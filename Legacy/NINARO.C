@@ -73,7 +73,7 @@ GRID *playgrid;
 GRID *entrygrid;
 PLAYERGROUP *players;
 int player_one,player_two,player_current;
-int player_one_score,player_two_score;
+int player_one_score,player_two_score,games_played;
 int player_winner;
 int dialogplayer;
 KEYGROUP *pkeys;
@@ -95,6 +95,7 @@ int ingame;
 int isdraw;
 int goesfirst;
 int wentfirst;
+int bestof;
 int ai_speed;
 int ai_delay; // milliseconds
 int hilite,back,text;
@@ -151,6 +152,7 @@ void ResetScores(void)
 {
     player_one_score=0;
     player_two_score=0;
+    games_played=0;
     player_winner=-1;       // no winner
 }
 
@@ -313,7 +315,7 @@ void DisplayPlayerScore(int score)
 {
     char sbuf[5];
     _setcolor(GREEN);
-    sprintf(sbuf,"%d",score);
+    sprintf(sbuf,"%3d/%3d",score,games_played);
     _grtext_w(0.0,1.0,sbuf);
 }
 
@@ -324,10 +326,16 @@ void Debug(char *string)
     _grtext_w(0.5,0.5, string);
 }
 
-void DisplayEntryGrid(void) {_setcolor(YELLOW);DisplayGrid(entrygrid,0.6);}
+void DisplayEntryGrid(void)
+{
+#ifndef TESTING
+    _setcolor(YELLOW);DisplayGrid(entrygrid,0.6);
+#endif    
+}
 
 void DisplayPlayGrid(void)
 {
+#ifndef TESTING
     int x;
     int col,row;
     _setcolor(GREEN);
@@ -339,10 +347,12 @@ void DisplayPlayGrid(void)
             row=win->win[x].row;
             DrawDisc(col,playgrid->width,row,playgrid->height,PlayerGetColor(playgrid->grid[col][row]),0.9);
         }
+#endif        
 }
 
 void DisplayGameName(void)
 {
+#ifndef TESTING
     _settextalign(_LEFT,_BASE);
     _setcharspacing_w(-0.01);
     _setcharsize_w(0.1,0.04);
@@ -360,19 +370,23 @@ void DisplayGameName(void)
     _grtext_w(0.655,0.25,"By the author");
     _grtext_w(0.655,0.55,"");
     _grtext_w(0.655,0.85,"   1998  ");
-
+#endif
 }
 
 void DisplayMsgBox(void)
 {
+#ifndef TESTING
     _setvieworg(0,0);
     TextBoxDisplay(msgbox,CurrentViewport());
+#endif    
 }
 
 void DisplayStatusBox(void)
 {
+#ifndef TESTING
     _setvieworg(0,0);
     TextBoxDisplay(statusbox,CurrentViewport());
+#endif    
 }
 
 void DisplayP1Color(void) {DisplayPlayerColor(PlayerGroupPlayer(players,player_one));}
@@ -503,13 +517,15 @@ int DropToken()
             if (TokensInGrid(playgrid)==MaxTokensInGrid(playgrid)) // draw
             {
                 TextBoxFixedAddLine(msgbox,"It's A Draw...");
-                isdraw=TRUE; 
+                isdraw=TRUE;
+                ++games_played;
             }
             break;
         case Win :
             PlayTune(4,100,50,300,50,500,100,400,5);
             win_occured=TRUE;
             sprintf(buffer,"%s Wins",PlayerGetName(PlayerGroupPlayer(players,player_current)));
+            ++games_played;
             if (player_current==player_one)
                 {++player_one_score; player_winner=player_one;}
             else
@@ -573,7 +589,8 @@ void NewGame(void)
     if (!ingame)
     {
         TextBoxFixedAddLine(msgbox,"Currently Playing Game.");
-        ViewSysWindowChanged(vs,3,TRUE); 
+        ViewSysWindowChanged(vs,3,TRUE);
+        ResetScores();
     }
     ingame=TRUE;
 }
@@ -654,7 +671,7 @@ int SaveCfg()
 {
     int ret,x;
     PLAYER *pl;
-    BINFILE *bf=BinFileNew((13+players->players)*sizeof(int));
+    BINFILE *bf=BinFileNew((14+players->players)*sizeof(int));
     BinFilePutInt(bf,grid_cols);
     BinFilePutInt(bf,grid_rows);
     BinFilePutInt(bf,win->tokens);
@@ -668,6 +685,7 @@ int SaveCfg()
     BinFilePutInt(bf,back);
     BinFilePutInt(bf,hilite);
     BinFilePutInt(bf,mouseusage);
+    BinFilePutInt(bf,bestof);
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -706,6 +724,7 @@ int LoadCfg()
     }
     hilite=BinFileGetInt(bf);
     mouseusage=BinFileGetInt(bf);
+    bestof=BinFileGetInt(bf);
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -735,7 +754,7 @@ void GameStatus(void)
     TextBoxSetLine(statusbox,1,"Columns  Rows  Connect  Sound");
     sprintf(gbuf,"~%5d  %4d  %6d      %s",grid_cols,grid_rows,win->tokens,IsMute()?"Off":"On");
     TextBoxSetLine(statusbox,2,gbuf);
-    TextBoxSetLine(statusbox,3,"Type    Player         Score");
+    TextBoxSetLine(statusbox,3,"Type    Player      Score/Games");
 }
 
 void GameSizeCustom(void)
@@ -824,9 +843,12 @@ void P1Dialog(void)
     if (player!=-1) // player has changed
     {
         SetP1(player);
-        player_one_score=0;
-        player_two_score=0;
-        if (ingame) NewGame();
+        if (ingame)
+        {
+            NewGame();
+            ResetScores();
+        }
+        else player_one_score=0;
     }
 }
 
@@ -839,23 +861,29 @@ void P2Dialog(void)
     if (player!=-1)// player has changed
     {
         SetP2(player);
-        player_one_score=0;
-        player_two_score=0;
-        if (ingame) NewGame();
+        if (ingame)
+        {
+            NewGame();
+            ResetScores();
+        }
+        else player_two_score=0;
     }
 }
 
 void PlayerOptions(void)
 {
-    VIEWPORT vp={50,50,590,300};
+    VIEWPORT vp={50,30,590,320};
     CONTROL *c;
     ControlCurrentSetTo(DialogControlGet(optionsdialog,0),goesfirst);
     ControlCurrentSetTo(DialogControlGet(optionsdialog,1),ai_speed);
+    ControlCurrentSetTo(DialogControlGet(optionsdialog,2),bestof);
     if (DialogCall(optionsdialog,&vp,vs->current,5,11,HelpOptionsDialog,mouseusage==2))
     {
         goesfirst=ControlCurrentGet(DialogControlGet(optionsdialog,0));
         c=DialogControlGet(optionsdialog,1);
         ControlValueGet(c,ControlCurrentGet(c),&ai_speed);
+        c=DialogControlGet(optionsdialog,2);
+        ControlValueGet(c,ControlCurrentGet(c),&bestof);
     }
 }
 
@@ -1277,6 +1305,18 @@ void SuggestMove(void)
     _setfillmask( old_mask );
 }
 
+void BestOfResult(void)
+{
+    char out[60];
+    if (player_one_score>player_two_score)
+        sprintf(out,"%s Wins The Set",PlayerGetName(PlayerGroupPlayer(players,player_one)));
+    else if (player_two_score>player_one_score)
+        sprintf(out,"%s Wins The Set",PlayerGetName(PlayerGroupPlayer(players,player_two)));    
+    else
+        sprintf(out,"The Set is Drawn",PlayerGetName(PlayerGroupPlayer(players,player_two)));
+    TextBoxFixedAddLine(msgbox,out);
+}
+
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
 {
     VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,ClearViewport);
@@ -1292,15 +1332,15 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
         DisplayStatusBox,NULL,"The Game Status");
     ViewSysWindowNew(vs,0.61,0.4,0.65,0.448,TRUE,
         DisplayP1Type,NULL,"Player One's Type");
-    ViewSysWindowNew(vs,0.66,0.4,0.90,0.448,TRUE,
+    ViewSysWindowNew(vs,0.66,0.4,0.85,0.448,TRUE,
         DisplayP1Name,NULL,"Player One's Name");
-    ViewSysWindowNew(vs,0.91,0.4,1.0,0.448,TRUE,
+    ViewSysWindowNew(vs,0.86,0.4,1.0,0.448,TRUE,
         DisplayP1Score,NULL,"Player One's Score");
     ViewSysWindowNew(vs,0.61,0.452,0.65,0.5,TRUE,
         DisplayP2Type,NULL,"Player Two's Type");
-    ViewSysWindowNew(vs,0.66,0.452,0.90,0.5,TRUE,
+    ViewSysWindowNew(vs,0.66,0.452,0.85,0.5,TRUE,
         DisplayP2Name,NULL,"Player Two's Name");
-    ViewSysWindowNew(vs,0.91,0.452,1.0,0.5,TRUE,
+    ViewSysWindowNew(vs,0.86,0.452,1.0,0.5,TRUE,
         DisplayP2Score,NULL,"Player Two's Score");
     return vs;
 }
@@ -1363,13 +1403,13 @@ void ProgInit() // initialises global variables
         "Hilite",TRUE,TRUE,ControlNew(List,Color,1,5,11,5,
                         RED,"",GREEN,"",BLUE,"",YELLOW,"",ORANGE,""),
         "Mouse Use",TRUE,TRUE,ControlNew(List,Radio,1,3,8,3,
-                        2,"Full",1,"Partial",0,"None"));
+                        0,"None",1,"Partial",2,"Full"));
 
         
 //        hilite color red
 //        text color black
 
-    optionsdialog=DialogNew(pkeys,NULL,"Player Options",2,
+    optionsdialog=DialogNew(pkeys,NULL,"Player Options",3,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Player One",
                         1,"Player Two",
@@ -1382,11 +1422,17 @@ void ProgInit() // initialises global variables
                         3,"Slow",
                         2,"Normal",
                         1,"Fast",
-                        0,"Fastest"));
-                        
-/*        "Best Of",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
-0,"Infinity",3,"Three",5,"Five",11,"Eleven",25,"Twenty-Five",51,"Fifty-One"));
-*/            
+                        0,"Fastest"),
+        "Best Of",TRUE,TRUE,ControlNew(List,Slider,1,2,8,8,
+                        3,"3",
+                        5,"5",
+                        11,"11",
+                        25,"25",
+                        51,"51",
+                        101,"101",
+                        1000,"1000",
+                        0,"Infinity"));
+
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys,&hilite);
     MenuNewSub(mainmenu,"Game",8,
         "New",      CN, NewGame,FALSE,
@@ -1441,6 +1487,7 @@ void ProgInit() // initialises global variables
         SetP2(1);
         goesfirst=GFSuccessive;
         wentfirst=player_one;
+        bestof=0;   // infinity
         ai_speed=2; // normal
         ai_delay=500; // half a second
         mouseusage=1; // partial
@@ -1526,24 +1573,29 @@ void main()
                     if ((win_occured) || (isdraw))
                     {
                         waitesc=((ai_speed) || (!BothPlayerAI()));
+                        if (bestof) // bestof==0 is infinity
+                        {
+                            if (games_played==bestof)
+                            {
+                                BestOfResult();
+                                TextBoxFixedAddLine(msgbox,"~Press ESC To Continue");
+                                ViewSysDisplay(vs,DisplayAll); SwapPage();
+                                while (GetKey()!=ESC) {}
+                                waitesc=FALSE; // no longer need to display msg
+                                ResetScores();
+                            }
+                        }
 #ifndef TESTING
+                        
                         if (waitesc)
-                            TextBoxFixedAddLine(msgbox,"~Press Cancel To Continue");
+                            TextBoxFixedAddLine(msgbox,"~Press ESC To Continue");
 #endif
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
                         NewGame();
 #ifndef TESTING
                         if (waitesc)
                         {
-                            for (;;)
-                            {
-                                if (kbhit())
-                                {
-                                    // find relevant cancel key/s
-                                    // or esc or RMB if p1=human
-                                    GetKey(); break;
-                                }
-                            }
+                            while (GetKey()!=ESC) {}
                         }
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
 #endif
