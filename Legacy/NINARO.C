@@ -1029,50 +1029,52 @@ void TitleScreen(void)
     long sety,adds[3]={0x010000L,0x000100L,0x000001L};
     long bottom=0x020306L,top=bottom+0x080808L;
 
-    if (filegrid==NULL) return;
-    ResetViewport(&vp,vs->main.x1,vs->main.y1,vs->main.x2,vs->main.y2-30);
-    tokens=MaxTokensInGrid(filegrid);
-   _remappalette(YELLOW,0x020202L); _remappalette(GREEN,0x040404L);
-    StartRandom();
-    ResetGameSize(GridCols(filegrid),GridRows(filegrid),4);
-    _setcolor(WHITE); _setcharsize(20,10); _setcharspacing(0);
-    _settextalign(_CENTER,_TOP);
-    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
-    _setvisualpage(_getactivepage());
-    SetViewport(&(vp));
-    _setcolor(GREEN); DisplayGrid(playgrid,0.95);
-    sety=bottom;
-    x=0;
-    do
+    if (filegrid!=NULL)
     {
-        if (x<tokens)
+        ResetViewport(&vp,vs->main.x1,vs->main.y1,vs->main.x2,vs->main.y2-30);
+        tokens=MaxTokensInGrid(filegrid);
+       _remappalette(YELLOW,0x020202L); _remappalette(GREEN,0x040404L);
+        StartRandom();
+        ResetGameSize(GridCols(filegrid),GridRows(filegrid),4);
+        _setcolor(WHITE); _setcharsize(20,10); _setcharspacing(0);
+        _settextalign(_CENTER,_TOP);
+        _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
+        _setvisualpage(_getactivepage());
+        SetViewport(&(vp));
+        _setcolor(GREEN); DisplayGrid(playgrid,0.95);
+        sety=bottom;
+        x=0;
+        do
         {
-            scol=AIRandomMove(playgrid);
-            pl=RemoveToken(filegrid,scol);
-            row=InsertTokenTarget(playgrid,scol);
-            InsertTokenInCol(playgrid,scol,PlayerGroupFind(players,pl)==0?plback:plname,win);
-
-            DrawDisc(scol,GridCols(playgrid),row,GridRows(playgrid),PlayerGetColor(StatusOfCR(playgrid,scol,row)),0.95);    
-
-            x++;
+            if (x<tokens)
+            {
+                scol=AIRandomMove(playgrid);
+                pl=RemoveToken(filegrid,scol);
+                row=InsertTokenTarget(playgrid,scol);
+                InsertTokenInCol(playgrid,scol,PlayerGroupFind(players,pl)==0?plback:plname,win);
+    
+                DrawDisc(scol,GridCols(playgrid),row,GridRows(playgrid),PlayerGetColor(StatusOfCR(playgrid,scol,row)),0.95);    
+    
+                x++;
+            }
+            if (up)
+            {
+                sety+=adds[add]; 
+                if (sety>top) up=0;
+            }
+            else // down
+            {
+                sety-=adds[add];
+                if (sety<bottom) up=1;
+            }
+            if (add==2) add=0; else ++add;
+            _remappalette(YELLOW,sety);
         }
-        if (up)
-        {
-            sety+=adds[add]; 
-            if (sety>top) up=0;
-        }
-        else // down
-        {
-            sety-=adds[add];
-            if (sety<bottom) up=1;
-        }
-        if (add==2) add=0; else ++add;
-        _remappalette(YELLOW,sety);
+        while (!kbhit());
+        _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
+        GetKey();
+        GridFree(filegrid);
     }
-    while (!kbhit());
-    _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
-    GetKey();
-    GridFree(filegrid);
     PlayerFree(plname);
     PlayerFree(plback);
     _setvisualpage(0);
@@ -1379,7 +1381,7 @@ void ProgInit() // initialises global variables
     TextBoxAddLine(statusbox," ",ATEND);
     TextBoxAddLine(statusbox," ",ATEND);
     
-    playerdialog=DialogNew(pkeys,ModifyPlayer,"Player One",2,
+    playerdialog=DialogNew(pkeys,ModifyPlayer,"Player One",&hilite,2,
         "Player",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         1,"Human",
                         2,PlayerGetName(PlayerGroupPlayer(players,2)),
@@ -1389,7 +1391,7 @@ void ProgInit() // initialises global variables
                         6,PlayerGetName(PlayerGroupPlayer(players,6))),
         "Color",TRUE,TRUE,ControlNew(Range,Color,1,10,5,
                         1,"",7,""));
-    boarddialog=DialogNew(pkeys,GameSizeFit,"Custom Board Size",3,
+    boarddialog=DialogNew(pkeys,GameSizeFit,"Custom Board Size",&hilite,3,
         "Rows",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",50,""),
         "Columns",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
@@ -1397,7 +1399,7 @@ void ProgInit() // initialises global variables
         "Connect",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
 
-    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",3,
+    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",&hilite,3,
         "Background",TRUE,TRUE,ControlNew(List,Color,1,2,15,2,
                         BLACK,"",WHITE,""),
         "Hilite",TRUE,TRUE,ControlNew(List,Color,1,5,11,5,
@@ -1405,11 +1407,7 @@ void ProgInit() // initialises global variables
         "Mouse Use",TRUE,TRUE,ControlNew(List,Radio,1,3,8,3,
                         0,"None",1,"Partial",2,"Full"));
 
-        
-//        hilite color red
-//        text color black
-
-    optionsdialog=DialogNew(pkeys,NULL,"Player Options",3,
+    optionsdialog=DialogNew(pkeys,NULL,"Player Options",&hilite,3,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Player One",
                         1,"Player Two",

@@ -16,7 +16,6 @@ enum {Button=0,Radio,Color,Name,Slider,Dial}; // Display Type
 enum {List=0,Range}; // Control Type
 
 #define CONTROLTEXT BLACK
-#define CONTROLHILITE RED
 #define CONTROLBACK LTGREY
 
 struct CListElemTag
@@ -71,6 +70,7 @@ struct DialogTag
     DIALOGELEM *elem;   // array of controls in the dialog
 //  MEMPAGE *background;// the background image
     KEYSYS *ks;         // the key system of the dialog
+    int *hilite;        // pointer to the hilite color
 };
 typedef struct DialogTag DIALOG;
 
@@ -127,12 +127,12 @@ ControlElemSet(CONTROL *c,int elem,int value,char *name);
 // if range then if value==min strcpy(minname,name)
 //               if value==max strcpy(maxname,name)
 // if list then list[elem]=value,name.
-void ControlDisplay(CONTROL *c,VIEWPORT *vp);
+void ControlDisplay(CONTROL *c,VIEWPORT *vp,int hilite);
 // purpose : to graphically display the control in the viewport
 // returns : void
 
 /*---------------------------DIALOG-----------------------------------*/
-DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int controls,...);
+DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int *hilite,int controls,...);
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
 // returns : the dialog

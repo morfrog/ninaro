@@ -375,21 +375,24 @@ void DisplayCircleFilled(int x1,int y1,int x2,int y2,int filled)
     }
 }
 
-void DisplayColor(int x1,int y1,int x2,int y2,int color,int selected)
+void DisplayColor(int x1,int y1,int x2,int y2,int hilite,int color,int selected)
 {
     if (selected)
     {
-        _setcolor(CONTROLHILITE);
+        _setcolor(hilite);
         _setlinestyle(0x5555);
         _rectangle(_GBORDER,x1,y1,x2,y2);
-        _rectangle(_GBORDER,x1+1,y1+1,x2-1,y2-1);
+        _rectangle(_GBORDER,x1+2,y1+2,x2-2,y2-2);
         _setlinestyle(0xffff);
+        _setcolor(CONTROLTEXT);
+        _rectangle(_GBORDER,x1+1,y1+1,x2-1,y2-1);
+        _rectangle(_GBORDER,x1+3,y1+3,x2-3,y2-3);
     }
     _setcolor(color);
     _rectangle(_GFILLINTERIOR,x1+4,y1+4,x2-4,y2-4);
 }
 
-void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars)
+void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars,int hilite)
 {
     int width=vp->x2-vp->x1+1;
     int height=vp->y2-vp->y1+1;
@@ -419,24 +422,24 @@ void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars)
         }
         at=left+(pos*section/(range-1));
     }
-    BorderedBox(at-edge,vp->y1+(height/4),at+edge,vp->y2-(height/4),CONTROLBACK,CONTROLHILITE);
+    BorderedBox(at-edge,vp->y1+(height/4),at+edge,vp->y2-(height/4),CONTROLBACK,hilite);
     _setcolor(CONTROLTEXT);
     _grtext(at,vp->y1+height/2,value);
 }
 
-void DisplayRangeColor(CRANGE *c,VIEWPORT *vp)
+void DisplayRangeColor(CRANGE *c,VIEWPORT *vp,int hilite)
 {
     int width=(vp->x2-vp->x1+1)/(c->max-c->min+1);
     int at=vp->x1,x;
 
     for (x=c->min;x<=c->max;x++)
     {
-        DisplayColor(at,vp->y1,at+width,vp->y2,x,x==c->current);
+        DisplayColor(at,vp->y1,at+width,vp->y2,hilite,x,x==c->current);
         at+=width;
     }
 }
 
-void DisplayRange(CRANGE *r,VIEWPORT *vp,int display,int rows,int cols,int strwidth)
+void DisplayRange(CRANGE *r,VIEWPORT *vp,int display,int rows,int cols,int strwidth,int hilite)
 {
     int height=(vp->y2-vp->y1)/rows;
     VIEWPORT scale;
@@ -467,15 +470,15 @@ void DisplayRange(CRANGE *r,VIEWPORT *vp,int display,int rows,int cols,int strwi
     {
         case Slider :
             sprintf(buffer,"%d",r->current);
-            DisplayScale(names?&scale:vp,r->max-r->min+1,r->current-r->min,buffer,3);
+            DisplayScale(names?&scale:vp,r->max-r->min+1,r->current-r->min,buffer,3,hilite);
         break;
         case Color :
-            DisplayRangeColor(r,names?&scale:vp);            
+            DisplayRangeColor(r,names?&scale:vp,hilite);            
         break;
     }
 }
 
-void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwidth)
+void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwidth,int hilite)
 {
     int atx=vp->x1,aty=vp->y1,width=(vp->x2-vp->x1+1)/cols;
     int height=(vp->y2-vp->y1+1)/rows,_3hon4=(3*height)/4,x;
@@ -484,7 +487,7 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
     if (cl->elems<elements) elements=cl->elems;
 
     if (display==Slider)
-        DisplayScale(vp,cl->elems,cl->current,cl->elem[cl->current].name,strwidth);
+        DisplayScale(vp,cl->elems,cl->current,cl->elem[cl->current].name,strwidth,hilite);
     else
     {
         switch (display)
@@ -520,7 +523,7 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
                 case Button :
                     if (x==cl->current)
                     {
-                        _setcolor(CONTROLHILITE);
+                        _setcolor(hilite);
                         _rectangle(_GFILLINTERIOR,atx+5,aty+5,atx+width-5,aty+height-5);
                     }
                     _setcolor(CONTROLTEXT);
@@ -529,7 +532,7 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
                 break;
                 case Name :
                     if (x==cl->current)
-                        _setcolor(CONTROLHILITE);
+                        _setcolor(hilite);
                     else
                         _setcolor(CONTROLTEXT);
                     _grtext(atx+textx,aty+texty,cl->elem[x].name);
@@ -537,16 +540,16 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
                 case Color :
                     if (cl->elem[x].name==NULL)
                     {
-                        DisplayColor(atx,aty,atx+width,aty+height,
+                        DisplayColor(atx,aty,atx+width,aty+height,hilite,
                             cl->elem[x].value,x==cl->current);
                     }
                     else
                     {
-                        DisplayColor(atx,aty,atx+width,aty+_3hon4,
+                        DisplayColor(atx,aty,atx+width,aty+_3hon4,hilite,
                                 cl->elem[x].value,x==cl->current);
-                            _setcolor(CONTROLTEXT);
-                            _grtext(atx+textx,aty+_3hon4,cl->elem[x].name);
-                        }
+                        _setcolor(CONTROLTEXT);
+                        _grtext(atx+textx,aty+_3hon4,cl->elem[x].name);
+                    }
                     break;
                 default:
                     exit(0);
@@ -559,17 +562,17 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
     }        
 }
 
-void ControlDisplay(CONTROL *c,VIEWPORT *vp)
+void ControlDisplay(CONTROL *c,VIEWPORT *vp,int hilite)
 // purpose : to graphically display the control in the viewport
 // returns : void
 {
     switch (c->controltype)
     {
         case Range :
-            DisplayRange((CRANGE *)c->store,vp,c->displaytype,c->rows,c->cols,c->strwidth);
+            DisplayRange((CRANGE *)c->store,vp,c->displaytype,c->rows,c->cols,c->strwidth,hilite);
         break;
         case List :
-            DisplayList((CLIST *)c->store,vp,c->displaytype,c->rows,c->cols,c->strwidth);
+            DisplayList((CLIST *)c->store,vp,c->displaytype,c->rows,c->cols,c->strwidth,hilite);
         break;
         default:
             exit(0);
@@ -577,7 +580,7 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp)
     }            
 }
 
-DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int controls,...)
+DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int *hilite,int controls,...)
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
 // returns : the dialog
@@ -589,6 +592,7 @@ DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int cont
     ret->elems=controls+1;
     ret->elem=malloc((controls+1)*sizeof(DIALOGELEM));
     ret->state=malloc(ret->elems*sizeof(int));
+    ret->hilite=hilite;
     ret->change=change;
     va_start(ap,controls);
     for (x=0;x<controls;x++)
@@ -783,7 +787,7 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         control.y2=aty+(d->elem[x].store->rows*rowheight)-1;
         if (x==d->current)
         {
-            _setcolor(CONTROLHILITE);
+            _setcolor(*(d->hilite));
             _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
             _rectangle(_GBORDER,vp->x1+1,control.y1-1,vp->x2-1,control.y2+1);                        
         }
@@ -798,7 +802,7 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         else                          control.x1=vp->x1+names;
         control.y1+=1;
         control.y2-=1;
-        ControlDisplay(d->elem[x].store,&control);
+        ControlDisplay(d->elem[x].store,&control,*(d->hilite));
         aty+=(d->elem[x].store->rows)*rowheight;
     }
 }
