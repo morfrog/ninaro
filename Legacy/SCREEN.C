@@ -47,6 +47,12 @@ void DrawDisc(int col,int cols,int row,int rows,int color,double discsize)
                               wherex+(side*colwidth),wherey+(side*rowheight));
 }
 
+void Exit_Failure(char *message)
+{
+    ShutDown();
+    printf("\n%s\n",message);
+}
+
 void SwapPage()
 {
     static int viewpage;

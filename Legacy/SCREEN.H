@@ -21,6 +21,7 @@
 void ScreenInit();
 void DrawGrid(int x,int y);
 void DrawDisc(int col,int cols,int row,int rows,int color,double discsize);
+void Exit_Failure(char *message);
 void SwapPage();
 int ShutDown( void );
 

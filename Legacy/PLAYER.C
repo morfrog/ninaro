@@ -2,19 +2,19 @@
 #include <string.h>
 #include "player.h"
 
-void PlayerReset(PLAYER *player,char *name,int color,int human,int skill)
+void PlayerReset(PLAYER *player,char *name,int color,int type,int skill)
 {
     player->color=color;
     player->score=0;
-    player->human=human;
+    player->type=type;
     player->skill=skill;
     strcpy(player->name,name);
 }
 
-PLAYER *PlayerNew(char *name,int color,int human,int skill)
+PLAYER *PlayerNew(char *name,int color,int type,int skill)
 {
     PLAYER *ret=malloc(sizeof(PLAYER));
-    PlayerReset(ret,name,color,human,skill);
+    PlayerReset(ret,name,color,type,skill);
     return ret;
 }
 
@@ -35,7 +35,7 @@ void PlayerChangeScore(PLAYER *player,int amount)
 
 void PlayerChangeColor(PLAYER *player,int color)
 {
-    player->color=color;
+    player->color+=color;
 }
 
 int PlayerGetColor(PLAYER *player)
@@ -48,9 +48,14 @@ int PlayerGetScore(PLAYER *player)
     return (player->score);
 }
 
-int PlayerIsHuman(PLAYER *player)
+int PlayerGetType(PLAYER *player)
 {
-    return (player->human);
+    return (player->type);
+}
+
+void PlayerSetType(PLAYER *player,int type)
+{
+    player->type=type;
 }
 
 char *PlayerGetName(PLAYER *player)
@@ -62,3 +67,4 @@ int PlayerGetSkill(PLAYER *player)
 {
     return (player->skill);
 }
+
