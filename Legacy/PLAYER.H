@@ -50,6 +50,7 @@ PLAYER *PlayerGroupUseGet(PLAYERGROUP *pg,int pnum);
 void PlayerGroupCurrentSet(PLAYERGROUP *pg,int pnum);
 void PlayerGroupCurrentNext(PLAYERGROUP *pg);
 PLAYER *PlayerGroupCurrentGet(PLAYERGROUP *pg);
+int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl);
 void PlayerGroupFree(PLAYERGROUP *pg);
 
 #endif

@@ -350,13 +350,9 @@ void GameSizeCustom(void)
                     switch (boarddialog->current)
                     {
                         // case 0 : Name
-                        case 1 :
-                            --cols;
-                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                        case 1 : --cols; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
                             break; 
-                        case 2 :
-                            --rows;
-                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                        case 2 : --rows; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
                             break;
                         case 3 : --inarow;
                         // case 4 : buttons
@@ -369,13 +365,9 @@ void GameSizeCustom(void)
                     switch (boarddialog->current)
                     {
                         // case 0 : Name
-                        case 1 :
-                            ++cols;
-                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                        case 1 : ++cols; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
                             break; 
-                        case 2 :
-                            ++rows;
-                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                        case 2 : ++rows; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
                             break;
                         case 3 : ++inarow;
                         // case 4 : buttons
@@ -384,12 +376,11 @@ void GameSizeCustom(void)
                 break;
             case KP8 : ControlsDialogPrev(boarddialog); break;
             case KP2 : ControlsDialogNext(boarddialog); break;
-            case ENTER :
+            case ENTER :                          // process button
                 switch (ControlsDialogDefaultButton(boarddialog))
                 {
-                    case 0 :
-                        ResetGameSize(cols,rows,inarow);
-                        GameStatus();
+                    case 0 :                                 // OK
+                        ResetGameSize(cols,rows,inarow); GameStatus();
                         return; break;
                     case 1 :                                 // Reset
                         cols=grid_cols;
@@ -399,31 +390,133 @@ void GameSizeCustom(void)
                         ControlsControlListChange(ControlsDialogList(boarddialog,2),3,50);
                         ControlsDialogSet(boarddialog,2,rows);
                         inarow=win->tokens;
-                        ControlsControlListChange(ControlsDialogList(boarddialog,3),3,50);
                         ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                        ControlsDialogSet(boarddialog,3,inarow);
                         break;
                     case 2 : return; break;                 // Cancel
     
                 }
                 break;
-            case ESC : return; 
+            case ESC : return;                  // auto cancel
         }
     }
 }
 
-void PlayerDialog(PLAYER *player)
+void PlayerDialog(int pnum)
 {
-    
+    VIEWPORT vp={50,50,590,300};
+    PLAYER *player=PlayerGroupUseGet(players,pnum);
+    PLAYER *select;
+    int type=PlayerGetType(player);
+    int name=PlayerGroupFind(players,player);
+    int color=PlayerGetColor(player);
+    int skill=PlayerGetSkill(player);
+    int at;
+
+/*
+    case ENTER :
+        switch (ControlsDialogDefaultButton(boarddialog))
+        {
+            case 0 : // OK
+                PlayerGroupUseSet(players,pnum,name);
+                
+            case 1 : // Reset
+                
+            case 2 : // Cancel
+                return; break;
+        }
+*/    
+    ControlsDialogSet(playerdialog,1,type);
+    ControlsDialogSet(playerdialog,type==Human?2:3,name);
+                                          
+    ControlsDialogSet(playerdialog,4,color);
+    ControlsDialogSet(playerdialog,5,skill);
+    if (type==Human)
+    {
+        ControlsDialogControlEnable(playerdialog,2,FALSE);
+        ControlsDialogControlEnable(playerdialog,3,TRUE);
+    }
+    else // computer
+    {
+        ControlsDialogControlEnable(playerdialog,2,TRUE);
+        ControlsDialogControlEnable(playerdialog,3,FALSE);
+    }
+    for (;;)
+    {
+        MemPagePut(vs->current);
+        ControlsDialogDisplay(&vp,playerdialog,2);    
+        SwapPage();
+        switch(GetKey())
+        {
+            case KP4 :
+                if (ControlsDialogControlPrev(playerdialog))
+                {
+                    at=ControlsDialogGet(playerdialog,playerdialog->current);
+                    switch (playerdialog->current)
+                    {
+                        // case 0 : name
+                        case 1 : // type
+                            if (at==Computer)
+                            {
+                                ControlsDialogControlEnable(playerdialog,2,TRUE);
+                                ControlsDialogControlEnable(playerdialog,3,FALSE);
+                            }
+                            else // human
+                            {
+                                ControlsDialogControlEnable(playerdialog,2,FALSE);
+                                ControlsDialogControlEnable(playerdialog,3,TRUE);
+                            }
+                            break;
+                        case 2 : // humans
+//                            ControlsDialogSet(playerdialog,4,name);
+                        case 3 : // computers
+                        case 4 : // color
+                        case 5 : // skill
+                        break;                            
+                     }
+                }
+            break;
+            case KP6 :
+                if (ControlsDialogControlNext(playerdialog))
+                {
+                    at=ControlsDialogGet(playerdialog,playerdialog->current);
+                    switch (playerdialog->current)
+                    {
+                        // case 0 : name
+                        case 1 : // type
+                            if (at==Computer)
+                            {
+                                ControlsDialogControlEnable(playerdialog,2,TRUE);
+                                ControlsDialogControlEnable(playerdialog,3,FALSE);
+                            }
+                            else // human
+                            {
+                                ControlsDialogControlEnable(playerdialog,2,FALSE);
+                                ControlsDialogControlEnable(playerdialog,3,TRUE);
+                            }
+                            break;
+                        case 2 : // humans
+                            
+                        case 3 : // computers
+                        break;                            
+                     }
+                }
+            break;
+            case KP8 : ControlsDialogPrev(playerdialog); break;
+            case KP2 : ControlsDialogNext(playerdialog); break;
+            case ESC : return; break;
+        }
+    }    
 }
 
 void P1Dialog(void)
 {
-    ControlsDialogCall(&(vs->main),playerdialog,2);
+    PlayerDialog(0);
 }
 
 void P2Dialog(void)
 {
-    ControlsDialogCall(&(vs->main),playerdialog,2);
+    PlayerDialog(1);
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
@@ -516,7 +609,7 @@ void ProgInit() // initialises global variables
                                            4,PlayerGetName(PlayerGroupPlayer(players,4)),
                                            5,PlayerGetName(PlayerGroupPlayer(players,5)),
                                            6,PlayerGetName(PlayerGroupPlayer(players,6))),
-        FALSE,"Name",   2,  1,    10, 0.3,
+        FALSE,"Name",   2,  3,    10, 0.3,
             ControlsControlListNew(Radio,TRUE,2,0,PlayerGetName(PlayerGroupPlayer(players,0)),
                                                 1,PlayerGetName(PlayerGroupPlayer(players,1))),
         TRUE,"Color",   10,  1,  0,  0.1,

@@ -393,6 +393,7 @@ void ControlsControlListDisplay(VIEWPORT *vpt,CONTROLLIST *cl,int cols,int rows,
 }
 
 int ControlsDialogGet(DIALOG *dl,int control)
+// returns the current of the current control list of dialog dl
 {
     return dl->control[control].cl->current;
 }
@@ -590,6 +591,11 @@ int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,int gap)
             case ESC : return TRUE; 
         }
     }
+}
+
+void ControlsDialogControlEnable(DIALOG *dl,int control,int enable)
+{
+    dl->control[control].enabled=enable;
 }
 
 /*

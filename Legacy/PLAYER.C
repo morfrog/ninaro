@@ -69,6 +69,14 @@ int PlayerGetSkill(PLAYER *player)
     return (player->skill);
 }
 
+int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl)
+{
+    int x;
+    for (x=0;x<pg->players;x++)
+       if (pg->player[x]==pl) return x; // found
+    return -1; // not found
+}
+
 PLAYERGROUP *PlayerGroupNew(int players,int groupsize,...)
 // creates a new player group containing groupsize players, with players
 // players able to be active at any one time

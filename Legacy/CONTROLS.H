@@ -96,9 +96,10 @@ ControlsControlListChange(CONTROLLIST *cl,...);
 
 DIALOG *ControlsDialogNew(double fract,int controls,...);
 int ControlsDialogNext(DIALOG *dl);
-int ControlsDialogControlNext(DIALOG *dl);
 int ControlsDialogPrev(DIALOG *dl);
+int ControlsDialogControlNext(DIALOG *dl);
 int ControlsDialogControlPrev(DIALOG *dl);
+void ControlsDialogControlEnable(DIALOG *dl,int control,int enable);
 int ControlsDialogDefaultButton(DIALOG *dl);
 void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap);
 int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,int gap);
