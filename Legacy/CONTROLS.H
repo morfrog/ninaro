@@ -92,14 +92,17 @@ int ControlsControlListNext(CONTROLLIST *cl);
 int ControlsControlListPrev(CONTROLLIST *cl);
 void ControlsControlListDisplay(VIEWPORT *vp,CONTROLLIST *cl,int cols,int rows,int chars);
 int ControlsControlListSetCurrent(CONTROLLIST *cl,...);
+ControlsControlListChange(CONTROLLIST *cl,...);
 
 DIALOG *ControlsDialogNew(double fract,int controls,...);
 int ControlsDialogNext(DIALOG *dl);
 int ControlsDialogControlNext(DIALOG *dl);
 int ControlsDialogPrev(DIALOG *dl);
 int ControlsDialogControlPrev(DIALOG *dl);
+int ControlsDialogDefaultButton(DIALOG *dl);
 void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap);
 int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,int gap);
 int ControlsDialogSet(DIALOG *dl,int control,...);
 int ControlsDialogGet(DIALOG *dl,int control);
+CONTROLLIST *ControlsDialogList(DIALOG *dl,int control);
 #endif

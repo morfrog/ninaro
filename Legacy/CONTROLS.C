@@ -268,6 +268,7 @@ void DisplayScale(VIEWPORT *vp,int range,int pos,int value,int chars)
     _settextalign(_CENTER,_HALF);
     _setcharsize(2*(vp->y2-vp->y1)/5,(vp->x2-vp->x1)/(5*chars));
     _setcharspacing(0);
+    if (range==1) {at+=0.4; all=0.5;}
     SetViewport(vp);
     _setcolor(CONTROLHILITE);
     _moveto_w(all,0.5); _lineto_w(all,0.4);
@@ -396,6 +397,11 @@ int ControlsDialogGet(DIALOG *dl,int control)
     return dl->control[control].cl->current;
 }
 
+int ControlsDialogDefaultButton(DIALOG *dl)
+{
+    return dl->control[dl->controls-1].cl->current;
+}
+
 int ControlsDialogSet(DIALOG *dl,int control,...)
 {
     va_list ap;
@@ -412,6 +418,11 @@ int ControlsDialogSet(DIALOG *dl,int control,...)
     }
     va_end(ap);
     return FALSE;
+}
+
+CONTROLLIST *ControlsDialogList(DIALOG *dl,int control)
+{
+    return dl->control[control].cl;
 }
 
 DIALOG *ControlsDialogNew(double fract,int controls,...)
@@ -509,6 +520,9 @@ void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap)
     int wintop,winbot;
     VIEWPORT i;
     
+    SetViewport(vp);
+    _setcolor(CONTROLTEXT);
+    _rectangle_w(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
     for (x=0;x<dl->controls;x++)
     {
         if (dl->control[x].enabled==TRUE)

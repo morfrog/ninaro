@@ -98,6 +98,7 @@ void ViewSysClear(VIEWPORT *vp)
 // clears the vp viewport
 {
     SetViewport(vp);
+    _setvieworg(0,0);
     _clearscreen(_GVIEWPORT);
 }
 
@@ -214,11 +215,11 @@ int ViewSysKeyNum(VIEWSYS *vs,int keynum)
 
 void ViewSysWindowChanged(VIEWSYS *vs,int window,int changed)
 {
-    vs->window[window].changed=changed;
     if ((vs->window[window].changed==CHANGED) && (changed==NOCHANGE))
         vs->changed-=1;
     else if ((vs->window[window].changed==NOCHANGE) && (changed==CHANGED))
         vs->changed+=1;
+    vs->window[window].changed=changed;
 }       
 
 void ViewSysWindowActivate(VIEWSYS *vs,int window,int activity)

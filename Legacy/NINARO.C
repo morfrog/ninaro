@@ -43,6 +43,7 @@ VIEWSYS *vs;
 MENU *mainmenu;
 DIALOG *playerdialog;
 DIALOG *boarddialog;
+DIALOG *optionsdialog;
 
 void SetP1Current()
 {
@@ -225,8 +226,12 @@ int KeyUp(void)
 int KeyLeft(void)
 {
     if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT))
-        {--keypos; return DisplayAll;}
-        // 0 is entry grid
+    {
+        --keypos;
+        ViewSysWindowChanged(vs,0,CHANGED);
+        return DisplayChanged;
+    }
+    // 0 is entry grid
     else
         return NoDisplay;
 }
@@ -234,8 +239,12 @@ int KeyLeft(void)
 int KeyRight(void)
 {
     if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT))
-        {++keypos; return DisplayAll;}
-        // 0 is entry grid
+    {
+        ++keypos;
+        ViewSysWindowChanged(vs,0,CHANGED);
+        return DisplayChanged;
+    }
+    // 0 is entry grid
     else
         return NoDisplay;
 }
@@ -317,34 +326,87 @@ void GameStatus(void)
 void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
 void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
 
+int MinOf(int a,int b) {if (a<b) return a; else return b;}
+int MaxOf(int a,int b) {if (a>b) return a; else return b;}
+
 void GameSizeCustom(void)
 {
+    VIEWPORT vp={50,50,590,300};
     int cols=grid_cols,rows=grid_rows,inarow=win->tokens;
-    int min=inarow;
 
     ControlsDialogSet(boarddialog,1,cols);
     ControlsDialogSet(boarddialog,2,rows);
     ControlsDialogSet(boarddialog,3,inarow);
+    ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
     for (;;)
     {
-        _clearscreen(_GCLEARSCREEN);
-        ControlsDialogDisplay(&(vs->main),boarddialog,2);    
+        MemPagePut(vs->current);
+        ControlsDialogDisplay(&vp,boarddialog,2);    
         SwapPage();
         switch(GetKey())
         {
             case KP4 :
-                ControlsDialogControlPrev(boarddialog);
-                switch (boarddialog->current)
+                if (ControlsDialogControlPrev(boarddialog))
                 {
-                    // case 0 : Name
-//                    case 1 : 
+                    switch (boarddialog->current)
+                    {
+                        // case 0 : Name
+                        case 1 :
+                            --cols;
+                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                            break; 
+                        case 2 :
+                            --rows;
+                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                            break;
+                        case 3 : --inarow;
+                        // case 4 : buttons
+                    }
                 }
                 break;
             case KP6 :
-                ControlsDialogControlNext(boarddialog);
+                if (ControlsDialogControlNext(boarddialog))
+                {
+                    switch (boarddialog->current)
+                    {
+                        // case 0 : Name
+                        case 1 :
+                            ++cols;
+                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                            break; 
+                        case 2 :
+                            ++rows;
+                            ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                            break;
+                        case 3 : ++inarow;
+                        // case 4 : buttons
+                    }
+                }
                 break;
             case KP8 : ControlsDialogPrev(boarddialog); break;
             case KP2 : ControlsDialogNext(boarddialog); break;
+            case ENTER :
+                switch (ControlsDialogDefaultButton(boarddialog))
+                {
+                    case 0 :
+                        ResetGameSize(cols,rows,inarow);
+                        GameStatus();
+                        return; break;
+                    case 1 :                                 // Reset
+                        cols=grid_cols;
+                        ControlsControlListChange(ControlsDialogList(boarddialog,1),3,50);
+                        ControlsDialogSet(boarddialog,1,cols);
+                        rows=grid_rows;
+                        ControlsControlListChange(ControlsDialogList(boarddialog,2),3,50);
+                        ControlsDialogSet(boarddialog,2,rows);
+                        inarow=win->tokens;
+                        ControlsControlListChange(ControlsDialogList(boarddialog,3),3,50);
+                        ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
+                        break;
+                    case 2 : return; break;                 // Cancel
+    
+                }
+                break;
             case ESC : return; 
         }
     }
@@ -472,7 +534,16 @@ void ProgInit() // initialises global variables
         TRUE,"Game Size",   1,  1, 6,  0.2,
             ControlsControlListNew(Range,TRUE,50,3));
             
-   
+    optionsdialog=ControlsDialogNew(0.2,3,
+        TRUE,NULL,      1,  1,  6,  0.2,
+            ControlsControlListNew(Name,TRUE,1,"Player Options"),
+        TRUE,"Goes First",      1,  1,  6,  0.2,
+            ControlsControlListNew(Radio,TRUE,4,0,"Winner",
+                                                1,"Loser",
+                                                2,"Random",
+                                                3,"Successive"));
+            
+            
     mainmenu=MenuNew(5,&(vs->main),ViewSysCurrent(vs));
     MenuNewSub(mainmenu,"Game",5,
         "New",      CN, NewGame,    ItemEnabled,
