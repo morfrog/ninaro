@@ -92,7 +92,7 @@ void ScreenInit()
     _setwindow(0,0.0,0.0,1.0,1.0);
     _registerfonts( "*.fon" );
     _setfont("t'Modern'");
-    _setvisualpage(1);
+    _setactivepage(1);
     ResetPalette();
     ResetMouse();
     _setviewport(0,0,639,349);

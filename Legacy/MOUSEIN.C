@@ -1,19 +1,27 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <graph.h>
 #include "mouse.h"
+#include "screen.h"
 #include "defines.h"
 #include "mousein.h"
 
+int xadjust,yadjust;
+
 int MouseX(int x)
 {
-    int ret;
-    if ((x<0) || (x>640)) {ret=(x)%640; if (ret<0) ret+=640; return ret;}
-    else {ret=x%640; if (ret<0) ret+=640; return ret;}
+//    int ret;
+//    if ((x<0) || (x>640)) {ret=(x)%640; if (ret<0) ret+=640; return ret;}
+//    else {ret=x%640; if (ret<0) ret+=640; return ret;}
+    return x;
 }
 
 int MouseY(int y)
 {
-    int ret;
-    if ((y<0) || (y>350)) {ret=(y-60)%350; if (ret<0) ret+=350; return ret;}
-    else {ret=y%350; if (ret<0) ret+=350; return ret;}
+//    int ret;
+//    if ((y<0) || (y>350)) {ret=(y-60)%350; if (ret<0) ret+=350; return ret;}
+//    else {ret=y%350; if (ret<0) ret+=350; return ret;}
+    return y;
 }
 
 
@@ -23,11 +31,8 @@ int GetMouseInput(int *x,int *y)
 {
     static int lmbpress=0;
     static int rmbpress=0;
+    static int lastx,lasty;
     MouseStatus gmims={0};
-    
-    MouseStat(&gmims);
-    *x=MouseX(gmims.xpos);
-    *y=MouseY(gmims.ypos);
 
     gmims.left=1;
     ReleaseInfo(&gmims);
@@ -49,7 +54,10 @@ int GetMouseInput(int *x,int *y)
     }
     else
     {
-        return NMB;
+        MouseStat(&gmims);
+        *x=gmims.xpos-xadjust;
+        *y=gmims.ypos-yadjust;
+        return NMB;            
     }
 }
 
@@ -115,3 +123,28 @@ int GetMouseInput(int *x,int *y)
     }
 }
 */
+
+void InitMouse(void)
+{
+    int x,y,thisx,thisy;
+    char bfg[80];
+    xadjust=0;
+    yadjust=0;
+    ResetMouse();
+    ShowMouse();
+    while (LMB!=GetMouseInput(&x,&y))
+    {
+        _clearscreen(_GCLEARSCREEN);
+        _grtext(30,200,"Move the mouse to the top left");
+        _grtext(30,240,"corner of the screen and press");
+        _grtext(30,280,"the left mouse button.");
+        sprintf(bfg,"%10d,%10d",x,y);
+        _grtext(30,100,bfg);
+        SwapPage();
+    }
+    xadjust=x;
+    yadjust=y;
+    _clearscreen(_GCLEARSCREEN);
+    SwapPage();
+    HideMouse();
+}

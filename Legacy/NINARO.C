@@ -1077,8 +1077,9 @@ void TitleScreen(void)
     }
     PlayerFree(plname);
     PlayerFree(plback);
-    _setvisualpage(0);
-    _setactivepage(1);
+    _setvisualpage(1);
+    SetMousePage(1);
+    _setactivepage(0);
 }
 
 void Test(void)
@@ -1515,6 +1516,7 @@ void main()
     int waitesc,col,ccols,crows,csize,mb,mx,my;
 
     ScreenInit();
+    InitMouse();
     _setcolor(RED);
     _setcharsize_w(0.02,0.02);
     _setcharspacing_w(-(0.01));
