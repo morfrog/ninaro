@@ -76,7 +76,7 @@ void BorderedBox(int x1,int y1,int x2,int y2,int p,int s)
 void ResetPalette(void)
 {
     long colors[ 16 ] =
-        { _BLACK, _RED,_YELLOW-0x010101,_BLUE,_GREEN,_MAGENTA,_BROWN,_WHITE,
+        { _BLACK, _RED,_YELLOW-0x010101,_BLUE+0x150000L,_GREEN,_MAGENTA,_BROWN,_WHITE,
         _CYAN,_LIGHTRED,_LIGHTYELLOW,_LIGHTBLUE,_LIGHTGREEN,_LIGHTMAGENTA,
         _GRAY,_GRAY+0x080808};
     _remapallpalette(colors);

@@ -10,22 +10,10 @@
 
 int xadjust,yadjust;
 
-int MouseX(int x)
-{
-//    int ret;
-//    if ((x<0) || (x>640)) {ret=(x)%640; if (ret<0) ret+=640; return ret;}
-//    else {ret=x%640; if (ret<0) ret+=640; return ret;}
-    return x;
-}
-
-int MouseY(int y)
-{
-//    int ret;
-//    if ((y<0) || (y>350)) {ret=(y-60)%350; if (ret<0) ret+=350; return ret;}
-//    else {ret=y%350; if (ret<0) ret+=350; return ret;}
-    return y;
-}
-
+int MouseX(void) {return xadjust;}
+int MouseY(void) {return yadjust;}
+void SetMouseX(int x) {xadjust=x;}
+void SetMouseY(int y) {yadjust=y;}
 
 int GetMouseInput(int *x,int *y)
 // purpose : to get mouse input, *button==LMB or RMB
@@ -126,8 +114,11 @@ int InitMouse(void)
 //        }
     }
     HideMouse();
-    xadjust=x;
-    yadjust=y;
+    if (ret)
+    {
+        xadjust=x;
+        yadjust=y;
+    }
     _clearscreen(_GCLEARSCREEN);
     SwapPage();
     return ret;

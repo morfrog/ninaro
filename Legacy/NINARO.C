@@ -101,6 +101,7 @@ int ai_delay; // milliseconds
 int hilite,back,text;
 int mouseusage;
 int mouseinstalled;
+int mouseconfig;    // are the mouse config values OK (got via mousein)
 
 int BothPlayerAI(void)
 {
@@ -698,7 +699,7 @@ int SaveCfg()
 {
     int ret,x;
     PLAYER *pl;
-    BINFILE *bf=BinFileNew((14+players->players)*sizeof(int));
+    BINFILE *bf=BinFileNew((17+players->players)*sizeof(int));
     BinFilePutInt(bf,grid_cols);
     BinFilePutInt(bf,grid_rows);
     BinFilePutInt(bf,win->tokens);
@@ -713,6 +714,12 @@ int SaveCfg()
     BinFilePutInt(bf,hilite);
     BinFilePutInt(bf,mouseusage);
     BinFilePutInt(bf,bestof);
+    BinFilePutInt(bf,mouseconfig);
+    if (mouseconfig)
+    {
+        BinFilePutInt(bf,MouseX());
+        BinFilePutInt(bf,MouseY());
+    }
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -751,6 +758,13 @@ int LoadCfg()
     hilite=BinFileGetInt(bf);
     mouseusage=BinFileGetInt(bf);
     bestof=BinFileGetInt(bf);
+    mouseconfig=BinFileGetInt(bf);
+    if (mouseconfig)
+    {
+        SetMouseX(BinFileGetInt(bf));
+        SetMouseY(BinFileGetInt(bf));
+        mouseinstalled=TRUE;
+    }
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -1044,6 +1058,7 @@ void DoMouseInit(void)
 {
     SetViewport(&(vs->main));
     mouseinstalled=InitMouse();
+    if (mouseinstalled) mouseconfig=TRUE;
 }
 
 void TitleScreen(void)
@@ -1055,7 +1070,7 @@ void TitleScreen(void)
     PLAYER *plback=PlayerNew("",YELLOW,Human,NULL);
     PLAYER *pl;
     GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
-    int x,y,tokens,scol; // source col
+    int x,y,tokens,scol,key; // source col
     int up=1,add=0,row;
 
 //    long sety,adds[3]={0x010001L,0x000200L,0x010001L};
@@ -1108,7 +1123,7 @@ void TitleScreen(void)
         }
         while (!kbhit());
         _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
-        GetKey();
+        key=GetKey();
     }
     if (_getvisualpage()==0)
     {
@@ -1123,36 +1138,39 @@ void TitleScreen(void)
     _clearscreen(_GCLEARSCREEN);
     SwapPage();
     
-//    playgrid=invert filegrid
-    for (x=0;x<GridCols(filegrid);x++)
-        for (y=0;y<GridRows(filegrid);y++)
+    if (!mouseconfig)
+    // then attempt to configure it
+    {
+//      playgrid=invert filegrid
+        for (x=0;x<GridCols(filegrid);x++)
+            for (y=0;y<GridRows(filegrid);y++)
+            {
+                pl=StatusOfCR(filegrid,x,y);
+                if (pl!=NULL)
+                    ResetTokenAtCR(playgrid,x,GridRows(filegrid)-1-y,pl);
+            }
+        GridFree(filegrid);
+    
+        ResetViewport(&clear,vp.x1,vp.y1,vp.x2,vp.y2);
+        for (x=0;x<20;x++)
         {
-            pl=StatusOfCR(filegrid,x,y);
-            if (pl!=NULL)
-                ResetTokenAtCR(playgrid,x,GridRows(filegrid)-1-y,pl);
-        }
-    GridFree(filegrid);
-
-    ResetViewport(&clear,vp.x1,vp.y1,vp.x2,vp.y2);
-    for (x=0;x<20;x++)
-    {
-        if (kbhit()) break;
-        MoveViewport(&vp,+13,0,0,-9);
-        ClearViewport(&vp);
-        _setcolor(BLACK); // no grid, just tokens
-        DisplayGrid(playgrid,0.9);
-        SwapPage();
-        ClearViewport(&clear);
-        MoveViewport(&clear,+10,0,0,-7);
-    }    
-    if (!kbhit())
-    {
-        ClearViewport(&vp);
-        _setcolor(BLACK); // no grid, just tokens
-        DisplayGrid(playgrid,0.9);
+            if (kbhit()) break;
+            MoveViewport(&vp,+13,0,0,-9);
+            ClearViewport(&vp);
+            _setcolor(BLACK); // no grid, just tokens
+            DisplayGrid(playgrid,0.9);
+            SwapPage();
+            ClearViewport(&clear);
+            MoveViewport(&clear,+10,0,0,-7);
+        }        
+        if (!kbhit())
+        {
+            ClearViewport(&vp);
+            _setcolor(BLACK); // no grid, just tokens
+            DisplayGrid(playgrid,0.9);
+        }   
+        DoMouseInit();
     }
-    DoMouseInit();
-
     PlayerFree(plname);
     PlayerFree(plback);
 }
@@ -1570,13 +1588,13 @@ void ProgInit() // initialises global variables
         bestof=0;   // infinity
         ai_speed=2; // normal
         ai_delay=500; // half a second
-        mouseusage=0; // none
+        mouseusage=2; // full
+        mouseconfig=FALSE; // mouse not configured
     }
     win->win=malloc(win->tokens*sizeof(TOKEN));
     win_occured=FALSE;
     playgrid=GridNew(grid_cols,grid_rows);
     entrygrid=GridNew(grid_cols,1);
-    
 }
 
 void ProgFree() // frees global variables
@@ -1589,6 +1607,7 @@ void ProgFree() // frees global variables
     GridFree(entrygrid);
     ViewSysFree(vs);
     TextBoxFree(msgbox);
+    HelpFree(help);
 }
 
 void main()
