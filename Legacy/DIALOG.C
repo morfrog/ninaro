@@ -202,13 +202,24 @@ int ControlMove(CONTROL *c,int howfar)
 // returns : TRUE if moves else false;
 {
     CRANGE *cr; CLIST *cl;
+    int was;
     if (c->controltype==Range) {
         cr=(CRANGE *)c->store;
         return Move(cr->min,cr->max,&(cr->current),howfar);
     }
     else { // List
         cl=(CLIST *)c->store;
-        return Move(0,cl->elems-1,&(cl->current),howfar);
+        was=cl->current;
+        if (Move(0,cl->elems-1,&(cl->current),howfar))
+        {
+            if (cl->elem[cl->current].name==NULL)
+            {
+                cl->current=was; // restore current
+                return FALSE;
+            }
+            return TRUE;
+        }
+        else return FALSE;
     }
 }
 
@@ -452,6 +463,10 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
 
         for (x=0;x<elements;x++)
         {
+            if (cl->elem[x].name==NULL) // stop here
+            {
+                return;
+            }
             switch (display)
             {
                 case Radio :
@@ -485,17 +500,18 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
                     else
                     {
                         DisplayColor(atx,aty,atx+width,aty+_3hon4,
-                            cl->elem[x].value,x==cl->current);
-                        _setcolor(CONTROLTEXT);
-                        _grtext(atx+textx,aty+_3hon4,cl->elem[x].name);
-                    }
-                break;
+                                cl->elem[x].value,x==cl->current);
+                            _setcolor(CONTROLTEXT);
+                            _grtext(atx+textx,aty+_3hon4,cl->elem[x].name);
+                        }
+                    break;
                 default:
                     exit(0);
                 break;
             }
             if (col==cols) {col=1; aty+=height; atx=vp->x1;}
             else {atx+=width; ++col;}
+            
         }
     }        
 }
@@ -788,6 +804,7 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
     int index,funcret,changed=FALSE;
     
     DialogStateGet(d,d->state);
+    DialogCurrentSet(d,d->elems-1);
     MemPagePut(mp);
     DialogDisplay(d,vp,mp,namefract,chars);
     SwapPage();

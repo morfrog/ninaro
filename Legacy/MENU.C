@@ -273,6 +273,32 @@ int MenuCall(MENU *menu)
     }
 }
 
+int MenuItemEnable(MENU *menu,int sub,int item,int enable)
+// purpose : to set the enable state of an item in the submenu in the menu
+// returns : TRUE if successfully set else FALSE
+{
+    SUBMENU *sm;
+    if (sub>=menu->submenus) return FALSE;
+    sm=&(menu->submenu[sub]);
+    if (item>=sm->items) return FALSE;
+    sm->item[item].enabled=enable;
+    return TRUE;
+}
+
+int MenuSubCurrentSet(MENU *menu,int sub,int current)
+// purpose : to set the current in the submenu
+// returns : TRUE if set else FALSE
+{
+    SUBMENU *sm;
+    if (sub>=menu->submenus) return FALSE;
+    sm=&(menu->submenu[sub]);
+    if (current>=sm->items) return FALSE;
+    if (sm->item[current].enabled==FALSE) return FALSE;
+    sm->current=current;
+    return TRUE;
+   
+}
+
 void MenuFree(MENU *menu)
 // purpose : to free the memory allocated to the menu
 // returns : void

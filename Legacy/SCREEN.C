@@ -31,6 +31,7 @@ void ScreenInit()
     _setactivepage(0);
     _setvisualpage(1);
     _setviewport(0,0,639,349);
+    _remappalette(ORANGE,_YELLOW-4);
 }
 
 void DrawGrid(int x,int y)

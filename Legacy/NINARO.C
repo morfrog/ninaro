@@ -54,6 +54,9 @@ void SetP1Current()
     PlayerGroupCurrentSet(players,0);
     type=PlayerGetType(PlayerGroupCurrentGet(players));
     KeyGroupReset(pkeys,'a','d','w','s','e','q');
+    MenuItemEnable(mainmenu,2,0,TRUE);
+    MenuItemEnable(mainmenu,2,1,FALSE);
+    MenuSubCurrentSet(mainmenu,2,0);
 }
 
 void SetP2Current()
@@ -62,6 +65,9 @@ void SetP2Current()
     PlayerGroupCurrentSet(players,1);
     type=PlayerGetType(PlayerGroupCurrentGet(players));
     KeyGroupReset(pkeys,KP4,KP6,KP8,KP2,ENTER,BKSP);
+    MenuItemEnable(mainmenu,2,1,TRUE);
+    MenuItemEnable(mainmenu,2,0,FALSE);
+    MenuSubCurrentSet(mainmenu,2,1);
 }
 
 void NextPlayer()
@@ -79,12 +85,13 @@ void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
 void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
 
 void GameSizeFit(DIALOG *d)
+// only to be used with the boarddialog dialog
 {
     int rows=ControlCurrentGet(DialogControlGet(boarddialog,0)),
         cols=ControlCurrentGet(DialogControlGet(boarddialog,1)),
         size=MaxOf(cols,rows);
     CONTROL *gsize=DialogControlGet(boarddialog,2);
-    if (ControlCurrentGet(gsize)>size)
+    if (ControlCurrentGet(gsize)>size) // put back in range
         ControlCurrentSet(gsize,size);
     ControlReset(gsize,3,"",size,"");
 }
@@ -103,6 +110,41 @@ void ResetGameSize(int cols,int rows,int inarow)
     entrygrid=NewGrid(grid_cols,1);
     keypos=0;
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
+}
+
+void SetupPlayer(PLAYER *player,int puse)
+// uses the playerdialog dialog
+{
+    int pnum=PlayerGroupFind(players,player);
+    int ptype=PlayerGetType(player);
+    int pcol=PlayerGetColor(player);
+    DialogNameSet(playerdialog,puse==0?"Player One":"Player Two");
+    ControlCurrentSetTo(DialogControlGet(playerdialog,0),ptype);
+    if (ptype==Computer)
+    {
+        ControlReset(DialogControlGet(playerdialog,1),
+                        2,PlayerGetName(PlayerGroupPlayer(players,2)),
+                        3,PlayerGetName(PlayerGroupPlayer(players,3)),
+                        4,PlayerGetName(PlayerGroupPlayer(players,4)),
+                        5,PlayerGetName(PlayerGroupPlayer(players,5)),
+                        6,PlayerGetName(PlayerGroupPlayer(players,6)));
+    }
+    else
+    {
+        ControlReset(DialogControlGet(playerdialog,1),
+                        -1,PlayerGetName(player),
+                        -1,"New Player",
+                        -1,NULL,
+                        -1,NULL,
+                        -1,NULL);
+    }
+    ControlCurrentSetTo(DialogControlGet(playerdialog,2),pcol);
+}
+
+void ModifyPlayer(DIALOG *d)
+// only to be used with the playerdialog dialog
+{
+    
 }
 
 void DisplayHuman(int primary,int secondary)
@@ -365,11 +407,13 @@ void PlayerDialog(int pnum)
 
 void P1Dialog(void)
 {
+    SetupPlayer(PlayerGroupUseGet(players,0),0);
     PlayerDialog(0);
 }
 
 void P2Dialog(void)
 {
+    SetupPlayer(PlayerGroupUseGet(players,1),1);
     PlayerDialog(1);
 }
 
@@ -408,6 +452,13 @@ void Test(void)
     Buzz(800,900,50,400);
 }
 
+void ToggleSound(void)
+{
+    char buffer[20];
+    sprintf(buffer,"Sound is now %s",ToggleMute()?"Off":"On");
+    TextBoxAddLine(msgbox,buffer,ATEND);
+    TextBoxScrollEnd(msgbox);
+}
 
 void ProgInit() // initialises global variables
 {
@@ -423,7 +474,7 @@ void ProgInit() // initialises global variables
     msgbox=TextBoxNew(8,RED,WHITE,40);
 
     players=PlayerGroupNew(2,7, // allows for only two humans
-        PlayerNew("Player1",YELLOW,Human,Low),
+        PlayerNew("Player1",ORANGE,Human,Low),
         PlayerNew("Player2",RED,Human,Low),
         PlayerNew("Ronda Random",LTBLUE,Computer,Low),
         PlayerNew("Alfa B Prune",GREEN,Computer,Medium),
@@ -431,7 +482,6 @@ void ProgInit() // initialises global variables
         PlayerNew("Rodney Rule",ORANGE,Computer,Medium),
         PlayerNew("Minny Maxx",PURPLE,Computer,Medium));
     pkeys=KeyGroupNew(6,'a','d','w','s','e','q');
-    SetP1Current();
 
     TextBoxAddLine(msgbox,"Player1 Arrives",ATEND);
     TextBoxAddLine(msgbox,"Ronda Random Arrives",ATEND);
@@ -470,7 +520,7 @@ void ProgInit() // initialises global variables
         "Status",   CS, GameStatus, TRUE,
         "High Scores",NONE,NULL,    TRUE,
         "Suggest Move",NONE,NULL,   TRUE,
-        "Sound",    NONE,NULL,      TRUE,
+        "Sound",    NONE,ToggleSound,      TRUE,
         "Exit",     CX, ExitGame,   TRUE);
     MenuNewSub(mainmenu,"Board",3,
         "7x8x4",    NONE,GameSize7x8x4,      TRUE,
@@ -491,6 +541,7 @@ void ProgInit() // initialises global variables
     KeySysIFunc(ks,3,KeyDown);
     KeySysIFunc(ks,4,KeySelect);
     KeySysIFunc(ks,5,KeyCancel);
+    SetP1Current();
 }
 
 void ProgFree() // frees global variables

@@ -101,6 +101,12 @@ void MenuDisplay(MENU *menu);
 int MenuCall(MENU *menu);
 // purpose : calls the menu
 // returns : void
+int MenuItemEnable(MENU *menu,int sub,int item,int enable);
+// purpose : to set the enable state of an item in the submenu in the menu
+// returns : TRUE if successfully set else FALSE
+int MenuSubCurrentSet(MENU *menu,int sub,int current);
+// purpose : to set the current in the submenu
+// returns : TRUE if set else FALSE
 void MenuFree(MENU *menu);
 // purpose : to free the memory allocated to the menu
 // returns : void
