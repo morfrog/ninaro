@@ -51,7 +51,7 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 
 enum {GFOne=0,GFTwo,GFLoser,GFWinner,GFSuccessive,GFRandom}; // goes first
 
-#define TESTING
+// #define TESTING
 
 #define ColAdd 2 // 3 is red/green
 // secondary color = primary color + ColAdd
@@ -849,7 +849,7 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
                     if (col[x])
                     {
                         if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x),win,thisplayer))
-                        {
+                        {   
                             col[x]+=1;
                             triggered=TRUE;
                         }
@@ -877,15 +877,15 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
                         if (rows-GridInCol(playgrid,x)>1) // rule applicable
                         {
                             if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x)-1,win,otherplayer))
-                            {   // opponent goes above and wins
+                            {   // drop here and opponent drops here and wins
                                 col[x]-=90;
                             }
                             else if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x)-1,win,thisplayer))
-                            {   // opponent goes above and blocks
+                            {   // drop here and opponent drops here and blocks me
                                 col[x]-=20;
                             }
-                            
                         }
+
                         // also if opponent can make a move which gives them
                         // size-1 in a row with a gap either side block that
                         // move
@@ -1362,6 +1362,7 @@ void ProgInit() // initialises global variables
     HelpAddLine(aboutgame,"      Semester One 1998");
     HelpAddLine(aboutgame,"");
     HelpAddLine(aboutgame,"       Copyright 1998");
+    HelpAddLine(aboutgame,"        Version 0.9b");
 }
 
 void ProgFree() // frees global variables
@@ -1449,7 +1450,7 @@ void main()
                     {
 #ifndef TESTING                        
                         ViewSysDisplay(vs,DisplayChanged); SwapPage();
-#endif                        
+#endif
                     }
                 }
             }

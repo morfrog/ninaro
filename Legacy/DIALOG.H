@@ -117,6 +117,12 @@ int ControlCurrentSetTo(CONTROL *c,int value);
 int ControlCurrentGet(CONTROL *c);
 // purpose : gets the controls current
 // returns : the controls current
+int ControlTransCurrentGet(CONTROL *c);
+// purpose : to get the current as a fraction of the total range of the control
+// returns : the number (0..size)
+int ControlRange(CONTROL *c);
+// purpose : to find how many elements are in the control
+// returns : the number
 ControlElemSet(CONTROL *c,int elem,int value,char *name);
 // if range then if value==min strcpy(minname,name)
 //               if value==max strcpy(maxname,name)
@@ -161,6 +167,9 @@ CONTROL *DialogControlGet(DIALOG *d,int control);
 // purpose : gets the control from the dialog, for use with control functions
 //           assumes 0<=control<=d->elems-1
 // returns : the control 
+int DialogCurrentItem(DIALOG *d);
+// purpose : to find the current item of the current control of the dialog
+// returns : the number
 void DialogNameSet(DIALOG *d,char *string);
 // purpose : sets the name of the dialog
 // returns : void

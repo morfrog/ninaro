@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <graph.h>
-#include <i86.h>
 #include "screen.h"
 #include "mouse.h"
 #include "mousein.h"
@@ -21,13 +20,12 @@ void main()
     {
         btn=GetMouseInput(&x,&y);
         if (btn==RMB) exit(0);
-        else // if (btn==LMB) or NMB
+        else // if (btn==LMB)
         {
             _clearscreen(_GCLEARSCREEN);
             sprintf(bfg,"%d,%d",x,y);
             _grtext(30,100,bfg);
             SwapPage();
-//            delay(300);
         }
     }
 }

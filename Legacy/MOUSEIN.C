@@ -1,4 +1,3 @@
-#include <graph.h>
 #include "mouse.h"
 #include "defines.h"
 #include "mousein.h"
@@ -6,20 +5,15 @@
 int MouseX(int x)
 {
     int ret;
-    switch (_getvisualpage())
-    {
-        case 0 : 
-        return x;
-        case 1 :
-        ret=(x)%640; if (ret<0) ret+=640; return ret;
-    }
+    if ((x<0) || (x>640)) {ret=(x)%640; if (ret<0) ret+=640; return ret;}
+    else {ret=x%640; if (ret<0) ret+=640; return ret;}
 }
 
 int MouseY(int y)
 {
     int ret;
-    if ((y<(0)) || (y>(350))) {ret=(y-60)%350; if (ret<0) ret+=350; return ret;}
-    else {ret=(y)%350; if (ret<0) ret+=350; return ret;}
+    if ((y<0) || (y>350)) {ret=(y-60)%350; if (ret<0) ret+=350; return ret;}
+    else {ret=y%350; if (ret<0) ret+=350; return ret;}
 }
 
 
@@ -32,8 +26,9 @@ int GetMouseInput(int *x,int *y)
     MouseStatus gmims={0};
     
     MouseStat(&gmims);
-    *x=gmims.xpos;
-    *y=gmims.ypos;    
+    *x=MouseX(gmims.xpos);
+    *y=MouseY(gmims.ypos);
+
     gmims.left=1;
     ReleaseInfo(&gmims);
     if (gmims.ButtonCount) lmbpress=1;
