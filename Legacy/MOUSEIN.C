@@ -157,7 +157,7 @@ int InitMouse(void)
     SwapPage();
     ShowMouse();
     _setviewport(1,1,300,150);
-    _setcharsize_w(0.07,0.025);
+    _setcharsize_w(0.07,0.020);
     while (NMB==GetMouseInput(&x,&y))
     {
         if (kbhit()) {while (kbhit()) {getch();} ret=FALSE; break;}
