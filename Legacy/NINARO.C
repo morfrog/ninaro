@@ -26,12 +26,14 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 //        if score too big - too many characters squash char width to fit.
 //  DONE  ERROR found - load saved game and cant drop tokens!!!
 //        hoping proper save/load will fix the error
+//        save game config at exit and restore when program initialised
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
 #include <graph.h>
 #include <i86.h>
 #include "sys.h"
+#include "binfile.h"
 #include "sound.h"
 #include "key.h"
 #include "txtbox.h"
@@ -88,6 +90,7 @@ int isdraw;
 int goesfirst;
 int wentfirst;
 int ai_speed;
+int ai_delay; // milliseconds
 
 int BothPlayerAI(void)
 {
@@ -140,7 +143,7 @@ void ResetScores(void)
 {
     player_one_score=0;
     player_two_score=0;
-    player_winner=-1;
+    player_winner=-1;       // no winner
 }
 
 void PlayerSwap(void) // not in use
@@ -631,7 +634,55 @@ void SaveGame(void)
     }
 }
 
-void ExitGame(void) {ProgFree(); ShutDown(); exit(0);}
+int SaveCfg()
+{
+    int ret,x;
+    PLAYER *pl;
+    BINFILE *bf=BinFileNew((9+players->players)*sizeof(int));
+    BinFilePutInt(bf,grid_cols);
+    BinFilePutInt(bf,grid_rows);
+    BinFilePutInt(bf,win->tokens);
+    BinFilePutInt(bf,goesfirst);
+    BinFilePutInt(bf,wentfirst);
+    BinFilePutInt(bf,ai_speed);
+    BinFilePutInt(bf,ai_delay);
+    BinFilePutInt(bf,player_one);
+    BinFilePutInt(bf,player_two);
+    for (x=0;x<players->players;x++)
+    {
+        pl=PlayerGroupPlayer(players,x);
+        BinFilePutInt(bf,PlayerGetColor(pl));
+    }
+    ret=BinFileWriteFull(bf,"NINARO.CFG");
+    BinFileFree(bf);
+    return ret;
+}
+
+int LoadCfg()
+{
+    int ret,x;
+    PLAYER *pl;
+    BINFILE *bf=BinFileReadFull("NINARO.CFG",0);
+    if (bf==NULL) return FALSE;
+    grid_cols=BinFileGetInt(bf);
+    grid_rows=BinFileGetInt(bf);
+    win->tokens=BinFileGetInt(bf);
+    goesfirst=BinFileGetInt(bf);
+    wentfirst=BinFileGetInt(bf);
+    ai_speed=BinFileGetInt(bf);
+    ai_delay=BinFileGetInt(bf);
+    player_one=BinFileGetInt(bf);
+    player_two=BinFileGetInt(bf);
+    for (x=0;x<players->players;x++)
+    {
+        pl=PlayerGroupPlayer(players,x);
+        PlayerSetColor(pl,BinFileGetInt(bf));
+    }
+    BinFileFree(bf);
+    return TRUE;
+}
+
+void ExitGame(void) {SaveCfg(); ProgFree(); ShutDown(); exit(0);}
 
 void GameStatus(void)
 {
@@ -811,6 +862,9 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
                                 col[x]-=90;
                             }
                         }
+                        // also if opponent can make a move which gives them
+                        // size-1 in a row with a gap either side block that
+                        // move
                     }
                 }
             break;
@@ -819,7 +873,7 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
                 {
                     if (col[x])
                     {
-                        col[x]+=(40*WinPotential(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x),thisplayer,otherplayer))/((win->tokens-1)*40);
+                        col[x]+=WinPotential(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x),thisplayer,otherplayer,40);
                     }
                 }
             break;
@@ -893,7 +947,6 @@ void TitleScreen(void)
     _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
     GetKey();
     GridFree(filegrid);
-    ResetGameSize(7,8,4);
 }
 
 void Test(void)
@@ -1000,6 +1053,45 @@ int AIGeniusMove(GRID *grid)
     return RuleMove(grid,4,PlayerGroupPlayer(players,player_current),OtherPlayer());
 }
 
+void AnimateMove(int col)
+{
+    int goright=col>keypos;
+    int dist=(goright?col-keypos:keypos-col);
+    int del=0;
+    if (dist==0) return;
+    del=(ai_speed*ai_delay)/(dist);   // ai_speed is a half second delay
+    do
+    {
+        if (goright) KeyRight(NULL); else KeyLeft(NULL);
+        ViewSysWindowChanged(vs,0,TRUE); // entry grid
+        ViewSysDisplay(vs,DisplayChanged); SwapPage();
+        delay(del); // delay appropriate amount of time as per ai_speed 
+    } while (keypos!=col);
+}
+
+void SuggestMove(void)
+{
+    PLAYER *pl=PlayerGroupPlayer(players,6); // AI genius
+    int col;
+    char old_mask[ 8 ];
+    char new_mask[ 8 ] = { 0xa2, 0x15, 0xa2, 0x10,
+                       0xa2, 0x10, 0xa2, 0x15 };
+
+    _getfillmask( old_mask );
+    _setfillmask( new_mask );
+
+    col=pl->getmove(playgrid);
+    ViewSysDisplay(vs,DisplayCurrent); SwapPage();
+    if (keypos==col)
+    {
+        ViewSysWindowChanged(vs,0,TRUE); // entry grid
+        ViewSysDisplay(vs,DisplayChanged); SwapPage();
+        delay(ai_speed*ai_delay);
+    }
+    else AnimateMove(col);
+    _setfillmask( old_mask );
+}
+
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
 {
     VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,ClearViewport);
@@ -1030,13 +1122,6 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
 
 void ProgInit() // initialises global variables
 {
-    win=malloc(sizeof(WIN));
-    win->tokens=4;
-    win->win=malloc(win->tokens*sizeof(TOKEN));
-    win_occured=FALSE;  
-    grid_rows=8;
-    grid_cols=7;
-
     vs=ViewSysInit(0,0,639,349,20);
         
     players=PlayerGroupNew(8, // allows for only two humans
@@ -1051,10 +1136,24 @@ void ProgInit() // initialises global variables
     pkeys=KeyGroupNew(6,0,0,0,0,0,0); //KP4,KP6,KP8,KP2,ENTER,BKSP);
     p1keys=KeyGroupNew(6,'a','d','w','s','e','q');
     p2keys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
-    player_one=0;
-    player_two=1;
     ResetScores();
 
+    win=malloc(sizeof(WIN));
+    if (!LoadCfg()) // no cfg file
+    {
+        win->tokens=4;
+        grid_rows=8;
+        grid_cols=7;
+        player_one=0;
+        player_two=1;
+        goesfirst=GFSuccessive;
+        wentfirst=player_one;
+        ai_speed=2; // normal
+        ai_delay=500; // half a second
+    }
+    win->win=malloc(win->tokens*sizeof(TOKEN));
+    win_occured=FALSE;
+                
     msgbox=TextBoxNew(7,RED,WHITE,GREEN,30);
     TextBoxFixedAddLine(msgbox,"Press F1 for HELP");
     TextBoxFixedAddLine(msgbox,"Press Esc for MENU");
@@ -1066,7 +1165,6 @@ void ProgInit() // initialises global variables
     TextBoxAddLine(statusbox," ",ATEND);
     TextBoxAddLine(statusbox," ",ATEND);
     TextBoxAddLine(statusbox," ",ATEND);
-    GameStatus();
     
     playgrid=GridNew(grid_cols,grid_rows);
     entrygrid=GridNew(grid_cols,1);
@@ -1102,14 +1200,8 @@ void ProgInit() // initialises global variables
                         1,"Fast",
                         0,"Fastest"));
                         
-/*
-        "Best Of",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
-                        0,"Infinity",
-                        3,"Three",
-                        5,"Five",
-                        11,"Eleven",
-                        25,"Twenty-Five",
-                        51,"Fifty-One"));
+/*        "Best Of",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
+0,"Infinity",3,"Three",5,"Five",11,"Eleven",25,"Twenty-Five",51,"Fifty-One"));
 */            
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
     MenuNewSub(mainmenu,"Game",7,
@@ -1117,7 +1209,7 @@ void ProgInit() // initialises global variables
         "Load",   NONE, LoadGame,TRUE,
         "Save",   NONE, SaveGame,   TRUE,
         "End",      CE, EndGame,    TRUE,
-        "Suggest Move",NONE,NULL,   TRUE,
+        "Suggest Move",NONE,SuggestMove,TRUE,
         "Toggle Sound",NONE,ToggleSound,TRUE,
         "Exit",     CX, ExitGame,   TRUE);
     MenuNewSub(mainmenu,"Board",3,
@@ -1141,8 +1233,6 @@ void ProgInit() // initialises global variables
     KeySysIFunc(ks,3,KeyDown);
     KeySysIFunc(ks,4,KeySelect);
     KeySysIFunc(ks,5,KeyCancel);
-    SetP1Current();
-    InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
 
     help=HelpNew("NINARO.HLP",pkeys,20,RED,WHITE,GREEN,60);
 
@@ -1155,10 +1245,6 @@ void ProgInit() // initialises global variables
     HelpAddLine(aboutgame,"");
     HelpAddLine(aboutgame,"       Copyright 1998");
 
-    goesfirst=GFSuccessive;
-    wentfirst=player_one;
-    ai_speed=2; // normal
-    NewGame();
 }
 
 void ProgFree() // frees global variables
@@ -1173,23 +1259,10 @@ void ProgFree() // frees global variables
     TextBoxFree(msgbox);
 }
 
-void AnimateMove(int col)
-{
-    int dist=(col>keypos?col-keypos:keypos-col);
-    int del=(ai_speed*500)/dist;   // ai_speed is a half second delay
-    do
-    {
-        if (col<keypos) KeyLeft(NULL); else KeyRight(NULL);
-        ViewSysWindowChanged(vs,0,TRUE); // entry grid
-        ViewSysDisplay(vs,DisplayChanged); SwapPage();
-        delay(del); // delay appropriate amount of time as per ai_speed 
-    } while (keypos!=col);
-}
-
 void main()
 {
     PLAYER *pl;
-    int waitesc,col;
+    int waitesc,col,ccols,crows,csize;
 
     ScreenInit();
     _setcolor(RED);
@@ -1199,9 +1272,12 @@ void main()
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
     ProgInit(); // some parts rely on graphics mode
-
+    
+    ccols=grid_cols; crows=grid_rows; csize=win->tokens;
     TitleScreen();
-
+    ResetGameSize(ccols,crows,csize);
+    NewGame();
+    GameStatus();
     ViewSysDisplay(vs,DisplayAll);  // initialises viewsys current
     SwapPage();
     ResetPalette();

@@ -13,6 +13,9 @@ Updated        : 4 May 1998         RemoveTokenTarget   CREATED
 #include "player.h"
 #include "connectn.h"
 
+#define tokenvalue 10
+#define nullvalue 1
+
 int Continuance(GRID *grid,int size)
 // removes bottom layers of grid such that size-1 high minimum remains
 // ( size-1 because all tokens below this are irrelevant )
@@ -107,18 +110,17 @@ int AnglePotential(GRID *grid,int size,int col,int row,int col_dir,int row_dir,
                 NULL,&rnull,other,size-1);
     if (left+right+1>=size)
     {
-        return ((5*(lp+rp)) + (lnull+rnull));
-        // tokens = 5, nulls = 1
+        return ((tokenvalue*(lp+rp)) + (nullvalue*(lnull+rnull)));
     }
     else return 0; // no potential                
 }
 
 int WinPotential(GRID *grid,int size,int col,int row,PLAYER *player,
-        PLAYER *other)
+        PLAYER *other,int max)
 // purpose : checks for how much potential for wins are around token at
 //           (col,row) and
 // returns : a number which is a measure of this. the measure is in the
-//           range {0..((size*2)*4)}
+//           range 0..max
 {
     
     int ret=0;
@@ -130,6 +132,7 @@ int WinPotential(GRID *grid,int size,int col,int row,PLAYER *player,
                      // check /          +1  -1
     ret+=AnglePotential(grid,size,col,row,-1,-1,player,other);                     
                      // check \          -1  -1
+    ret=(max*ret)/(((size-1)*tokenvalue)*8);
     return ret;
 }
 

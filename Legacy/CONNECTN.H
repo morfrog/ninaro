@@ -44,7 +44,7 @@ int CheckForWin(GRID *grid,int size,int col,int row,WIN *win,PLAYER *player);
 int AnglePotential(GRID *grid,int size,int col,int row,int col_dir,int row_dir,
     PLAYER *p1,PLAYER *p2);
 int WinPotential(GRID *grid,int size,int col,int row,PLAYER *player,
-        PLAYER *other);
+        PLAYER *other,int max);
 void SetWinSize(WIN *win,int size);
 int GameSave(int p1,int p2,int current,int size,GRID *grid,PLAYERGROUP *pg,
                 char *filename);

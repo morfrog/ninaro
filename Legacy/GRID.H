@@ -13,10 +13,7 @@ Updated        : 24 April 1998      CREATED Save and Load Functions
 #include "binfile.h"
 #include "player.h"
 
-#define T_UP 0
-#define T_DOWN 1
-#define T_LEFT 2
-#define T_RIGHT 3
+enum {T_UP=0,T_DOWN,T_LEFT,T_RIGHT};
 
 struct gridTag
 {

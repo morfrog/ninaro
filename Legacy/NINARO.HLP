@@ -3,7 +3,7 @@ Ninaro - HELP - Ninaro - HELP - Ninaro - HELP - Ninaro -
 ~How To Use Help
 Press ESC or F1 to exit help. If you used the menu to get
 help, the keys you used in the menu work here. Otherwise
-you used F1 to get help, and the arrow keys work here.
+you used F1 or H to get help, and the arrow keys work here.
 Please ensure that NumLock is off (by pressing the NumLock
 key on the numerical keypad to the right of your keyboard
 until the NumLock light is off). The table below shows what
@@ -24,6 +24,15 @@ End         Scrolls to the end of help
 Ninaro stands for N-in-a-row, which means that the connect
 four game has been extended to connect any number on any
 sized grid. Logically however a minimum of 3x3x3 applies.
+
+~How To Play
+The aim of the game is to connect a number of tokens in the
+grid while stopping your opponent from doing so. The first
+player to make the connection wins. The number of tokens you
+must connect to win is shown at the top right of the screen,
+under the Connect heading. Connections can take in four
+different ways. These are vertical, horizontal, slope 1 (/)
+or slope 2 (\).
 
 ~Player's Keys
 Each player has a set of keys, consisting of Left,Right,Up,
@@ -65,7 +74,8 @@ minor differences, moving the mouse acts as moving keys.
 The differences are as follows : Moving the mouse in itself
 does nothing. Only Selecting while on a spot does anything.
 To enter a token move the mouse to the appropriate column
-in the grid and press Select (left-click).
+in the grid and press Select (left-click). Obviously using
+the right mouse button as Cancel calls the menu.
 
 ~The Menus.
 The menus are the key way in Ninaro of changing things. The
@@ -81,7 +91,7 @@ End     - ends the current game, when no game is on all
           options are accessable (e.g. player one and two)
           dialogs.
 Suggest - suggests a move to make. The move is suggested by
-Move      the best AI.
+Move      AI Genius.
 Toggle  - toggles the sound On and Off
 Sound
 Exit    - exits the game
@@ -100,6 +110,8 @@ Two...  - changes the attributes of player two via The
           Player Dialog
 Options - changes the player options via The Player Options
           Dialog
+Reset   - resets both player's scores to zero.
+Scores
 
 ~The Help Menu
 The help menu provides all your help needs, via this screen.
@@ -117,3 +129,33 @@ cancels the dialog.
 ~The Player Dialog
 
 ~The Player Options Dialog
+
+~Troubleshooting
+
+~    I dont want to be red anymore.
+
+~    I want to play someone else.
+
+~    I want to go first always.
+
+~    I am addicted to the game.
+
+~    I dont know which move to make, help me decide!
+
+~    I am too good, who else can I play?
+
+~    The sound is really bugging me, can I turn it off?
+
+~    The computer is too slow, can I speed it up?
+
+~    The computer is too fast, can I slow it down?
+
+~    I am totally undefeated, the game is no challenge.
+Try changing some of the following :-
+Player->Options->Goes First as Loser
+Board->Custom->(Change the connect size). Higher levels of
+    connection are harder to obtain.
+Board->Custom->(Change the row or column size). Different
+    boards can have different strategies.
+Play a human. Humans are better in some areas of strategy
+than AI's. Humans learn from their mistakes.
