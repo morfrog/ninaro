@@ -51,12 +51,13 @@ int BinFilePutBinfile(BINFILE *target,BINFILE *source);
 // purpose : adds source binfile to the end of target binfile
 // returns : TRUE is successful, FALSE otherwise
 int     BinFileGet(BINFILE *bf,int bytes,char *element);
-// purpose : gets bytes from the binfile 
-// returns : TRUE if successful else FALSE
+// purpose : gets up to bytes from the binfile, if cant get bytes
+//           it gets as many as it can
+// returns : the number of bytes gotten
 int     BinFileGetTill(BINFILE *bf,int bytes,char *element,char till);
 // purpose : gets bytes from the binfile , stops after reading till character
 //           or bytes bytes are read.
-// returns : TRUE if successful else FALSE
+// returns : 0 if no bytes read, else the number of bytes read
 int     BinFilePutInt(BINFILE *bf,int element);
 // purpose : puts the element in the binfile
 // returns : TRUE if successful else FALSE

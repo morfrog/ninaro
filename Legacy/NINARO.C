@@ -101,7 +101,7 @@ int hilite,back,text;
 int mouseusage;
 int mouseinstalled;
 int mouseconfig;    // are the mouse config values OK (got via mousein)
-int savecfg;
+int savecfg;        // will we save the config on game exit
 
 int BothPlayerAI(void)
 {
@@ -1232,7 +1232,6 @@ int ExtraFunctionality(int key)
             ViewSysDisplay(vs,DisplayAll); // none or all could have changed
             SwapPage();
             break;
-        case AF4 : case CX : case CQ :
         case F2 : SaveGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
         case F3 : LoadGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
         case F4 : ToggleInGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
@@ -1250,6 +1249,7 @@ int ExtraFunctionality(int key)
                    savecfg=FALSE;
                    ViewSysWindowChanged(vs,3,TRUE);
                    ViewSysDisplay(vs,DisplayChanged); SwapPage(); break;
+        case AF4 : case CX : case CQ :
         case F10 : ExitGame(); break;
         default : return FALSE; break;
     } // switch
@@ -1760,7 +1760,7 @@ void main()
                 }
             }
         } // while (ingame)
-        ExtraFunctionality(GetKey());
+        if (kbhit()) ExtraFunctionality(GetKey());
         if (mouseusage==2)
         {
             if (GetMouseInput(&mx,&my)==RMB)
