@@ -55,6 +55,7 @@ struct viewsysTag
 typedef struct viewsysTag VIEWSYS;
 
 void ViewSysClear(VIEWPORT *vp);
+MEMPAGE *ViewSysCurrent(VIEWSYS *vs);
 VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
         void (* background)(VIEWPORT *));
 void ViewSysWindowNew(VIEWSYS *vs,double x1,double y1,double x2,double y2,

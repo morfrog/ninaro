@@ -38,6 +38,12 @@ VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
     return viewsys;
 }
 
+MEMPAGE *ViewSysCurrent(VIEWSYS *vs)
+// returns the current view of the viewsystem
+{
+    return vs->current;
+}
+
 int PointInsideViewport(int x,int y,VIEWPORT *vp)
 {
     if (x>vp->x2) return FALSE;

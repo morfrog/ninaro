@@ -199,7 +199,7 @@ void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
 int KeyUp(void)
 {
-//    MenuDisplay(menu);
+    MenuDisplay(menu);
     return TRUE;
 }
 
@@ -329,9 +329,9 @@ void ProgInit() // initialises global variables
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
 
-//    menu=MenuNew(20,0,0,639,349);
-//    MenuNewSub(menu,"Game",2,"New",CN,Test,ItemEnabled,
-//                             "Exit",CX,NULL,ItemEnabled);
+    menu=MenuNew(20,0,0,639,349,ViewSysCurrent(vs));
+    MenuNewSub(menu,"Game",2,"New",CN,Test,ItemEnabled,
+                             "Exit",CX,NULL,ItemEnabled);
 }
 
 void ProgFree() // frees global variables
@@ -352,7 +352,7 @@ void ProgFree() // frees global variables
     GridFree(playgrid);
     GridFree(entrygrid);
     printf("Freeing Menu...");
-//    MenuFree(menu);
+    MenuFree(menu);
 }
 
 void main()

@@ -39,6 +39,8 @@ struct menuTag
     SUBMENU *submenu;   // array of all submenus
     VIEWPORT vp;        // the viewport of the menu system
     MEMPAGE *background;// the screen background behind the menu
+    SET *validkeys;     // list of the keys which are valid to have
+                        // have the menu finish, one chosen is returned
 };
 
 typedef struct menuTag MENU;

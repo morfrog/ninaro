@@ -63,25 +63,27 @@ void MenuNewSub(MENU *menu,char *menuname,int items,...)
     ++(menu->currentmenu);
 }
 
-void MenuDisplay(MENU *menu)
+int MenuCall(MENU *menu)
+// calls the menu
 {
-//    MemPageGet(menu->background);
-    _clearscreen(_GCLEARSCREEN);
+
+}
+
+void MenuDisplay(MENU *menu)
+// displays the menu in its current state
+{
+    MemPagePut(menu->background)
     _setcharspacing(-0.3);
     _settextalign(_LEFT,_BASE);
     _setcharsize_w(0.1,0.04);
     _setviewport(menu->vp.x1,menu->vp.y1,menu->vp.x2,menu->vp.y2);
+
 // menu bar
-    
-    _setbkcolor(_GRAY);
+    _setcolor(_GRAY);
+    _rectangle_w(
     _settextcolor(RED);
     _settextposition(1,1);
     _outtext("Hello");
-    _setbkcolor(_BLACK);
-    getch();
-    Buzz(100,500,20,40);
-    SwapPage();
-    getch();
 
     MemPagePut(menu->background);
     SwapPage();
