@@ -35,13 +35,20 @@ typedef struct windowTag WINDOW;
 
 struct keyinTag
 {
-    char key;       // the keypress
-    char extend;    // only used if key=0, for extended keys
+    int key;       // the keypress - key enum in sys.h
     int window;     // the number of the window
     int lmb;        // lmb==true send lmb signal to window else send rmb signal
 };
 
 typedef struct keyinTag KEYIN;
+
+struct mappingTag
+{
+    WINDOW *window;
+    int x,y;
+};
+
+typedef struct mappingTag MAPPING;
 
 struct viewsysTag
 {
@@ -52,6 +59,7 @@ struct viewsysTag
     int maxkeys;        // the maximum number of keys
     int keys;           // the number of keys in use
     KEYIN *key;         // storage of the keys
+    MAPPING ***map;      // map of the windows in the viewsystem
 };
 
 typedef struct viewsysTag VIEWSYS;
@@ -60,10 +68,11 @@ VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys);
 void ViewSysNewWindow(VIEWSYS *vs,double x1,double y1,double x2,double y2,
                 int active,int (* display)(void),void (* lmb)(int,int),
                 void (* rmb)(int,int),char *help);
-void ViewSysAddKey(VIEWSYS *vs,char key,char extend,int window,int lmb);
+void ViewSysAddKey(VIEWSYS *vs,int key,int window,int lmb);
 void ViewSysDisplay(VIEWSYS *vs,int mode);
-int ViewSysKey(VIEWSYS *vs,char key,char extend);
+int ViewSysKey(VIEWSYS *vs,int key);
 void ViewSysActivate(VIEWSYS *vs,int window,int activity);
 char *ViewSysHelp(VIEWSYS *vs,int window);
+void ViewSysFree(VIEWSYS *vs);
 
 #endif

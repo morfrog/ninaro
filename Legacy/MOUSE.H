@@ -52,7 +52,6 @@ typedef struct {                                                      /* Mouse s
                  ypos;                                                    /* The current y co-ordinate of the mouse. (in pixels) */
 } MouseStatus;
 
-
 typedef struct {                                                      /* Graphical mouse cursor shape structure */
     int cursor[32];
     unsigned int xpos,                                                /* The x co-ordinate of the "hot-spot" */
@@ -132,7 +131,6 @@ Description:-    Checks to see if there is a button being pressed.
 Pre Condition:-  You must pass in a MouseStatus that is current.
 Post Condition:- returns TRUE or FALSE if a button is being pressed.
 ****************************************************************/
-
 
 void SetXLimits(int min, int max);
 /***************************************************************

@@ -36,6 +36,14 @@ PLAYER *player_current;
 TXTBOX *msgbox;
 VIEWSYS *vs;
 
+void MSwapPage()
+{
+    static int mpage=0;
+    SwapPage();
+    SetMousePage(mpage);
+    if (mpage==0) mpage=1; else mpage=0;
+}
+
 void NextPlayer()
 {
     if (player_current==player_one)
@@ -194,10 +202,8 @@ VIEWSYS *ViewSysInit(int maxwindows,int maxkeys,int x1,int y1,int x2,int y2)
     return vs;
 }
 
-void main()
+void ProgInit() // initialises global variables
 {
-    int ever=1,keypos=0,keyrow;
-    
     win=malloc(sizeof(WIN));
     win->tokens=4;
     win->win=malloc(win->tokens*sizeof(TOKEN));
@@ -205,7 +211,6 @@ void main()
     win_occured=FALSE;  
     grid_rows=8;
     grid_cols=7;
-
 
     vs=ViewSysInit(20,20,0,0,639,349);
 
@@ -232,6 +237,29 @@ void main()
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
 
+}
+
+void ProgFree() // frees global variables
+{
+    int x;
+    printf("Freeing Memory...\n");
+    free(win->win);
+    free(win);
+    ViewSysFree(vs);
+    printf("Freeing Players...\n");
+    for (x=0;x<numplayers;x++)
+        free(players[x]);
+    free(players);
+}
+
+void main()
+{
+    int ever=1,keypos=0,keyrow;
+    MouseStatus ms;
+    int mouseclear=1;
+
+    ProgInit();
+
     InsertTokenAtCR(entrygrid,keypos,0,player_current);
 
     ScreenInit();
@@ -242,13 +270,16 @@ void main()
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
     
+    ResetMouse();
+    ShowMouse();
     ViewSysDisplay(vs,DisplayAll);
-    SwapPage();
+    MSwapPage();
     ViewSysDisplay(vs,DisplayAll);
-    SwapPage();
+    MSwapPage();
 
     for (;ever;)
     {
+//        MouseStat(&ms);
         if (kbhit())
         {
             switch (GetKey())
@@ -264,14 +295,14 @@ void main()
                         NextPlayer();
                         InsertTokenAtCR(entrygrid,keypos,0,player_current);
                         ViewSysDisplay(vs,DisplayAll);
-                        SwapPage();
+                        MSwapPage();
 
                         if (CheckForWin(playgrid,win->tokens,keypos,keyrow,win))
                         {
                             PlayTune(4,100,50,300,50,500,100,400,5);
                             win_occured=TRUE;
                             ViewSysDisplay(vs,DisplayAll);
-                            SwapPage();
+                            MSwapPage();
                         }
                     }
                     else // already full so entry not possible
@@ -282,19 +313,20 @@ void main()
                 case KP4 :
                     if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT)) --keypos;
                     ViewSysDisplay(vs,DisplayAll);
-                    SwapPage();
+                    MSwapPage();
                     break;
                 case KP6 :
                     if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT)) ++keypos;
                     ViewSysDisplay(vs,DisplayAll);
-                    SwapPage();
+                    MSwapPage();
                     break;
                 case 'c' : Continuance(playgrid,win->tokens);
                     ViewSysDisplay(vs,DisplayAll);
-                    SwapPage();
+                    MSwapPage();
                     break;
             } // switch (GetKey)
         } // if kbhit
     } // for (;ever;)
     ShutDown();
+    ProgFree();
 }
