@@ -27,19 +27,19 @@ int GetMouseInput(int *x,int *y)
     
     MouseStat(&gmims);
     gmims.left=1;
-    PressInfo(&gmims);
-    if (gmims.ButtonCount) ++lmbpress;
+    ReleaseInfo(&gmims);
+    if (gmims.ButtonCount) lmbpress=1;
     gmims.left=0;
     gmims.right=1;
-    PressInfo(&gmims);
-    if (gmims.ButtonCount) ++rmbpress;
+    ReleaseInfo(&gmims);
+    if (gmims.ButtonCount) rmbpress=1;
 
     if (lmbpress)
     {   
         MouseStat(&gmims);
         *x=MouseX(gmims.xpos);
         *y=MouseY(gmims.ypos);
-        --lmbpress;
+        lmbpress=0;
         return LMB;
     }
     else if (rmbpress)
@@ -47,7 +47,7 @@ int GetMouseInput(int *x,int *y)
         MouseStat(&gmims);
         *x=MouseX(gmims.xpos);
         *y=MouseY(gmims.ypos);
-        --rmbpress;
+        rmbpress=0;
         return RMB;
     }
     else
@@ -57,6 +57,16 @@ int GetMouseInput(int *x,int *y)
         *y=MouseY(gmims.ypos);
         return NMB;
     }
+}
+
+int MouseCol(int col,int cols)
+{
+    return (col*(640/cols))+(320/cols);
+}
+
+int MouseRow(int row,int rows)
+{
+    return (row*(350/rows))+(175/rows);
 }
 
 /*

@@ -1051,7 +1051,7 @@ int HumanMove(GRID *grid)
 // returns column, returns -1 if anything other than a move occurs
 {
     int key,index=0,funcret,mx,my,newpos,btn;
-    char bfg[20];
+//    char bfg[20];
 
     SetMouseCol(keypos);
     
@@ -1108,9 +1108,9 @@ int HumanMove(GRID *grid)
                             RemoveTokenAtCR(entrygrid,keypos,0));
                         keypos=newpos;
                         ViewSysWindowChanged(vs,0,TRUE);
-                        sprintf(bfg,"%d",mx);
-                        TextBoxFixedAddLine(msgbox,bfg);
-                        ViewSysWindowChanged(vs,3,TRUE);
+//                        sprintf(bfg,"%d",mx);
+//                        TextBoxFixedAddLine(msgbox,bfg);
+//                        ViewSysWindowChanged(vs,3,TRUE);
                         ViewSysDisplay(vs,DisplayChanged);
                         SwapPage();
                     }

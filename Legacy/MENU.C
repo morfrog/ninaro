@@ -258,9 +258,10 @@ void MenuDisplay(MENU *menu)
 void SetMouseMenuSub(MENU *menu,int y)
 // sets the mousepos to the center of the current item of the current submenu
 {
-    int width=menu->vp->x2-menu->vp->x1+1;
-    int smwidth=width/menu->submenus;
-    SetMousePos((MenuSub(menu)*smwidth)+(smwidth/2),y);
+//    int width=menu->vp->x2-menu->vp->x1+1;
+//    int smwidth=width/menu->submenus;
+//    SetMousePos((MenuSub(menu)*smwidth)+(smwidth/2),y);
+    SetMousePos(MouseCol(MenuSub(menu),menu->submenus),y);
 }
 
 void SetMouseMenuItem(MENU *menu,int x)

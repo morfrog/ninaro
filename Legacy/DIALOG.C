@@ -14,6 +14,8 @@ Updated        : 27 April 1998      DialogCall made more general
 #include <string.h>
 #include "sys.h"
 #include "screen.h"
+#include "mouse.h"
+#include "mousein.h"
 #include "key.h"
 #include "dialog.h"
 #include "mempage.h"
@@ -813,6 +815,11 @@ int DialogSelect(DIALOG *d)
     return TRUE; // should never happen
 }
 
+GetMouseControl(DIALOG *d,int y)
+{
+    
+}
+
 int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (* help)(void))
 // purpose : runs a dialog, as is, in the viewport with the mempage as
 //           background, running function change whenever a controls current
@@ -822,7 +829,7 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
 // returns : FALSE if cancelled, TRUE if OK'd. if exit state is same as entry
 //           state, cancel is assumed and FALSE is returned
 {
-    int index,funcret,changed=FALSE,key,used;
+    int index,funcret,changed=FALSE,key,used,newcontrol,newitem,btn,mx,my;
     int *newstate,same;
     
     DialogStateGet(d,d->state);
@@ -833,22 +840,76 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
 
     for (;;)
     {
-        key=GetKey();
-        used=FALSE;
-        used=KeySysKey(d->ks,key,d,&funcret,&index);
-        if (!used) // provide extra functionality
+        btn=GetMouseInput(&mx,&my);
+        switch (btn)
         {
-            switch (key)
+            case LMB :
+                index=4;
+                used=KeySysIKey(d->ks,index,d,&funcret);
+                break;
+            case RMB :
+                index=5;
+                used=KeySysIKey(d->ks,index,d,&funcret);
+                break;
+            case NMB :
+                funcret=FALSE;
+                index=-1;
+            /*
+                newcontrol=GetMouseControl(dialog,my);
+                if (newmenu>=0) // valid mouse pos
+                {
+                    if (newmenu!=menu->current)
+                    {
+                        menu->current=newmenu;
+                        index=0; // left or right will be triggered,
+                                // and mouse y pos set to item
+                        funcret=TRUE;
+                        used=TRUE;
+                        SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
+                    }
+                    else // same menu, possibly different item
+                    {
+                        newitem=GetMouseMenuItem(menu,my);
+                        if ((newitem>=0) && (newitem<MenuSubItems(menu)))
+                        // valid mouse pos
+                        {
+//                            Buzz(400,500,2,6);
+                            if ((newitem!=MenuSubItem(menu))
+                            && (menu->submenu[menu->current].item[newitem].enabled))
+                            {
+                                menu->submenu[menu->current].current=newitem;
+                                index=2; // up or down
+                                funcret=TRUE;
+                                used=TRUE;
+                            }
+                        }
+                        
+                    }
+                }
+                // else mouse pos bad
+                */
+                break;
+        }
+
+        if (kbhit())
+        {
+            key=GetKey();
+            used=FALSE;
+            used=KeySysKey(d->ks,key,d,&funcret,&index);
+            if (!used) // provide extra functionality
             {
-                case 'o' : // OK
-                case 'O' : DialogDefaultSet(d,0); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
-                case 'r' : // Reset
-                case 'R' : DialogDefaultSet(d,1); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
-                case 'c' : // Cancel
-                case 'C' :
-                case ESC : DialogDefaultSet(d,2); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
-                case 'h' :
-                case F1 : help(); funcret=TRUE; index=6; used=TRUE; break;
+                switch (key)
+                {
+                    case 'o' : // OK
+                    case 'O' : DialogDefaultSet(d,0); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
+                    case 'r' : // Reset
+                    case 'R' : DialogDefaultSet(d,1); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
+                    case 'c' : // Cancel
+                    case 'C' :
+                    case ESC : DialogDefaultSet(d,2); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
+                    case 'h' :
+                    case F1 : help(); funcret=TRUE; index=6; used=TRUE; break;
+                }
             }
         }
         if (used) // key is used, via extra functionality or keysys
