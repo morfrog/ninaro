@@ -1,7 +1,7 @@
 //  todo :
 //  DONE  grid save and load
 //  DONE  title screen
-//        player has new attribute (* func)(GRID *grid) which gets move
+//  DONE  player has new attribute (* func)(GRID *grid) which gets move
 //        so each player has own function
 //        getting a computer move cannot be interrupted, interrupt between
 //        turns
@@ -12,9 +12,9 @@
 //  DONE  options dialog could use computer speed, so that computers could
 //        play at human speed(3 seconds?), or at computer speed(0 secs);
 //        that way could watch random vs tree play 500 games in 1 minute.
-//        when two computers battling it out, player can press ESC or M to
+//  DONE  when two computers battling it out, player can press ESC or M to
 //        interrupt them to gain menu access
-//        provide animation for computers
+//  DONE  provide animation for computers
 //  DONE  possibly merge player color and type icons to expand score width
 //        if score too big - too many characters squash char width to fit.
 //  DONE  ERROR found - load saved game and cant drop tokens!!!
@@ -82,7 +82,7 @@ int goesfirst;
 int wentfirst;
 int ai_speed;
 int newgame;    // used to request a new game
-
+int loadgame;   // used to request a loaded game to start
 int BothPlayerAI(void)
 {
     return ((player_one>1) && (player_two>1));
@@ -539,10 +539,13 @@ void NewGame(void)
     isdraw=FALSE;
     MenuItemEnable(mainmenu,0,3,TRUE); // enable end game
     MenuItemEnable(mainmenu,0,0,FALSE); // disable new game
-    MenuSubCurrentSet(mainmenu,0,1);
+    MenuSubCurrentSet(mainmenu,0,2);
+    if (!ingame)
+    {
+        TextBoxFixedAddLine(msgbox,"Currently Playing Game.");
+        ViewSysWindowChanged(vs,3,TRUE); 
+    }
     ingame=TRUE;
-    TextBoxFixedAddLine(msgbox,"Currently Playing Game.");
-    ViewSysWindowChanged(vs,3,TRUE); 
 }
 
 void EndGame(void)
@@ -557,10 +560,15 @@ void EndGame(void)
     GridEmpty(playgrid);
 }
 
+void RequestLoadGame()
+{
+    loadgame=TRUE;
+}
+
 void LoadGame(void)
 {
-    int p1,p2,current;
-    GRID *tmp=GameLoad(&p1,&p2,&current,players,"NINARO.SAV");
+    int p1,p2,current,size;
+    GRID *tmp=GameLoad(&p1,&p2,&current,&size,players,"NINARO.SAV");
     if (tmp==NULL) // failed to load
     {
         TextBoxFixedAddLine(msgbox,"~Load Error!");
@@ -568,19 +576,26 @@ void LoadGame(void)
     else // loaded OK
     {
         GridFree(playgrid);
+        GridFree(entrygrid);
+        grid_cols=GridCols(tmp);
+        keypos=grid_cols/2;
+        grid_rows=GridRows(tmp);
+        SetWinSize(win,size);
         playgrid=tmp;
+        entrygrid=GridNew(grid_cols,1);
         SetP1(p1);
         SetP2(p2);
         player_current=current;
         TextBoxFixedAddLine(msgbox,"Game Loaded");
         win_occured=FALSE; 
         ResetTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
+        GameStatus();
     }
 }
 
 void SaveGame(void)
 {
-    if (GameSave(player_one,player_two,player_current,playgrid,players,"NINARO.SAV"))
+    if (GameSave(player_one,player_two,player_current,win->tokens,playgrid,players,"NINARO.SAV"))
     {
         TextBoxFixedAddLine(msgbox,"Game Saved");
     }
@@ -679,42 +694,59 @@ void PlayerOptions(void)
     }
 }
 
+int RandomMoveFromBools(int size,int *bool,int n)
+// returns the index of the random'th TRUE in list bool of size where there
+// are n TRUE's.
+{
+    int move,x,found=0;
+    move=Random(n);
+    
+    for (x=0;x<size;x++)
+    {
+        if (bool[x])
+        {
+            ++found;
+            if (found==move+1) return x;
+        }
+    }
+    return -1;
+}
+
+int RuleMove(GRID *grid,int level,PLAYER *player)
+// level is how many rules to invoke
+{
+    int cols=GridCols(grid),rows=GridRows(grid);
+    int x,*col=malloc(sizeof(int)*cols);
+    int atlevel,canuse=0,ret;
+    
+    for (x=0;x<cols;x++) // find how many can columns still get tokens
+    {
+        col[x]=(GridInCol(grid,x)<rows?TRUE:FALSE);
+        if (col[x]) ++canuse;
+    }
+
+    for (atlevel=0;atlevel<=level;atlevel++)
+    {
+        switch (atlevel)
+        {
+            case 0 : break; // invoke zero rules is just random
+            case 1 : break; // take win rule
+            case 2 : break; // dont lose rule
+            case 3 : break;
+            case 4 : break;
+        }
+    }
+    if (canuse==0) ret=-1;
+    else ret=RandomMoveFromBools(cols,col,canuse);
+    free(col);
+    return ret;
+}
+
 int RandomMove(GRID *grid)
 // purpose : find a column which has space for a token to be inserted
 // returns : -1 if unable to make a move, else the moves column is returned
 {
-    int cols=GridCols(grid),rows=GridRows(grid),move=Random(cols);
-    int incol=GridInCol(grid,move);
-    int unfillcols,x;
-    int *col;
-    
-    if (incol<rows) // there is a row free in the col
-    {
-        return move;
-    }
-    else
-    {
-        col=malloc(sizeof(int)*cols);
-        unfillcols=0;
-        for (x=0;x<cols;x++) // find how many can columns still get tokens
-        {
-            incol=GridInCol(grid,x);
-            col[x]=(incol<rows?TRUE:FALSE);
-            if (col[x]) ++unfillcols;
-        }
-        move=Random(unfillcols); // random of columns which can still get tokens
-        unfillcols=0;
-        for (x=0;x<cols;x++)
-        {
-            if (col[x])
-            {
-                ++unfillcols;
-                if (unfillcols==move+1) {free(col); return x;}
-            }
-        }
-        // error if get here, may have called func too many times.
-        return -1; // cant make move
-    }
+    return RuleMove(grid,0,PlayerGroupPlayer(players,player_current));
 }
 
 void TitleScreen(void)
@@ -796,7 +828,7 @@ int HumanMove(GRID *grid,KEYGROUP *kg)
         {
             ViewSysDisplay(vs,funcret);
             if (funcret!=NoDisplay) SwapPage();
-            if ((newgame) || (!ingame)) return -1;
+            if ((newgame) || (!ingame) || (loadgame)) return -1;
         }
         else
         {   // not used but still in group
@@ -816,7 +848,7 @@ int HumanMove(GRID *grid,KEYGROUP *kg)
                         // ESC to menu defaults to numeric keys
                         MenuCall(mainmenu,HelpMenu); KeyGroupCopy(pkeys,kg);
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
-                        if ((newgame) || (!ingame)) return -1;
+                        if ((newgame) || (!ingame) || (loadgame)) return -1;
                         break;
                     case AF4 : case CX : case CQ :
                     case F10 : ExitGame(); break;
@@ -920,7 +952,7 @@ void ProgInit() // initialises global variables
                         3,"",50,""),
         "Columns",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",50,""),
-        "Size",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
+        "Connect",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
     optionsdialog=DialogNew(pkeys,NULL,"Player Options",2,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
@@ -949,7 +981,7 @@ void ProgInit() // initialises global variables
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
     MenuNewSub(mainmenu,"Game",7,
         "New",      CN, RequestNewGame,FALSE,
-        "Load",   NONE, LoadGame,   TRUE,
+        "Load",   NONE, RequestLoadGame,TRUE,
         "Save",   NONE, SaveGame,   TRUE,
         "End",      CE, EndGame,    TRUE,
         "Suggest Move",NONE,NULL,   TRUE,
@@ -995,6 +1027,7 @@ void ProgInit() // initialises global variables
     wentfirst=player_one;
     ai_speed=2; // normal
     newgame=FALSE;
+    loadgame=FALSE;
     NewGame();
 }
 
@@ -1067,6 +1100,11 @@ void main()
                     NewGame(); newgame=FALSE;
                     ViewSysDisplay(vs,DisplayChanged); SwapPage();                    
                 }
+                if (loadgame)
+                {
+                    LoadGame(); loadgame=FALSE;
+                    ViewSysDisplay(vs,DisplayAll); SwapPage();
+                }
             }
             else if ((win_occured) || (isdraw))
             {
@@ -1093,6 +1131,11 @@ void main()
                     {
                         NewGame(); newgame=FALSE;
                         ViewSysDisplay(vs,DisplayChanged); SwapPage();
+                    }
+                    else if (loadgame)
+                    {
+                        LoadGame(); loadgame=FALSE;
+                        ViewSysDisplay(vs,DisplayAll); SwapPage();                    
                     }
                     break;
                 case F1 : case 'h' :

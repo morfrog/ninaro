@@ -46,12 +46,12 @@ PLAYER *RemoveToken(GRID *grid,int col)
     return RemoveTokenAtCR(grid,col,RemoveTokenTarget(grid,col));
 }
 
-int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win)
+int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win,PLAYER *player)
 {
     int left,right,start_col,start_row,x;
-    left=NumInDirection(grid,col,row,col_dir,row_dir,grid->grid[col][row]);
+    left=NumInDirection(grid,col,row,col_dir,row_dir,player);
     if (left>=size) left=size-1;    // ensures token is a part of the win
-    right=NumInDirection(grid,col,row,-col_dir,-row_dir,grid->grid[col][row]);
+    right=NumInDirection(grid,col,row,-col_dir,-row_dir,player);
     if (right>=size) right=size-1;  // ensures token is a part of the win
 
     if ((left+right+1)>=size)                   // A win has been found
@@ -69,19 +69,19 @@ int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *
     else return FALSE;
 }
 
-int CheckForWin(GRID *grid,int size,int col,int row,WIN *win)
-// checks for win which includes the token at col,row
+int CheckForWin(GRID *grid,int size,int col,int row,WIN *win,PLAYER *player)
+// checks for win which includes the player token 
 // if there isn't one 0 is returned else
 // 1 is returned and the tokens which are the win are in the WIN *
 {
     // check vertical    0  -1
-    if (CheckAngle(grid,size,col,row,0,-1,win)) return TRUE;
+    if (CheckAngle(grid,size,col,row,0,-1,win,player)) return TRUE;
     // check horizontal -1   0
-    else if (CheckAngle(grid,size,col,row,-1,0,win)) return TRUE;
+    else if (CheckAngle(grid,size,col,row,-1,0,win,player)) return TRUE;
     // check /          +1  -1
-    else if (CheckAngle(grid,size,col,row,1,-1,win)) return TRUE;
+    else if (CheckAngle(grid,size,col,row,1,-1,win,player)) return TRUE;
     // check \          -1  -1
-    else if (CheckAngle(grid,size,col,row,1,1,win)) return TRUE;
+    else if (CheckAngle(grid,size,col,row,1,1,win,player)) return TRUE;
     else return FALSE;
 }
 
@@ -94,7 +94,7 @@ int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win)
     int row=InsertTokenTarget(grid,col);
     if (InsertToken(grid,col,player))
     {
-        if (CheckForWin(grid,win->tokens,col,row,win))
+        if (CheckForWin(grid,win->tokens,col,row,win,player))
             return Win;
         else
             return Success;
@@ -109,21 +109,22 @@ void SetWinSize(WIN *win,int size)
     win->win=malloc(size*sizeof(TOKEN));
 }
 
-int GameSave(int p1,int p2,int current,GRID *grid,PLAYERGROUP *pg,
+int GameSave(int p1,int p2,int current,int size,GRID *grid,PLAYERGROUP *pg,
                 char *filename)
 {
     int ret;
-    BINFILE *bf=BinFileNew((3*sizeof(int))+GridSaveSize(grid));
+    BINFILE *bf=BinFileNew((4*sizeof(int))+GridSaveSize(grid));
     BinFilePutInt(bf,p1);
     BinFilePutInt(bf,p2);
     BinFilePutInt(bf,current);
+    BinFilePutInt(bf,size);
     GridSave(bf,grid,pg);       // save grid to bin file
     ret=BinFileWriteFull(bf,filename);
     BinFileFree(bf);
     return ret;
 }
 
-GRID *GameLoad(int *p1,int *p2,int *current,PLAYERGROUP *pg,char *filename)
+GRID *GameLoad(int *p1,int *p2,int *current,int *size,PLAYERGROUP *pg,char *filename)
 {
     BINFILE *bf=BinFileReadFull(filename,0);
     GRID *ret;
@@ -131,6 +132,7 @@ GRID *GameLoad(int *p1,int *p2,int *current,PLAYERGROUP *pg,char *filename)
     *p1=BinFileGetInt(bf);
     *p2=BinFileGetInt(bf);
     *current=BinFileGetInt(bf);
+    *size=BinFileGetInt(bf);
     ret=GridLoad(bf,pg);
     BinFileFree(bf);
     return ret;
