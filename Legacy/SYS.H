@@ -1,4 +1,5 @@
 #ifndef SYS_H
+#define SYS_H
 
 #define FALSE 0
 #define TRUE  1
@@ -46,4 +47,5 @@ void Beep(int pitch,int time);
 void Working();
 void ClearBuffer();
 int PlusFactorial(int num);
+
 #endif

@@ -9,10 +9,11 @@
 #include <conio.h>
 #include <graph.h>
 #include <i86.h>
+#include "sys.h"
 #include "sound.h"
 #include "txtbox.h"
 #include "viewsys.h"
-#include "sys.h"
+#include "menu.h"
 #include "screen.h"
 #include "grid.h"
 #include "player.h"
@@ -41,6 +42,7 @@ PLAYER *player_two;
 PLAYER *player_current;
 TXTBOX *msgbox;
 VIEWSYS *vs;
+MENU *menu;
 
 void SetP1Current()
 {
@@ -48,9 +50,9 @@ void SetP1Current()
     player_current=player_one;
 
     // disable irrelevant keys
-    ViewSysEnableGroup(vs,DISABLE,4,0,1,2,3);
-    if (type==Human) ViewSysEnableGroup(vs,ENABLE,4,4,5,6,7);
-    else             ViewSysEnableGroup(vs,DISABLE,4,4,5,6,7);
+    ViewSysKeyEnableGroup(vs,DISABLE,4,0,1,2,3);
+    if (type==Human) ViewSysKeyEnableGroup(vs,ENABLE,4,4,5,6,7);
+    else             ViewSysKeyEnableGroup(vs,DISABLE,4,4,5,6,7);
                     // is Computer so disable all keys
 }
 
@@ -60,9 +62,9 @@ void SetP2Current()
     player_current=player_two;
 
     // disable irrelevant keys
-    ViewSysEnableGroup(vs,DISABLE,4,4,5,6,7);
-    if (type==Human) ViewSysEnableGroup(vs,ENABLE,4,0,1,2,3);
-    else             ViewSysEnableGroup(vs,DISABLE,4,0,1,2,3);
+    ViewSysKeyEnableGroup(vs,DISABLE,4,4,5,6,7);
+    if (type==Human) ViewSysKeyEnableGroup(vs,ENABLE,4,0,1,2,3);
+    else             ViewSysKeyEnableGroup(vs,DISABLE,4,0,1,2,3);
                     // is Computer so disable all keys
 }
 
@@ -197,7 +199,7 @@ void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
 int KeyUp(void)
 {
-    PlayTune(6,100,20,200,30,300,40,200,5,100,5,500,100); // call menu
+//    MenuDisplay(menu);
     return TRUE;
 }
 
@@ -249,32 +251,37 @@ int KeyDown(void)
 
 VIEWSYS *ViewSysInit(int maxwindows,int maxkeys,int x1,int y1,int x2,int y2)
 {
-    VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys,ClearViewport);
-    ViewSysNewWindow(vs,0.0,0.0,0.6,0.09,ACTIVE,
+    VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys,ViewSysClear);
+    ViewSysWindowNew(vs,0.0,0.0,0.6,0.09,ACTIVE,
         DisplayEntryGrid,"Enter Your Token Here");      // entrygrid is 0
-    ViewSysNewWindow(vs,0.0,0.1,0.6,1.0,ACTIVE,
-        DisplayPlayGrid,"Enter Your Token Here");
-    ViewSysNewWindow(vs,0.61,0.0,1.0,0.1,ACTIVE,
+    ViewSysWindowNew(vs,0.0,0.1,0.6,1.0,ACTIVE,
+        DisplayPlayGrid,"Enter Your Token Here");       // playgrid is 1
+    ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,ACTIVE,
         DisplayGameName,"Ninaro - By the author 1998");
-    ViewSysNewWindow(vs,0.61,0.1,1.0,0.4,ACTIVE,
+    ViewSysWindowNew(vs,0.61,0.1,1.0,0.4,ACTIVE,
         DisplayMsgBox,"Messages appear here");
-    ViewSysNewWindow(vs,0.61,0.4,0.65,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.61,0.4,0.65,0.448,ACTIVE,
         DisplayP1Color,"Player One's Color");
-    ViewSysNewWindow(vs,0.65,0.4,0.70,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.65,0.4,0.70,0.448,ACTIVE,
         DisplayP1Type,"Player One's Type");
-    ViewSysNewWindow(vs,0.7,0.4,0.96,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.7,0.4,0.96,0.448,ACTIVE,
         DisplayP1Name,"Player One's Name");
-    ViewSysNewWindow(vs,0.96,0.4,1.0,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.96,0.4,1.0,0.448,ACTIVE,
         DisplayP1Score,"Player One's Score");
-    ViewSysNewWindow(vs,0.61,0.452,0.65,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.61,0.452,0.65,0.5,ACTIVE,
         DisplayP2Color,"Player Two's Color");
-    ViewSysNewWindow(vs,0.65,0.452,0.7,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.65,0.452,0.7,0.5,ACTIVE,
         DisplayP2Type,"Player Two's Type");
-    ViewSysNewWindow(vs,0.7,0.452,0.96,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.7,0.452,0.96,0.5,ACTIVE,
         DisplayP2Name,"Player Two's Name");
-    ViewSysNewWindow(vs,0.96,0.452,1.0,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.96,0.452,1.0,0.5,ACTIVE,
         DisplayP2Score,"Player Two's Score");
     return vs;
+}
+
+void Test(void)
+{
+    Buzz(800,900,50,400);
 }
 
 void ProgInit() // initialises global variables
@@ -289,14 +296,15 @@ void ProgInit() // initialises global variables
 
     vs=ViewSysInit(20,20,0,0,639,349);
 
-    ViewSysAddKey(vs,KP4,KeyLeft,DISABLE);  // move token left
-    ViewSysAddKey(vs,KP2,KeyDown,DISABLE);  // drop token
-    ViewSysAddKey(vs,KP6,KeyRight,DISABLE); // move token right
-    ViewSysAddKey(vs,KP8,KeyUp,DISABLE);    // call menu
-    ViewSysAddKey(vs,'a',KeyLeft,DISABLE);  // move token left
-    ViewSysAddKey(vs,'d',KeyRight,DISABLE); // move token right
-    ViewSysAddKey(vs,'s',KeyDown,DISABLE);  // drop token
-    ViewSysAddKey(vs,'w',KeyUp,DISABLE);    // call menu
+    ViewSysKeyAdd(vs,KP4,KeyLeft,DISABLE);  // move token left
+    ViewSysKeyAdd(vs,KP2,KeyDown,DISABLE);  // drop token
+    ViewSysKeyAdd(vs,KP6,KeyRight,DISABLE); // move token right
+    ViewSysKeyAdd(vs,KP8,KeyUp,DISABLE);    // call menu
+    ViewSysKeyAdd(vs,'a',KeyLeft,DISABLE);  // move token left
+    ViewSysKeyAdd(vs,'d',KeyRight,DISABLE); // move token right
+    ViewSysKeyAdd(vs,'s',KeyDown,DISABLE);  // drop token
+    ViewSysKeyAdd(vs,'w',KeyUp,DISABLE);    // call menu
+    ViewSysKeyAdd(vs,ESC,KeyUp,ENABLE);     // call menu
 
     msgbox=TextBoxNew(5,RED,WHITE,40);
 
@@ -321,6 +329,9 @@ void ProgInit() // initialises global variables
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
 
+//    menu=MenuNew(20,0,0,639,349);
+//    MenuNewSub(menu,"Game",2,"New",CN,Test,ItemEnabled,
+//                             "Exit",CX,NULL,ItemEnabled);
 }
 
 void ProgFree() // frees global variables
@@ -340,16 +351,14 @@ void ProgFree() // frees global variables
     printf("Freeing Grids...\n");
     GridFree(playgrid);
     GridFree(entrygrid);
+    printf("Freeing Menu...");
+//    MenuFree(menu);
 }
 
 void main()
 {
     int ever=1,keyused=FALSE,key;
     keypos=0;
-
-    ProgInit();
-
-    InsertTokenAtCR(entrygrid,keypos,0,player_current);
 
     ScreenInit();
     _setcolor(RED);
@@ -358,9 +367,9 @@ void main()
     _registerfonts( "*.fon" );
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
-    
-    ViewSysDisplay(vs,DisplayAll);
-    SwapPage();
+    ProgInit(); // some parts rely on graphics mode
+    InsertTokenAtCR(entrygrid,keypos,0,player_current);
+
     ViewSysDisplay(vs,DisplayAll);
     SwapPage();
 
@@ -374,7 +383,11 @@ void main()
                 case CF10 : case CQ : case CX : ever=0; break;
                 case 'c' :
                     if (Continuance(playgrid,win->tokens))
-                    {ViewSysDisplay(vs,DisplayAll); SwapPage();}
+                    {
+                        ViewSysWindowChanged(vs,1,CHANGED);
+                        ViewSysDisplay(vs,DisplayChanged);
+                        SwapPage();
+                    }
                     break;
                 default :
                     if (ViewSysDisplay(vs,ViewSysKey(vs,key,&keyused)))

@@ -5,6 +5,7 @@
 void ScreenInit()
 {
     _setvideomode(16); // 640x350 2 pages 16 colors
+    _settextwindow(0,0,24,79);
     _setwindow(0,0.0,0.0,1.0,1.0);
     _registerfonts( "*.fon" );
     _setfont("t'Modern'");

@@ -10,24 +10,31 @@
 #include <graph.h>
 #include "sys.h"
 #include "sound.h"
+#include "mempage.h"
 #include "viewsys.h"
 
 VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
-                    void (* background)(void))
-// creates a new view system and returns it
+        void (* background)(VIEWPORT *))
+// creates a new view system and returns it,
+// if getbkgrnd==TRUE the current screen is assumed to be the background
+// else the background is not set. It can be set using ViewSysSetBackground
+// which takes a MEMPAGE as a parameter which is the background.
+// this enables multiple view systems to have the same background thus saving
+// memory.
 {
     VIEWSYS *viewsys=malloc(sizeof(VIEWSYS));
     viewsys->main.x1=x1;
     viewsys->main.y1=y1;
     viewsys->main.x2=x2;
     viewsys->main.y2=y2;
-    viewsys->background=background;
     viewsys->maxwindows=maxwindows;
     viewsys->windows=0;
     viewsys->maxkeys=maxkeys;
     viewsys->keys=0;
     viewsys->window=malloc(maxwindows*sizeof(WINDOW));
     viewsys->key=malloc(maxkeys*sizeof(KEYIN));
+    viewsys->current=MemPageNew(x1,y1,x2,y2);
+    viewsys->background=background;
     return viewsys;
 }
 
@@ -49,7 +56,7 @@ void ViewportFromViewport(VIEWPORT *new,VIEWWIN *vw,VIEWPORT *vp)
     new->y2=vp->y1+(int)(vw->y2*(double)height);
 }
 
-void ViewSysNewWindow(VIEWSYS *vs,double x1,double y1,double x2,double y2,
+void ViewSysWindowNew(VIEWSYS *vs,double x1,double y1,double x2,double y2,
                 int active,int (* display)(void),char *help)
 // adds a window to the view system
 {
@@ -61,11 +68,12 @@ void ViewSysNewWindow(VIEWSYS *vs,double x1,double y1,double x2,double y2,
     ViewportFromViewport(&(vs->window[vs->windows].vp),&vw,&(vs->main));
     vs->window[vs->windows].display=display;
     vs->window[vs->windows].changed=NOCHANGE;
+    vs->window[vs->windows].help=malloc((strlen(help)+1)*sizeof(char));
     strcpy(vs->window[vs->windows].help,help);
     ++(vs->windows);
 }
 
-void ViewSysAddKey(VIEWSYS *vs,int key,int (* func)(void),int enable)
+void ViewSysKeyAdd(VIEWSYS *vs,int key,int (* func)(void),int enable)
 // adds a key to the view system, a key can have multiple functions run from
 // it, they are run in the order in which they are added to the system
 {
@@ -84,6 +92,13 @@ void SetViewport(VIEWPORT *vp)
     _setviewport(vp->x1,vp->y1,vp->x2,vp->y2);
 }
 
+void ViewSysClear(VIEWPORT *vp)
+// clears the vp viewport
+{
+    SetViewport(vp);
+    _clearscreen(_GVIEWPORT);
+}
+
 int ViewSysDisplay(VIEWSYS *vs,int mode)
 // mode==DisplayAll displays all active windows
 // mode==DisplayChanged displays only windows which have changed
@@ -91,22 +106,40 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
 // returns TRUE if display updated else FALSE
 // TODO - make more efficient, possibly by splitting DisplayAll & DisplayChanged
 {
-    int n,changed;
-    if (mode==NoDisplay) return FALSE;
-    if (mode==DisplayAll) {SetViewport(&(vs->main)); vs->background();}
-    for (n=0;n<vs->windows;n++)
+    WINDOW *wp;
+    int n;
+    switch (mode)
     {
-        changed=(vs->window[n].changed==CHANGED);
-        if ((vs->window[n].active) && (mode==DisplayAll?1:changed))
-            if (vs->window[n].display!=NULL)
+        case DisplayAll:
+            vs->background(&(vs->main));
+            for (n=0;n<vs->windows;n++)
             {
-                SetViewport(&(vs->window[n].vp));
-                vs->window[n].display();
-                if (changed) vs->window[n].changed=NOCHANGE;
+                wp=&(vs->window[n]);
+                if ((wp->active) && (wp->display!=NULL))
+                {
+                    SetViewport(&(wp->vp));
+                    wp->display();
+                    wp->changed=NOCHANGE;
+                }
             }
-            // else nothing to display
-        // else inactive/hasn't changed, so don't display
+            break;
+        case DisplayChanged :
+            MemPagePut(vs->current);
+            for (n=0;n<vs->windows;n++)
+            {
+                wp=&(vs->window[n]);
+                if ((wp->changed) && (wp->active) && (wp->display!=NULL))
+                {
+                    vs->background(&(wp->vp));
+                    SetViewport(&(wp->vp));
+                    wp->display();
+                    wp->changed=NOCHANGE;
+                }
+            }
+            break;
+        default : return FALSE; break; // NoDisplay
     }
+    MemPageGet(vs->current); // update current to reflect changes
     return TRUE;
 }
 
@@ -138,13 +171,13 @@ int ViewSysKey(VIEWSYS *vs,int key,int *used)
     return ret;
 }
 
-void ViewSysEnable(VIEWSYS *vs,int enable,int n_key)
+void ViewSysKeyEnable(VIEWSYS *vs,int enable,int n_key)
 // sets the n_key'th key created to enable state
 {
     vs->key[n_key].enable=enable;
 }
 
-void ViewSysEnableAll(VIEWSYS *vs,int enable,int key)
+void ViewSysKeyEnableAll(VIEWSYS *vs,int enable,int key)
 // sets all keys which match key to enabled state
 {
     int n;
@@ -152,7 +185,7 @@ void ViewSysEnableAll(VIEWSYS *vs,int enable,int key)
         if (vs->key[n].key==key) vs->key[n].enable=enable;
 }
 
-void ViewSysEnableGroup(VIEWSYS *vs,int enable,int num,...)
+void ViewSysKeyEnableGroup(VIEWSYS *vs,int enable,int num,...)
 // sets the nth keys to enable, e.g. ViewSysEnableGroup(vs,ENABLE,3,0,1,2);
 {
     int n,n_key;
@@ -167,17 +200,17 @@ void ViewSysEnableGroup(VIEWSYS *vs,int enable,int num,...)
     va_end(ap);
 }
 
-void ViewSysChanged(VIEWSYS *vs,int window,int changed)
+void ViewSysWindowChanged(VIEWSYS *vs,int window,int changed)
 {
     vs->window[window].changed=changed;
 }
 
-void ViewSysActivate(VIEWSYS *vs,int window,int activity)
+void ViewSysWindowActivate(VIEWSYS *vs,int window,int activity)
 {
     vs->window[window].active=activity;
 }
 
-char *ViewSysHelp(VIEWSYS *vs,int window)
+char *ViewSysWindowHelp(VIEWSYS *vs,int window)
 {
     return vs->window[window].help;
 }
@@ -185,7 +218,10 @@ char *ViewSysHelp(VIEWSYS *vs,int window)
 
 void ViewSysFree(VIEWSYS *vs)
 {
+    int n;
     free(vs->key);
+    for (n=0;n<vs->windows;n++)
+        free(vs->window[n].help);
     free(vs->window);
     free(vs);
 }
