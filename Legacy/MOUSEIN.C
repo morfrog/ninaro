@@ -32,7 +32,6 @@ int GetMouseInput(int *x,int *y)
 {
     static int lmbpress=0;
     static int rmbpress=0;
-    static int lastx,lasty;
     MouseStatus gmims={0};
 
     gmims.left=1;
@@ -130,27 +129,55 @@ int InitMouse(void)
 // returns : TRUE if use mouse, else FALSE
 {
     int x,y,ret=TRUE;  // mouse successfully initialised is default
+    int lastx=0,lasty=0;
+    int pos=0;
     char bfg[80];
+
     xadjust=0;
     yadjust=0;
     if (!ResetMouse()) return FALSE;
+
+    _clearscreen(_GCLEARSCREEN);
+    _moveto(0,0); _lineto(20,0);
+    _moveto(0,0); _lineto(0,20);
+    _grtext(30,160,"Mouse Configuration Screen");
+    _grtext(30,200,"Move the mouse to the very top");
+    _grtext(30,240,"left corner of the screen and");
+    _grtext(30,280,"press a mouse button.");
+    _grtext(30,320,"Or any key to use no mouse.");
+    SwapPage();
+    _clearscreen(_GCLEARSCREEN);
+    _moveto(0,0); _lineto(20,0);
+    _moveto(0,0); _lineto(0,20);
+    _grtext(30,160,"Mouse Configuration Screen");
+    _grtext(30,200,"Move the mouse to the very top");
+    _grtext(30,240,"left corner of the screen and");
+    _grtext(30,280,"press a mouse button.");
+    _grtext(30,320,"Or any key to use no mouse.");
+    SwapPage();
     ShowMouse();
-    while (LMB!=GetMouseInput(&x,&y))
+    _setviewport(1,1,300,150);
+    _setcharsize_w(0.07,0.025);
+    while (NMB==GetMouseInput(&x,&y))
     {
-        if (kbhit()) {getch(); ret=FALSE; break;}
-        _clearscreen(_GCLEARSCREEN);
-        _grtext(30,200,"Move the mouse to the top left");
-        _grtext(30,240,"corner of the screen and press");
-        _grtext(30,280,"the left mouse button.");
-        _grtext(30,320,"Or any key to use no mouse.");
-        sprintf(bfg,"%10d,%10d",x,y);
-        _grtext(30,100,bfg);
-        SwapPage();
+        if (kbhit()) {while (kbhit()) {getch();} ret=FALSE; break;}
+        if ((lastx!=x) || (lasty!=y))
+        {
+            _clearscreen(_GVIEWPORT);
+            _moveto(pos,pos); _lineto(100+pos,100+pos);
+            _moveto(pos,pos); _lineto(pos+20,pos);
+            _moveto(pos,pos); _lineto(pos,pos+20);
+            if (pos<1) pos=30; else pos-=1;
+            sprintf(bfg,"%10d,%10d",x,y);
+            _grtext_w(0.0,0.5,bfg);
+            SwapPage();
+            lastx=x; lasty=y;
+        }
     }
+    HideMouse();
     xadjust=x;
     yadjust=y;
     _clearscreen(_GCLEARSCREEN);
     SwapPage();
-    HideMouse();
     return ret;
 }

@@ -1038,6 +1038,7 @@ void TitleScreen(void)
 
     if (filegrid!=NULL)
     {
+        _clearscreen(_GCLEARSCREEN);
         ResetViewport(&vp,vs->main.x1,vs->main.y1,vs->main.x2,vs->main.y2-30);
         tokens=MaxTokensInGrid(filegrid);
        _remappalette(YELLOW,0x020202L); _remappalette(GREEN,0x040404L);
@@ -1084,9 +1085,14 @@ void TitleScreen(void)
     }
     PlayerFree(plname);
     PlayerFree(plback);
-    _setvisualpage(1);
-    SetMousePage(1);
-    _setactivepage(0);
+    if (_getvisualpage()==0)
+    {
+        _setvisualpage(1); SetMousePage(1); _setactivepage(0);
+    }
+    else
+    {
+        _setvisualpage(0); SetMousePage(0); _setactivepage(1);
+    }
 }
 
 void Test(void)
@@ -1525,6 +1531,9 @@ void main()
     int waitesc,col,ccols,crows,csize,mx,my;
 
     ScreenInit();
+    _setvisualpage(1);
+    SetMousePage(1);
+    _setactivepage(0);
     mouseinstalled=InitMouse();
     _setcolor(RED);
     _setcharsize_w(0.02,0.02);
