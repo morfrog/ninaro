@@ -176,6 +176,21 @@ void HelpEnd(HELP *help)
     TextBoxScrollEnd(help->tb);
 }
 
+int HelpScrollString(HELP *help,char *string)
+// purpose : scrolls to the next line in the help which contains string,
+//           loops over
+// returns : TRUE if scrolled, else FALSE
+{
+    return TextBoxScrollString(help->tb,string);
+}
+
+int HelpScrollLine(HELP *help,int line)
+// purpose : to scroll the help to line
+// returns : TRUE if scrolled, else FALSE
+{
+    return TextBoxScrollLine(help->tb,line);
+}
+
 #ifdef DEBUG_HELP            
 void main()
 {

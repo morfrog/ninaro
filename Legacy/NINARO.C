@@ -329,11 +329,50 @@ void DecP2Color(void) {DecPlayerColor(PlayerGroupPlayer(players,player_two));}
 void ClearScreen(void) {_clearscreen(_GCLEARSCREEN);}
 void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
+void HelpContents(void)
+{
+    VIEWPORT vp={10,10,629,339};
+    HelpCall(help,&vp,ViewSysCurrent(vs));
+}
+
+void HelpAbout(void)
+{
+    VIEWPORT vp={210,181,429,259};
+    MemPagePut(ViewSysCurrent(vs));
+    BorderedBox(200,100,439,269,GREY,LTBLUE);
+    BorderedBox(210,110,429,179,BLACK,LTBLUE);
+    _setviewport(210,110,429,179);
+    DisplayGameName();
+    MemPageGet(ViewSysCurrent(vs));
+    SwapPage();
+    MemPagePut(ViewSysCurrent(vs));     // both pages same
+    HelpCall(aboutgame,&vp,ViewSysCurrent(vs));
+    ViewSysDisplay(vs,DisplayAll);      // refesh to normal
+}
+
+void HelpPlayerDialog(void)
+{HelpScrollString(help,"Player Dialog"); HelpContents();}
+void HelpBoardDialog(void)
+{HelpScrollString(help,"Board Dialog"); HelpContents();}
+void HelpOptionsDialog(void)
+{HelpScrollString(help,"Options Dialog"); HelpContents();}
+
+void HelpMenu(void)
+{
+    switch (MenuSub(mainmenu))
+    {
+        case 0 : HelpScrollString(help,"Game Menu"); HelpContents(); break;
+        case 1 : HelpScrollString(help,"Board Menu"); HelpContents(); break;
+        case 2 : HelpScrollString(help,"Player Menu"); HelpContents(); break;
+        case 3 : HelpScrollString(help,"Help Menu"); HelpContents(); break;
+    }
+}
+
 int KeyUp(void *vp)
 {
     KEYGROUP *kg=KeySysGroupGet(ks);
     MenuKeyGroupSet(mainmenu,kg);
-    MenuCall(mainmenu);
+    MenuCall(mainmenu,HelpMenu);
     return TRUE;
 }
 
@@ -481,27 +520,6 @@ void SaveGame(void)
 void EndGame(void) {NewGame();}
 void ExitGame(void) {ProgFree(); ShutDown(); exit(0);}
 
-void HelpContents(void)
-{
-    VIEWPORT vp={10,10,629,339};
-    HelpCall(help,&vp,ViewSysCurrent(vs));
-}
-
-void HelpAbout(void)
-{
-    VIEWPORT vp={210,181,429,259};
-    MemPagePut(ViewSysCurrent(vs));
-    BorderedBox(200,100,439,269,GREY,LTBLUE);
-    BorderedBox(210,110,429,179,BLACK,LTBLUE);
-    _setviewport(210,110,429,179);
-    DisplayGameName();
-    MemPageGet(ViewSysCurrent(vs));
-    SwapPage();
-    MemPagePut(ViewSysCurrent(vs));     // both pages same
-    HelpCall(aboutgame,&vp,ViewSysCurrent(vs));
-    ViewSysDisplay(vs,DisplayAll);      // refesh to normal
-}
-
 void GameStatus(void)
 {
 
@@ -529,7 +547,7 @@ void GameSizeCustom(void)
     cbuf[3]=0; // OK
     DialogStateSet(boarddialog,cbuf);
     GameSizeFit(boarddialog);
-    if (DialogCall(boarddialog,&vp,vs->current,5,8))
+    if (DialogCall(boarddialog,&vp,vs->current,5,8,HelpBoardDialog))
     {
         DialogStateGet(boarddialog,cbuf);
         ResetGameSize(cbuf[1],cbuf[0],cbuf[2]);
@@ -545,7 +563,7 @@ int PlayerDialog(int pnum)
     CONTROL *c2=DialogControlGet(playerdialog,1);// colors
     int p;
     SetupPlayer(pnum);
-    DialogCall(playerdialog,&vp,vs->current,5,8);
+    DialogCall(playerdialog,&vp,vs->current,5,8,HelpPlayerDialog);
     ControlValueGet(c,ControlCurrentGet(c),&p); // which player
     PlayerSetColor(PlayerGroupPlayer(players,p),ControlCurrentGet(c2));
     if (p==pnum) return -1;
@@ -585,7 +603,7 @@ void P2Dialog(void)
 void PlayerOptions(void)
 {
     VIEWPORT vp={50,50,590,300};
-    DialogCall(optionsdialog,&vp,vs->current,5,11);
+    DialogCall(optionsdialog,&vp,vs->current,5,11,HelpOptionsDialog);
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
@@ -681,14 +699,18 @@ void ProgInit() // initialises global variables
                         3,"",50,""),
         "Size",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
-    optionsdialog=DialogNew(pkeys,NULL,"Player Options",1,
+    optionsdialog=DialogNew(pkeys,NULL,"Player Options",2,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Successive",
                         1,"Player One",
                         2,"Player Two",
                         3,"Winner",
                         4,"Loser",
-                        5,"Random"));
+                        5,"Random"),
+        "AI Skill",TRUE,TRUE,ControlNew(List,Slider,1,1,7,3,
+                        0,"Low",
+                        1,"Medium",
+                        2,"High"));
 /*
         "Best Of",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Infinity",
@@ -805,8 +827,11 @@ void TitleScreen(void)
     int x;
     int tokens=31*9;
     int scol,srow;  // source col & row
-    int sety,setr,bit=0,top=0;
-// 0x153f3fL
+    int up=1,add=0;
+    long sety,adds[3]={0x010100L,0x000101L,0x010001L};
+    long bottom=0x010000L;
+    long top=bottom+0x030303L;
+
     if (filegrid==NULL) return;
    _remappalette(YELLOW,0x020202L);
    _remappalette(GREEN,0x040404L);
@@ -832,26 +857,23 @@ void TitleScreen(void)
     _setcolor(GREEN);
     DisplayGrid(playgrid,0.95);
     SwapPage();
-    sety=0x000000L; setr=_RED; 
+    sety=bottom;
     do
     {
-        if (bit)
+        if (up)
         {
-            bit=0;
-            sety+=0x010001L; setr-=0x000001L;
+            sety+=adds[add]; if (add==2) add=0; else ++add;
+            if (sety>top) up=0;
         }
-        else
+        else // down
         {
-            bit=1;
-            sety+=0x000101L; setr-=0x000001L;
+            sety-=adds[add]; if (add==2) add=0; else ++add;
+            if (sety<bottom) up=1;
         }
         _remappalette(YELLOW,sety);
-        _remappalette(RED,setr);
-        if (kbhit()) sety=_YELLOW;
     }
-    while (sety<_YELLOW);
+    while (!kbhit());
    _remappalette(RED,_RED);
-   _remappalette(YELLOW,0x040404L);
     GetKey();
     GridFree(filegrid);
     ResetGameSize(7,8,4);
@@ -918,7 +940,7 @@ void main()
                 case ESC :
                     KeyGroupCopy(pkeys,p2keys);
                     // ESC to menu defaults to numeric keys
-                    MenuCall(mainmenu);
+                    MenuCall(mainmenu,HelpMenu);
                     ViewSysDisplay(vs,DisplayAll);
                     SwapPage();
                     if (player_current==player_one)
@@ -926,7 +948,7 @@ void main()
                     else
                         SetP2Current();
                     break;
-                case AF4 :
+                case AF4 : case CX : case CQ :
                 case F10 : ExitGame(); break;
             }              
         }

@@ -184,12 +184,13 @@ int DialogCancel(DIALOG *d);
 int DialogSelect(DIALOG *d);
 // purpose : sends a select signal to the dialog
 // returns : TRUE if OK, FALSE if cancel, UNKNOWN if reset
-int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars);
+int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (* help)(void));
 // purpose : runs a dialog, as is, in the viewport with the mempage as
 //           background, running function change whenever a controls current
 //           changes, using chars for control names, which are in left
-//           1/namefract section of viewport
+//           1/namefract section of viewport. help function is run via F1 or H
 //           kg keys are left,right,up,down,select,cancel
-// returns : FALSE if cancelled, TRUE if OK'd
+// returns : FALSE if cancelled, TRUE if OK'd. if exit state is same as entry
+//           state, cancel is assumed and FALSE is returned
 
 #endif

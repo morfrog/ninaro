@@ -46,6 +46,13 @@ void HelpHome(HELP *help);
 void HelpEnd(HELP *help);
 // purpose : scrolls the help box to the end
 // returns : void
+int HelpScrollString(HELP *help,char *string);
+// purpose : scrolls to the next line in the help which contains string,
+//           loops over
+// returns : TRUE if scrolled, else FALSE
+int HelpScrollLine(HELP *help,int line);
+// purpose : to scroll the help to line
+// returns : TRUE if scrolled, else FALSE
 void HelpFree(HELP *help);
 // purpose : to free the memory allocated to a help box
 // returns : void

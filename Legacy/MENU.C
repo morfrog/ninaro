@@ -245,8 +245,8 @@ void MenuDisplay(MENU *menu)
     MenuDisplaySub(&(menu->submenu[MenuSub(menu)]),&vp);
 }
 
-void MenuCall(MENU *menu)
-// purpose : calls the menu
+void MenuCall(MENU *menu,void (* help)(void))
+// purpose : calls the menu, runs help via F1 or H
 // returns : void
 {
     int funcret,index,key,used;
@@ -258,13 +258,18 @@ void MenuCall(MENU *menu)
     for (;;)
     {
         key=GetKey();
-        switch (key)
+        used=KeySysKey(menu->ks,key,menu,&funcret,&index);
+        if (!used) // provide extra functionality
         {
-            case 'm' :    // cancel
-            case ESC : return;
-        }
-        
-        if (KeySysKey(menu->ks,key,menu,&funcret,&index))
+            switch (key)
+            {
+                case 'm' :    // cancel
+                case ESC : return;
+                case F1  :
+                case 'h' : help(); used=TRUE; funcret=TRUE; index=6; break;
+            }
+        }    
+        if (used)
         // key is used, via extra functionality or keysys
         {
             switch (index)

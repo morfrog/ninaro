@@ -98,7 +98,7 @@ void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp);
 void MenuDisplay(MENU *menu);
 // purpose : displays the menu in its current state
 // returns : void
-void MenuCall(MENU *menu);
+void MenuCall(MENU *menu,void (* help)(void));
 // purpose : calls the menu
 // returns : void
 int MenuItemEnable(MENU *menu,int sub,int item,int enable);

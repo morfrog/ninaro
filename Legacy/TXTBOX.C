@@ -277,6 +277,33 @@ int TextBoxScroll(TXTBOX *tb,int amount)
     return TRUE;    
 }
 
+int TextBoxScrollLine(TXTBOX *tb,int line)
+// purpose : to scroll the textbox to line
+// returns : FALSE if line out of range, else TRUE
+{
+    if ((line>tb->size) || (line<1)) return FALSE;
+    TextBoxScrollHome(tb);
+    TextBoxScroll(tb,line-1); // no move if line==1
+    return TRUE;
+}
+
+int TextBoxScrollString(TXTBOX *tb,char *string)
+// purpose : to scroll to the next line which contains string, loops over
+// returns : TRUE if scrolled else FALSE
+{
+    NODE *look=tb->start->next;
+    while (look!=tb->start)
+    {
+        if (strstr(look->string,string)!=NULL) // found substring
+        {
+            tb->start=look;
+            return TRUE;
+        }
+        look=look->next;
+    }
+    return FALSE;
+}
+
 int TextBoxAtTop(TXTBOX *tb)
 // purpose : is the textbox at the top
 // returns : TRUE if the first displayable line is the first in the box

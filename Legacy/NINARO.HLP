@@ -43,9 +43,23 @@ The menus are the key way in Ninaro of changing things. The
 menu is accessable at almost anytime by pressing ESC, M for
 menu, or your appropriate player key.
 
+~The Game Menu
+
+~The Board Menu
+
+~The Player Menu
+
+~The Help Menu
+
 ~The Dialogs
 Dialogs help you choose from a group of options. In the
 dialogs C cancels, R resets and O ok's. Pressing Select
 at any time while in the dialog results on the hilited
 button (OK,Reset,Cancel) being used, while pressing cancel
 cancels the dialog.
+
+~The Custom Board Dialog
+
+~The Player Dialog
+
+~The Player Options Dialog

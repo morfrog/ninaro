@@ -83,6 +83,12 @@ int TextBoxScroll(TXTBOX *tb,int amount);
 //           down) or negative (scroll up). can scroll only to top or
 //           bottom of box, not outside, amount==0 = scroll to top
 // returns : TRUE if scrolled, else FALSE
+int TextBoxScrollLine(TXTBOX *tb,int line);
+// purpose : to scroll the textbox to line
+// returns : FALSE if line out of range, else TRUE
+int TextBoxScrollString(TXTBOX *tb,char *string);
+// purpose : to scroll to the next line which contains string, loops over
+// returns : TRUE if scrolled else FALSE
 int TextBoxAtTop(TXTBOX *tb);
 // purpose : is the textbox at the top
 // returns : TRUE if the first displayable line is the first in the box
