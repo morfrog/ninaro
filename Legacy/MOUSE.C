@@ -453,7 +453,7 @@ Post Condition:- Mouse is displayed on the new video page.
 ****************************************************************/
     union REGS inreg, outreg;
 
-    inreg.x.eax = 29;
+    inreg.x.eax = 30;
     inreg.x.ebx = page;
     int386(0x33, &inreg, &outreg);
 }

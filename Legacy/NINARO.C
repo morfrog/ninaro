@@ -1006,6 +1006,7 @@ int ExtraFunctionality(int key)
 }
 
 void AnimateMove(int col)
+// post : keypos=col
 {
     int goright=col>keypos;
     int dist=(goright?col-keypos:keypos-col);
@@ -1029,25 +1030,35 @@ void MouseMove(int x,int y,int width,int height)
     ViewSysWindowChanged(vs,0,TRUE); // entrygrid
 }
 
+int GetMouseCol(int x)
+// returns the column the mouse is in, -1 if invalid x
+{
+    int width;
+    if (x<vs->main.x1) return -1;
+    if (x>vs->main.x2) return -1;
+    width=(vs->main.x2-vs->main.x1+1);
+    return (x*grid_cols/width);
+}
+
+void SetMouseCol(int col)
+// sets the mouse pos to the middle of the col
+{
+    int width=(vs->main.x2-vs->main.x1+1)/grid_cols; // col width
+    SetMousePos(vs->main.x1+(col*width)+(width/2),vs->main.y1);
+}
+
 int HumanMove(GRID *grid)
 // returns column, returns -1 if anything other than a move occurs
 {
-    int key,index,funcret,mx,my,newpos,x,dist;
-    char bfg[80];
-    ShowMouse();
-    Buzz(400,500,50,200);
+    int key,index=0,funcret,mx,my,newpos,btn;
+    char bfg[20];
+
+    SetMouseCol(keypos);
+    
+//  Buzz(400,500,50,200);
     for (;;)
     {
-        switch (GetMouseInput(&mx,&my))
-        {
-            case RMB : 
-                funcret=KeyUp(NULL);
-                ViewSysDisplay(vs,funcret);
-                if (funcret!=NoDisplay) SwapPage();
-                return -1; // menu call
-                break;
-        }
-        
+        funcret=FALSE;
         if (kbhit())
         {
             key=GetKey();
@@ -1056,10 +1067,13 @@ int HumanMove(GRID *grid)
                 switch (index)
                 {
                     case 0 : case 1 : // left or right
+                        SetMouseCol(keypos);
                         ViewSysDisplay(vs,funcret);
                         if (funcret!=NoDisplay) SwapPage(); break;
                     case 2 : case 5 : // up or cancel = menu
-                        return -1;
+                        ViewSysDisplay(vs,DisplayCurrent);
+                        SwapPage();
+                        return -1; // menu call
                     case 3 : case 4 : // down or select
                         return keypos;
                 }
@@ -1070,6 +1084,38 @@ int HumanMove(GRID *grid)
                 // else key does nothing
             }
         }
+
+        btn=GetMouseInput(&mx,&my);
+        mx=mx%640;
+        if (mx<0) mx+=640;
+        switch (btn)
+        {
+            case LMB :
+                return keypos;
+            case RMB :
+                funcret=KeyUp(NULL);
+                ViewSysDisplay(vs,funcret);
+                if (funcret!=NoDisplay) SwapPage();
+                return -1; // menu call
+                break;
+            case NMB :
+                newpos=GetMouseCol(mx);
+                if (newpos>=0) // valid column
+                {
+                    if (newpos!=keypos)
+                    {
+                        InsertTokenAtCR(entrygrid,newpos,0,
+                            RemoveTokenAtCR(entrygrid,keypos,0));
+                        keypos=newpos;
+                        ViewSysWindowChanged(vs,0,TRUE);
+                        ViewSysDisplay(vs,DisplayChanged);
+                        SwapPage();
+                    }
+                }
+//                else Buzz(200,300,4,20);
+                // else mouse pos bad
+                break;
+        } // switch
     }
 }
 
@@ -1361,6 +1407,7 @@ void main()
                 {
                     AnimateMove(col);
                 }   // now col==keypos;
+                keypos=col;
                 if (DropToken()!=Failure)
                 {
                     if ((win_occured) || (isdraw))

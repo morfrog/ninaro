@@ -79,10 +79,10 @@ void ResetPalette(void)
 
 void SwapPage()
 {
-    static int viewpage;
+    static int viewpage=0;
+    SetMousePage(viewpage);
     viewpage=_setvisualpage(viewpage);
     _setactivepage(viewpage);
-    SetMousePage(_getvisualpage());
 }
 
 void ScreenInit()
@@ -92,12 +92,10 @@ void ScreenInit()
     _setwindow(0,0.0,0.0,1.0,1.0);
     _registerfonts( "*.fon" );
     _setfont("t'Modern'");
-    _setactivepage(0);
     _setvisualpage(1);
-    ResetMouse();
-    SetMousePage(0);
-    _setviewport(0,0,639,349);
     ResetPalette();
+    ResetMouse();
+    _setviewport(0,0,639,349);
     SwapPage();
 }
 
