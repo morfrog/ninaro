@@ -9,6 +9,7 @@ struct playerTag
     int color;  // 0..15
     int type;   // {Computer,Human}
     int pid;    // internal player id, used by playergroup
+    int (* getmove)(void *); // function which gets the players move
 };
 typedef struct playerTag PLAYER;
 
@@ -21,10 +22,10 @@ struct playergroupTag
 // is the current player
 typedef struct playergroupTag PLAYERGROUP;
 
-PLAYER *PlayerNew(char *name,int color,int type);
+PLAYER *PlayerNew(char *name,int color,int type,int (* getmove)(void *));
 // purpose : to create a new player
 // returns : the player
-void PlayerReset(PLAYER *player,char *name,int color,int type);
+void PlayerReset(PLAYER *player,char *name,int color,int type,int (* getmove)(void *));
 // purpose : to reset a players attributes
 // returns : void
 int  PlayerGetColor(PLAYER *player);

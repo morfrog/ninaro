@@ -3,21 +3,22 @@
 #include <string.h>
 #include "player.h"
 
-void PlayerReset(PLAYER *player,char *name,int color,int type)
+void PlayerReset(PLAYER *player,char *name,int color,int type,int (* getmove)(void *))
 // purpose : to reset a players attributes
 // returns : void
 {
     strcpy(player->name,name);
     player->color=color;
     player->type=type;
+    player->getmove=getmove;
 }
 
-PLAYER *PlayerNew(char *name,int color,int type)
+PLAYER *PlayerNew(char *name,int color,int type,int (* getmove)(void *))
 // purpose : to create a new player
 // returns : the player
 {
     PLAYER *ret=malloc(sizeof(PLAYER));
-    PlayerReset(ret,name,color,type);
+    PlayerReset(ret,name,color,type,getmove);
     return ret;
 }
 

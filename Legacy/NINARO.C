@@ -711,32 +711,40 @@ void PlayerOptions(void)
 }
 
 int RandomMove(GRID *grid)
-// returns -1 if unable to make a move, else the moves column is returned
+// purpose : find a column which has space for a token to be inserted
+// returns : -1 if unable to make a move, else the moves column is returned
 {
-    int cols=GridCols(grid),move=Random(cols),incol=GridInCol(grid,move);
-    int tokcols,x;
-
-    if (incol) // there are tokens in the col
+    int cols=GridCols(grid),rows=GridRows(grid),move=Random(cols);
+    int incol=GridInCol(grid,move);
+    int unfillcols,x;
+    int *col;
+    
+    if (incol<rows) // there is a row free in the col
     {
         return move;
     }
     else
     {
-        tokcols=0;
-        for (x=0;x<cols;x++) // find how many columns still have tokens
-        {
-            if (GridInCol(grid,x)>0) ++tokcols;
-        }
-        move=Random(tokcols); // random of tokened columns
-        tokcols=0;
-        for (x=0;x<cols;x++)
+        col=malloc(sizeof(int)*cols);
+        unfillcols=0;
+        for (x=0;x<cols;x++) // find how many can columns still get tokens
         {
             incol=GridInCol(grid,x);
-            if (incol!=0) ++tokcols; // found a tokened col
-            if (tokcols==move+1) return x;
+            col[x]=(incol<rows?TRUE:FALSE);
+            if (col[x]) ++unfillcols;
+        }
+        move=Random(unfillcols); // random of columns which can still get tokens
+        unfillcols=0;
+        for (x=0;x<cols;x++)
+        {
+            if (col[x])
+            {
+                ++unfillcols;
+                if (unfillcols==move+1) {free(col); return x;}
+            }
         }
         // error if get here, may have called func too many times.
-        return -1;
+        return -1; // cant make move
     }
 }
 
@@ -771,7 +779,7 @@ void TitleScreen(void)
     {
         if (x<tokens)
         {
-            scol=RandomMove(filegrid);
+            scol=RandomMove(playgrid);
             pl=RemoveToken(filegrid,scol);
             InsertTokenInCol(playgrid,scol,pl,win);
             _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
@@ -847,13 +855,13 @@ void ProgInit() // initialises global variables
     vs=ViewSysInit(0,0,639,349,20);
         
     players=PlayerGroupNew(7, // allows for only two humans
-        PlayerNew("Player One",YELLOW,Human),
-        PlayerNew("Player Two",RED,Human),
-        PlayerNew("AI Random",ORANGE,Computer),
-        PlayerNew("AI Novice",GREEN,Computer),
-        PlayerNew("AI Normal",BLUE,Computer),
-        PlayerNew("AI Expert",YELLOW,Computer),
-        PlayerNew("AI Genius",PURPLE,Computer));
+        PlayerNew("Player One",YELLOW,Human,NULL),
+        PlayerNew("Player Two",RED,Human,NULL),
+        PlayerNew("AI Random",ORANGE,Computer,RandomMove),
+        PlayerNew("AI Novice",GREEN,Computer,NULL),
+        PlayerNew("AI Normal",BLUE,Computer,NULL),
+        PlayerNew("AI Expert",YELLOW,Computer,NULL),
+        PlayerNew("AI Genius",PURPLE,Computer,NULL));
     pkeys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
     p1keys=KeyGroupNew(6,'a','d','w','s','e','q');
     p2keys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
