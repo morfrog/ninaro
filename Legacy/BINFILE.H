@@ -6,21 +6,29 @@
 struct binfileTag
 {
     int size;       // how many bytes are allocated
-    int atbyte;       // which byte is the current eof
+    int bytes;      // how many bytes are in use
     byte *store;    // storage of the bytes
 };
 
 typedef struct binfileTag BINFILE;
 
 BINFILE *BinFileNew(int bytes);
-// purpose : creates a new bin file of size bytes
+// purpose : creates a new bin file of size bytes, bytes should be bigger
+//           than required, as binfile size is static.
 // returns : the binfile
-BINFILE *BinFileRead(char *filename);
-// purpose : reads a bin file from a file
-// returns : the binfile, else NULL if file does not exist
-int     BinFileWrite(BINFILE *bf,char *filename);
+BINFILE *BinFileRead(FILE *file,int size,int extras,int *read);
+// purpose : reads a binfile of size bytes from a file, mallocing
+//         : extras bytes more to the binfile
+// returns : the binfile
+BINFILE *BinFileReadFull(char *filename,int extras);
+// purpose : assumes file filename is a binfile, reads it
+// returns : the BINFILE, else NULL if does not exist
+int     BinFileWrite(BINFILE *bf,FILE *file);
 // purpose : write a binfile to a file
-// returns : TRUE if successful else false
+// returns : TRUE if successful else FALSE
+int BinFileWriteFull(BINFILE *bf,char *filename);
+// purpose : writes the binfile to file filename
+// returns : TRUE if successful else FALSE
 int BinFileRemain(BINFILE *bf);
 // purpose : how many bytes are left to be put to or got from the binfile
 // returns : the integer
@@ -61,11 +69,14 @@ void BinFileFree(BINFILE *bf);
 //      decrypt is BinFileEncryptAdd(BINFILE *bf,-12)
 // could use lots of them then decode in reverse order to make cracking
 // difficult
-// note: some algorithms might like to append a number to front of binfile
-//       which signifies the encryption amount. to do this move all stuff down
-//       a byte and append at front or realloc, copy across and down 1 byte
-void BinFileEncryptAdd(BINFILE *bf,int a);
+
+void BinFileEncryptAdd(BINFILE *bf,byte a);
 // adds a to every byte in the binfile, carry is lost.
+
+void BinFileEncryptCarryAdd(BINFILE *bf,byte a);
+// adds a to every byte in the binfile, carries remainder of byte add to
+// the next byte add, when carry == 0, starts process again at current
+// unencrypted byte
 
 void BinFileEncryptShift(BINFILE *bf,int bytes);
 // shifts the entire binfile by bytes, +ve is right, -ve is left;

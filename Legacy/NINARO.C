@@ -405,20 +405,20 @@ void GameSizeCustom(void)
 void PlayerDialogPlayer(PLAYER *player)
 {
     ControlsDialogSet(playerdialog,1,PlayerGetType(player));
-    if (type==Human) {
+    if (PlayerGetType(player)==Human) {
         ControlsDialogControlEnable(playerdialog,2,FALSE); // computers
         ControlsDialogControlEnable(playerdialog,3,TRUE);  // humans
-        ControlsDialogSet(playerdialog,3,name);
+        ControlsDialogSet(playerdialog,3,PlayerGetName(player));
         // set the name in the human radio control to the players name
-        666
+        //        666
     }
     else { // computer
         ControlsDialogControlEnable(playerdialog,2,TRUE); // computers
         ControlsDialogControlEnable(playerdialog,3,FALSE);// humans
-        ControlsDialogSet(playerdialog,2,name);
+        ControlsDialogSet(playerdialog,2,PlayerGetName(player));
     }
-    ControlsDialogSet(playerdialog,4,color);
-    ControlsDialogSet(playerdialog,5,skill);
+    ControlsDialogSet(playerdialog,4,PlayerGetColor(player));
+    ControlsDialogSet(playerdialog,5,PlayerGetSkill(player));
 }
 
 void PlayerDialog(int pnum)
@@ -433,7 +433,7 @@ void PlayerDialog(int pnum)
     int at;
     int key,success;
 
-    PlayerDialogPlayer(type,name,color,skill);
+    PlayerDialogPlayer(player);
     for (;;)
     {
         MemPagePut(vs->current);
@@ -474,7 +474,7 @@ void PlayerDialog(int pnum)
                     player=PlayerGroupPlayer(players,name);
                     color=PlayerGetColor(player);
                     skill=PlayerGetSkill(player);
-                    PlayerDialogPlayer(type,name,color,skill);
+                    PlayerDialogPlayer(player);
                     break;
                 case 4 : // color
                 break;
@@ -487,12 +487,12 @@ void PlayerDialog(int pnum)
 
 void P1Dialog(void)
 {
-    PlayerDialog(PlayerGroupUseGet(0));
+    PlayerDialog(0);
 }
 
 void P2Dialog(void)
 {
-    PlayerDialog(PlayerGroupUseGet(1));
+    PlayerDialog(1);
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
@@ -559,7 +559,7 @@ void ProgInit() // initialises global variables
         PlayerNew("Player2",RED,Human,Low),
         PlayerNew("Ronda Random",LTBLUE,Computer,Low),
         PlayerNew("Alfa B Prune",GREEN,Computer,Medium),
-        PlayerNew("Nathan Neuro",BLUE,Computer,High),
+        PlayerNew("Tammy Tree",BLUE,Computer,High),
         PlayerNew("Rodney Rule",ORANGE,Computer,Medium),
         PlayerNew("Minny Maxx",PURPLE,Computer,Medium));
     SetP1Current();
@@ -612,26 +612,25 @@ void ProgInit() // initialises global variables
                                                 3,"Successive"));
             
             
-    mainmenu=MenuNew(5,&(vs->main),ViewSysCurrent(vs));
-    MenuNewSub(mainmenu,"Game",5,
+    mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs));
+    MenuNewSub(mainmenu,"Game",7,
         "New",      CN, NewGame,    ItemEnabled,
         "End",      CE, EndGame,    ItemDisabled,
         "Status",   CS, GameStatus, ItemEnabled,
-        SEPARATOR,
+        "High Scores",NONE,NULL,    ItemEnabled,
+        "Suggest Move",NONE,NULL,   ItemEnabled,
+        "Sound",    NONE,NULL,      ItemEnabled,
         "Exit",     CX, ExitGame,   ItemEnabled);
     MenuNewSub(mainmenu,"Board",3,
         "7x8x4",    NONE,GameSize7x8x4,      ItemEnabled,
         "12x13x6",  NONE,GameSize12x13x6,      ItemEnabled, 
         "Custom...",NONE,GameSizeCustom,      ItemEnabled);
-    MenuNewSub(mainmenu,"Player",2,
+    MenuNewSub(mainmenu,"Player",3,
         "One...",   NONE,P1Dialog,      ItemDisabled,
-        "Two...",   NONE,P2Dialog,      ItemEnabled);
-    MenuNewSub(mainmenu,"Options",2,
-        "Player",   NONE,NULL,      ItemEnabled,
-        "Turn",     NONE,NULL,      ItemEnabled);
-    MenuNewSub(mainmenu,"Help",3,
+        "Two...",   NONE,P2Dialog,      ItemEnabled,
+        "Options",  NONE,NULL,          ItemEnabled);
+    MenuNewSub(mainmenu,"Help",2,
         "Contents", NONE,NULL,      ItemEnabled,
-        SEPARATOR,
         "About",    NONE,HelpAbout, ItemEnabled);                              
     MenuKeysSet(mainmenu,KP4,KP6,KP8,KP2,ENTER,ESC);
 }

@@ -32,6 +32,7 @@ char mygetch();
 int GetKey();
 void IntToByteString(int in,char *array);
 int ByteStringToInt(char *array);
+void _Break(int args,...);
 long FileSize(char *directory,char *filename);
 char *NewString(char *string);
 void StartRandom();

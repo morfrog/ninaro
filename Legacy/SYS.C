@@ -10,6 +10,7 @@
 #include <graph.h>
 #include <direct.h>
 #include <string.h>
+#include <stdarg.h>
 #include "sys.h"
 
 void *salloc(int n_items,size_t something) {
@@ -114,6 +115,21 @@ int ByteStringToInt(char *array)
     for (x=0;x<4;x++)
         ret+=(array[x] << ((3-x)*8)); 
     return ret;
+}
+
+void _Break(int args,...)
+{
+    int x,val; char *var;
+    va_list ap;
+
+    va_start(ap,args);
+    for (x=0;x<args;x++)
+    {
+        var=va_arg(ap,char *);
+        val=va_arg(ap,int);
+        printf("%s = %d\n",var,val);
+    }
+    va_end(ap);
 }
 
 long FileSize(char *directory,char *filename)
