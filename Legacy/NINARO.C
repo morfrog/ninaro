@@ -33,6 +33,7 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 #include <graph.h>
 #include <i86.h>
 #include "sys.h"
+#include "mouse.h"
 #include "binfile.h"
 #include "sound.h"
 #include "key.h"
@@ -638,7 +639,7 @@ int SaveCfg()
 {
     int ret,x;
     PLAYER *pl;
-    BINFILE *bf=BinFileNew((9+players->players)*sizeof(int));
+    BINFILE *bf=BinFileNew((10+players->players)*sizeof(int));
     BinFilePutInt(bf,grid_cols);
     BinFilePutInt(bf,grid_rows);
     BinFilePutInt(bf,win->tokens);
@@ -648,6 +649,7 @@ int SaveCfg()
     BinFilePutInt(bf,ai_delay);
     BinFilePutInt(bf,player_one);
     BinFilePutInt(bf,player_two);
+    BinFilePutInt(bf,IsMute()?TRUE:FALSE);
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -660,7 +662,7 @@ int SaveCfg()
 
 int LoadCfg()
 {
-    int ret,x;
+    int ret,x,col;
     PLAYER *pl;
     BINFILE *bf=BinFileReadFull("NINARO.CFG",0);
     if (bf==NULL) return FALSE;
@@ -673,12 +675,24 @@ int LoadCfg()
     ai_delay=BinFileGetInt(bf);
     player_one=BinFileGetInt(bf);
     player_two=BinFileGetInt(bf);
+    Mute(BinFileGetInt(bf));
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
         PlayerSetColor(pl,BinFileGetInt(bf));
     }
     BinFileFree(bf);
+    if (player_two==7)
+    {
+        col=PlayerGetColor(PlayerGroupPlayer(players,7));
+        PlayerCopy(PlayerGroupPlayer(players,7),PlayerGroupPlayer(players,player_one));
+    }
+    else if (player_one==7)
+    {
+        col=PlayerGetColor(PlayerGroupPlayer(players,7));
+        PlayerCopy(PlayerGroupPlayer(players,7),PlayerGroupPlayer(players,player_two));
+        PlayerSetColor(PlayerGroupPlayer(players,7),col);
+    }
     return TRUE;
 }
 
@@ -898,6 +912,8 @@ void TitleScreen(void)
 // uses global variables
 {
     VIEWPORT vp;
+    PLAYER *plname=PlayerNew("",RED,Human,NULL);
+    PLAYER *plback=PlayerNew("",YELLOW,Human,NULL);
     PLAYER *pl;
     GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
     int x,tokens,scol; // source col
@@ -927,7 +943,7 @@ void TitleScreen(void)
         {
             scol=AIRandomMove(playgrid);
             pl=RemoveToken(filegrid,scol);
-            InsertTokenInCol(playgrid,scol,pl,win);
+            InsertTokenInCol(playgrid,scol,PlayerGroupFind(players,pl)==0?plback:plname,win);
             _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
             x++;
         }
@@ -947,6 +963,8 @@ void TitleScreen(void)
     _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
     GetKey();
     GridFree(filegrid);
+    PlayerFree(plname);
+    PlayerFree(plback);
 }
 
 void Test(void)
@@ -1271,6 +1289,8 @@ void main()
     _registerfonts( "*.fon" );
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
+    ResetMouse();
+    SetMousePage(0);
     ProgInit(); // some parts rely on graphics mode
     
     ccols=grid_cols; crows=grid_rows; csize=win->tokens;

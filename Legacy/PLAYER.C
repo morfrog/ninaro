@@ -41,6 +41,13 @@ PLAYER *PlayerNew(char *name,int color,int type,int (* getmove)(void *))
     return ret;
 }
 
+void PlayerFree(PLAYER *player)
+// purpose : to free the memory allocated to a player
+// returns : void
+{
+    free(player);
+}
+
 int  PlayerGetColor(PLAYER *player) {return player->color;}
 // purpose : to get player's color
 // returns : player's color

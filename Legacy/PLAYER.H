@@ -37,6 +37,9 @@ PLAYER *PlayerNew(char *name,int color,int type,int (* getmove)(void *));
 void PlayerReset(PLAYER *player,char *name,int color,int type,int (* getmove)(void *));
 // purpose : to reset a players attributes
 // returns : void
+void PlayerFree(PLAYER *player);
+// purpose : to free the memory allocated to a player
+// returns : void
 void PlayerCopy(PLAYER *dest,PLAYER *source);
 // purpose : to copy one source players attributes to dest players attributes
 // returns : void

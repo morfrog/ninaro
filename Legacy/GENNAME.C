@@ -23,7 +23,7 @@ void main()
     {1,2,1,1,1,2,1,1,2,1,1,2,1,1,1,2,1,1,1,2,2,1,1,1,2,2,2,1,1,1,1,2,2,2,1,1},
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}};
     int x,y;
-    BINFILE *bf=BinFileNew(sizeof(int)*(2+(9*31)));
+    BINFILE *bf=BinFileNew(sizeof(int)*(2+(ROWS*COLS)));
 
     BinFilePutInt(bf,COLS); // width
     BinFilePutInt(bf,ROWS);  // height
