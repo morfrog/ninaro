@@ -1,6 +1,10 @@
 #ifndef CONTROLS_H
 #define CONTROLS_H
 
+#define CONTROLBACK GREY
+#define CONTROLTEXT BLACK
+#define CONTROLHILITE RED
+
 enum {Radio,Color,Button,Value};
 
 struct radioTag
@@ -14,7 +18,7 @@ typedef struct radioTag RADIO;
 struct radiolistTag
 {
     int current;   // the one which is selected
-    int rbs;       // how many buttons the are
+    int rbs;       // how many radio buttons the are
     RADIO *rb;     // array of radio buttons
 };
 
@@ -22,51 +26,51 @@ typedef struct radiolistTag RADIOLIST;
 
 struct colorTag
 {
-    int color;
+    int value;  // the value of the color
 };
 
 typedef struct colorTag COLOR;
 
 struct colorlistTag
 {
-    int current;
-    int colors;
-    COLOR *color;
+    int current;    // the one which is selected
+    int colors;     // the size of the list
+    COLOR *color;   // the color list
 };
 
 typedef struct colorlistTag COLORLIST;
 
 struct buttonTag
 {
-    char *name;
-    void (* func)(void);
+    char *name;             // the name of the button
+    void (* func)(void);    // the function to run when the button is pressed
 };
 
 typedef struct buttonTag BUTTON;
 
 struct buttonlistTag
 {
-    int current;
-    int buttons;
-    BUTTON *button;
+    int current;    // the one which is selected
+    int buttons;    // how many buttons are in the list
+    BUTTON *button; // the list of buttons
 };
 
-typedef struct buttonlist BUTTONLIST;
+typedef struct buttonlistTag BUTTONLIST;
 
 struct valueTag
 {
-    int value;
+    int value;      // the value
 };
 
 typedef struct valueTag VALUE;
 
 struct valuelistTag
 {
-    int current;
-    int values;
-    VALUE *value;
-    int names;
-    char **name;
+    int current;    // the one which is selected
+    int values;     // how many values there are
+    VALUE *value;   // the list of values
+    int names;      // how many names there are
+    char **name;    // array of the names
 };
 
 typedef struct valuelistTag VALUELIST;
@@ -74,16 +78,17 @@ typedef struct valuelistTag VALUELIST;
 struct dialogelemTag
 {
     int type; // enum {Radio,Color,Button,Value};
-    void *elem;
+    char *name;
+    void *elem; // are actually lists of above enum type 
 };
 
 typedef struct dialogelemTag DIALOGELEM;
 
 struct dialogTag
 {
-    int current;
-    int controls;
-    DIALOGELEM *control;
+    int current;        // which control is currently selected
+    int controls;       // how many controls there are
+    DIALOGELEM *control; // array of the controls
 };
 
 typedef struct dialogTag DIALOG;

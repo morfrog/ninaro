@@ -375,7 +375,7 @@ void ProgInit() // initialises global variables
     entrygrid=NewGrid(grid_cols,1);
     InsertTokenAtCR(entrygrid,keypos,0,player_current);
     
-    mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs));
+    mainmenu=MenuNew(5,&(vs->main),ViewSysCurrent(vs));
     MenuNewSub(mainmenu,"Game",5,
         "New",      CN, NewGame,    ItemEnabled,
         "End",      CE, EndGame,    ItemDisabled,
@@ -389,6 +389,9 @@ void ProgInit() // initialises global variables
     MenuNewSub(mainmenu,"Player",2,
         "One...",   NONE,NULL,      ItemDisabled,
         "Two...",   NONE,NULL,      ItemEnabled);
+    MenuNewSub(mainmenu,"Options",2,
+        "Player",   NONE,NULL,      ItemEnabled,
+        "Turn",     NONE,NULL,      ItemEnabled);
     MenuNewSub(mainmenu,"Help",3,
         "Contents", NONE,NULL,      ItemEnabled,
         SEPARATOR,
