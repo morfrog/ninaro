@@ -102,6 +102,7 @@ int hilite,back,text;
 int mouseusage;
 int mouseinstalled;
 int mouseconfig;    // are the mouse config values OK (got via mousein)
+int savecfg;
 
 int BothPlayerAI(void)
 {
@@ -118,6 +119,21 @@ void SetP2(int player)
 {
     if (player_current==player_two) {player_two=player;player_current=player_two;}
     else player_two=player;
+}
+
+void SetP1_2(int p1,int p2)
+// sets up both players, changes p2 color if colors equal
+{
+    PLAYER *player2=PlayerGroupPlayer(players,p2);
+    int player2col=PlayerGetColor(player2);
+    player_current=p1;
+    SetP1(p1);
+    SetP2(p2);
+    if (PlayerGetColor(PlayerGroupPlayer(players,p1))==player2col)
+    {
+        if (player2col==7) PlayerSetColor(player2,1+Random(6));
+        else PlayerSetColor(player2,7);
+    }
 }
 
 void SetP1Current()
@@ -173,8 +189,8 @@ void PlayerSwap(void) // not in use
 int MinOf(int a,int b) {if (a<b) return a; else return b;}
 int MaxOf(int a,int b) {if (a>b) return a; else return b;}
 
-void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
-void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
+void GameSize7x8x4(void) {ResetGameSize(7,8,4); ResetScores(); GameStatus();}
+void GameSize12x13x6(void) {ResetGameSize(12,13,6); ResetScores(); GameStatus();}
 
 void GameSizeFit(DIALOG *d,int last)
 // only to be used with the boarddialog dialog
@@ -614,21 +630,26 @@ void EndGame(void)
     GridEmpty(playgrid);
 }
 
+void ToggleInGame(void)
+{
+    if (ingame) EndGame(); else NewGame();
+}
+
 void DemoMode(int type)
 // uses current board
 {
-    int p1;
+    int p1,p2;
     if (type==Computer)
     {
-        p1=Random(4);
-        SetP1(2+p1);
-        SetP2(3+p1);
+        p1=Random(5);
+        do {p2=Random(5);} while (p1==p2); // ensure players are different
+        // could have same player, but have to mess with copy slot.
+        SetP1_2(2+p1,2+p2);
         TextBoxFixedAddLine(msgbox,"~Demo MODE!");
     }
     else
     {
-        SetP1(0);
-        SetP2(1);
+        SetP1_2(0,1);
     }
     NewGame();
     ResetScores();
@@ -653,8 +674,7 @@ void LoadGame(void)
         SetWinSize(win,size);
         playgrid=tmp;
         entrygrid=GridNew(grid_cols,1);
-        SetP1(p1);
-        SetP2(p2);
+        SetP1_2(p1,p2);
         player_current=current;
         TextBoxFixedAddLine(msgbox,"Game Loaded");
         win_occured=FALSE; 
@@ -786,7 +806,11 @@ int LoadCfg()
     return TRUE;
 }
 
-void ExitGame(void) {SaveCfg(); ProgFree(); ShutDown(); exit(0);}
+void ExitGame(void)
+{
+    if (savecfg) SaveCfg();
+    ProgFree(); ShutDown(); exit(0);
+}
 
 void GameStatus(void)
 {
@@ -811,6 +835,7 @@ void GameSizeCustom(void)
         ResetGameSize(cbuf[1],cbuf[0],cbuf[2]);
         GameStatus();
     }
+    ResetScores();
 }
 
 void GameOptions(void)
@@ -963,6 +988,9 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
     int *col=malloc(sizeof(int)*cols),x;
     int atlevel,canuse=FALSE,ret;
     int triggered=FALSE;
+#ifdef TESTING
+    char tmp[80];
+#endif
     
     for (x=0;x<cols;x++) // find how many can columns still get tokens
     {
@@ -1191,8 +1219,6 @@ int ExtraFunctionality(int key)
 {
     switch (key)
     {
-        case F2 : SaveGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
-        case F3 : LoadGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
         case 'h' : case F1  :
             KeyGroupCopy(pkeys,p2keys);
             // F1 to help defaults to numeric keys
@@ -1206,11 +1232,22 @@ int ExtraFunctionality(int key)
             SwapPage();
             break;
         case AF4 : case CX : case CQ :
-        case F10 : ExitGame(); break;
-        case F6  : DemoMode(Computer); break;
-        case F7  : DemoMode(Human); break;
-        case F8  : ToggleSound(); ViewSysWindowChanged(vs,4,TRUE);
+        case F2 : SaveGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
+        case F3 : LoadGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
+        case F4 : ToggleInGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
+        case F5 : SuggestMove(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
+        case F6 : DemoMode(Computer); break;
+        case F7 : DemoMode(Human); break;
+        case F8 : ToggleSound(); ViewSysWindowChanged(vs,4,TRUE);
             ViewSysDisplay(vs,DisplayChanged); SwapPage(); break;
+        case F9 : if (remove("NINARO.CFG")==0)
+                       TextBoxFixedAddLine(msgbox,"Config Removed...");
+                   else
+                       TextBoxFixedAddLine(msgbox,"Config Already Removed...");
+                   savecfg=FALSE;
+                   ViewSysWindowChanged(vs,3,TRUE);
+                   ViewSysDisplay(vs,DisplayChanged); SwapPage(); break;
+        case F10 : ExitGame(); break;
         default : return FALSE; break;
     } // switch
     return TRUE;
@@ -1581,8 +1618,7 @@ void ProgInit() // initialises global variables
         win->tokens=4;
         grid_rows=8;
         grid_cols=7;
-        SetP1(0);
-        SetP2(1);
+        SetP1_2(0,1);
         goesfirst=GFSuccessive;
         wentfirst=player_one;
         bestof=0;   // infinity
@@ -1595,6 +1631,7 @@ void ProgInit() // initialises global variables
     win_occured=FALSE;
     playgrid=GridNew(grid_cols,grid_rows);
     entrygrid=GridNew(grid_cols,1);
+    savecfg=TRUE; // default to save
 }
 
 void ProgFree() // frees global variables

@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : MOUSEIN
+Module Purpose : to provide a level of abstraction above MOUSE
+Creation Date  : 14 May 1998
+Updated        : 24 May 1998    FIXED InitMouse, GetMouseInput
+****************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
