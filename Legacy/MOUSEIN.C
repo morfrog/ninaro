@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <conio.h>
 #include <graph.h>
+#include <i86.h>
 #include "mouse.h"
 #include "screen.h"
 #include "defines.h"
@@ -72,64 +73,11 @@ int MouseRow(int row,int rows)
     return (row*(350/rows))+(175/rows);
 }
 
-/*
-int GetMouseInput(int *x,int *y)
-// purpose : to get mouse input, *button==LMB or RMB
-// returns : RMB if right button input found, LMB if left, NMB if none
-{
-    static int lmbpress=0;
-    static int lmbavailable=0;
-    static int rmbpress=0;
-    static int rmbavailable=0;
-    MouseStatus gmims={0};
-    
-    MouseStat(&gmims);
-    gmims.left=1;
-    PressInfo(&gmims);
-    if (gmims.ButtonCount) ++lmbpress;
-    gmims.left=1;
-    ReleaseInfo(&gmims);
-    if (gmims.ButtonCount) {--lmbpress; ++lmbavailable;}
-    gmims.left=0;
-    gmims.right=1;
-    PressInfo(&gmims);
-    if (gmims.ButtonCount) ++rmbpress;
-    gmims.left=0;
-    gmims.right=1;
-    ReleaseInfo(&gmims);
-    if (gmims.ButtonCount) {--rmbpress; ++rmbavailable;}
-
-    if (lmbavailable)
-    {   
-        MouseStat(&gmims);
-        *x=gmims.xpos-37683200;
-        *y=gmims.ypos-8847360;
-        --lmbavailable;
-        return LMB;
-    }
-    else if (rmbavailable)
-    {
-        MouseStat(&gmims);
-        *x=gmims.xpos-37683200;
-        *y=gmims.ypos-8847360;
-        --rmbavailable;
-        return RMB;
-    }
-    else
-    {
-        MouseStat(&gmims);
-        *x=gmims.xpos-37683200;
-        *y=gmims.ypos-8847360;
-        return NMB;
-    }
-}
-*/
-
 int InitMouse(void)
 // returns : TRUE if use mouse, else FALSE
 {
     int x,y,ret=TRUE;  // mouse successfully initialised is default
-    int lastx=0,lasty=0;
+    int lastx=0,lasty=0,col=WHITE;
     int pos=0;
     char bfg[80];
 
@@ -161,18 +109,21 @@ int InitMouse(void)
     while (NMB==GetMouseInput(&x,&y))
     {
         if (kbhit()) {while (kbhit()) {getch();} ret=FALSE; break;}
-        if ((lastx!=x) || (lasty!=y))
-        {
+//        if ((lastx!=x) || (lasty!=y))
+//        {
+            HideMouse();
             _clearscreen(_GVIEWPORT);
-            _moveto(pos,pos); _lineto(100+pos,100+pos);
+            _moveto(pos,pos); _lineto(70+pos,70+pos);
             _moveto(pos,pos); _lineto(pos+20,pos);
             _moveto(pos,pos); _lineto(pos,pos+20);
-            if (pos<1) pos=30; else pos-=1;
-            sprintf(bfg,"%10d,%10d",x,y);
-            _grtext_w(0.0,0.5,bfg);
+            if (pos<1) pos=50; else pos-=1;
+//            sprintf(bfg,"%10d,%10d",x,y);
+//            _grtext_w(0.0,0.5,bfg);
+            ShowMouse();
             SwapPage();
-            lastx=x; lasty=y;
-        }
+            delay(20);
+//            lastx=x; lasty=y;
+//        }
     }
     HideMouse();
     xadjust=x;
