@@ -156,12 +156,13 @@ void DisplayPlayGrid(void)
 
 void DisplayGameName(void)
 {
-    _setcharspacing(-0.3);
     _settextalign(_LEFT,_BASE);
     _setcolor(LTBLUE);
+    _setcharspacing_w(-0.01);
     _setcharsize_w(0.1,0.04);
     _grtext_w(0.0,0.7,"Ninaro");
     _grtext_w(0.01,0.7,"Ninaro");
+    _setcharspacing_w(-0.001);
     _setcharsize_w(0.03,0.013);
     _grtext_w(0.65,0.25,"By the author");
     _grtext_w(0.65,0.55,"");
@@ -264,16 +265,32 @@ void NewGame(void)
     win_occured=FALSE; MsgGameN();
 }
 void EndGame(void) {NewGame();}
-void ExitGame(void) {ShutDown(); ProgFree(); exit(0);}
+void ExitGame(void) {ProgFree(); ShutDown(); exit(0);}
 
 void HelpAbout(void)
 {
     ViewSysDisplay(vs,DisplayChanged);
     _setviewport(200,100,439,249);
+    BorderedBox(0.0,0.0,1.0,1.0,GREY,LTBLUE);
+    _setviewport(210,140,429,209);
     BorderedBox(0.0,0.0,1.0,1.0,BLACK,LTBLUE);
     DisplayGameName();
     SwapPage();
     GetKey();
+}
+
+void GameStatus(void)
+{
+    char buffer[50];
+    sprintf(buffer,"----------Game Status----------------");
+    TextBoxAddLine(msgbox,buffer,ATEND);
+    sprintf(buffer,"%d Columns x %d Rows, Connect %d",grid_cols,grid_rows,win->tokens);
+    TextBoxAddLine(msgbox,buffer,ATEND);
+    sprintf(buffer,"Player One is %s",PlayerGetName(player_one));
+    TextBoxAddLine(msgbox,buffer,ATEND);
+    sprintf(buffer,"Player Two is %s",PlayerGetName(player_two));
+    TextBoxAddLine(msgbox,buffer,ATEND);
+    TextBoxScrollEnd(msgbox);
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
@@ -286,7 +303,7 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
     ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,ACTIVE,
         DisplayGameName,"Ninaro - By the author 1998");
     ViewSysWindowNew(vs,0.61,0.1,1.0,0.6,ACTIVE,
-        DisplayMsgBox,"Messages appear here");
+        DisplayMsgBox,"Messages appear here");          // msg box is 3
     ViewSysWindowNew(vs,0.61,0.6,0.65,0.648,ACTIVE,
         DisplayP1Color,"Player One's Color");
     ViewSysWindowNew(vs,0.65,0.6,0.70,0.648,ACTIVE,
@@ -359,39 +376,36 @@ void ProgInit() // initialises global variables
     InsertTokenAtCR(entrygrid,keypos,0,player_current);
     
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs));
-    MenuNewSub(mainmenu,"Game",4,"New",CN,NewGame,ItemEnabled,
-                             "End",CE,EndGame,ItemDisabled,
-                             SEPARATOR,
-                             "Exit",CX,ExitGame,ItemEnabled);
-    MenuNewSub(mainmenu,"Board",3,"7x8x4",NONE,NULL,ItemEnabled,
-                              "12x13x6",NONE,NULL,ItemEnabled, 
-                              "Custom...",NONE,NULL,ItemEnabled);
-    MenuNewSub(mainmenu,"Player",2,"One...",NONE,NULL,ItemDisabled,
-                               "Two...",NONE,NULL,ItemEnabled);
-    MenuNewSub(mainmenu,"Help",2,"Contents",NONE,NULL,ItemEnabled,
-                             "About",NONE,HelpAbout,ItemEnabled);                              
+    MenuNewSub(mainmenu,"Game",5,
+        "New",      CN, NewGame,    ItemEnabled,
+        "End",      CE, EndGame,    ItemDisabled,
+        "Status",   CS, GameStatus, ItemEnabled,
+        SEPARATOR,
+        "Exit",     CX, ExitGame,   ItemEnabled);
+    MenuNewSub(mainmenu,"Board",3,
+        "7x8x4",    NONE,NULL,      ItemEnabled,
+        "12x13x6",  NONE,NULL,      ItemEnabled, 
+        "Custom...",NONE,NULL,      ItemEnabled);
+    MenuNewSub(mainmenu,"Player",2,
+        "One...",   NONE,NULL,      ItemDisabled,
+        "Two...",   NONE,NULL,      ItemEnabled);
+    MenuNewSub(mainmenu,"Help",3,
+        "Contents", NONE,NULL,      ItemEnabled,
+        SEPARATOR,
+        "About",    NONE,HelpAbout, ItemEnabled);                              
     MenuKeysSet(mainmenu,KP4,KP6,KP8,KP2,ENTER,ESC);
 }
 
 void ProgFree() // frees global variables
 {
-    int x;
-    printf("Freeing Memory...\n");
     free(win->win);
     free(win);
-    printf("Freeing ViewSystem...\n");
-    ViewSysFree(vs);
-    printf("Freeing Players...\n");
-    for (x=0;x<numplayers;x++)
-        free(players[x]);
+    MenuFree(mainmenu);
     free(players);
-    printf("Freeing Textbox...\n");
-    TextBoxFree(msgbox);
-    printf("Freeing Grids...\n");
     GridFree(playgrid);
     GridFree(entrygrid);
-    printf("Freeing Menu...");
-    MenuFree(mainmenu);
+    ViewSysFree(vs);
+    TextBoxFree(msgbox);
 }
 
 void main()

@@ -129,6 +129,7 @@ void MenuNewSub(MENU *menu,char *menuname,int items,...)
             // ensures the current is a proper item
         }
     }
+    va_end(ap);
     ++(menu->view->current);
 }
 
