@@ -307,7 +307,7 @@ int GetMouseMenuSub(MENU *menu,int x)
     return (x*menu->submenus/width);
 }
  
-void MenuCall(MENU *menu,void (* help)(void))
+void MenuCall(MENU *menu,void (* help)(void),int usemouse)
 // purpose : calls the menu, runs help via F1 or H
 // returns : void
 {
@@ -316,58 +316,59 @@ void MenuCall(MENU *menu,void (* help)(void))
     
     if (menu->current>=menu->submenus) menu->current=0;
 
-    btn=GetMouseInput(&mx,&my);
-    SetMouseMenu(menu);
+    if (usemouse)
+    {
+        btn=GetMouseInput(&mx,&my);
+        SetMouseMenu(menu);
+    }
     MenuDisplay(menu);
     SwapPage();
 
     for (;;)
     {   
         used=FALSE;
-        btn=GetMouseInput(&mx,&my);
-        switch (btn)
+        if (usemouse)
         {
-            case LMB :
-                funcret=MenuSelect(menu);
-            case RMB :
-                return; // menu finished
-                break;
-            case NMB :
-                newmenu=GetMouseMenuSub(menu,mx);
-                if (newmenu>=0) // valid mouse pos
-                {
-                    if (newmenu!=menu->current)
+            btn=GetMouseInput(&mx,&my);
+            switch (btn)
+            {
+                case LMB : funcret=MenuSelect(menu);
+                case RMB : return; break;// menu finished
+                case NMB : newmenu=GetMouseMenuSub(menu,mx);
+                    if (newmenu>=0) // valid mouse pos
                     {
-                        menu->current=newmenu;
-                        index=0; // left or right will be triggered,
-                                // and mouse y pos set to item
-                        funcret=TRUE;
-                        used=TRUE;
-                        SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
-                    }
-                    else // same menu, possibly different item
-                    {
-                        newitem=GetMouseMenuItem(menu,my);
-                        if ((newitem>=0) && (newitem<MenuSubItems(menu)))
-                        // valid mouse pos
+                        if (newmenu!=menu->current)
                         {
-//                            Buzz(400,500,2,6);
-                            if ((newitem!=MenuSubItem(menu))
-                            && (menu->submenu[menu->current].item[newitem].enabled))
-                            {
-                                menu->submenu[menu->current].current=newitem;
-                                index=2; // up or down
-                                funcret=TRUE;
-                                used=TRUE;
-                            }
+                            menu->current=newmenu;
+                            index=0; // left or right will be triggered,
+                                    // and mouse y pos set to item
+                            funcret=TRUE;
+                            used=TRUE;
+                            SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
                         }
-                        
+                        else // same menu, possibly different item
+                        {
+                            newitem=GetMouseMenuItem(menu,my);
+                            if ((newitem>=0) && (newitem<MenuSubItems(menu)))
+                            // valid mouse pos
+                            {
+//                           Buzz(400,500,2,6);
+                                if ((newitem!=MenuSubItem(menu))
+                                && (menu->submenu[menu->current].item[newitem].enabled))
+                                {
+                                    menu->submenu[menu->current].current=newitem;
+                                    index=2; // up or down
+                                    funcret=TRUE;
+                                    used=TRUE;
+                                }   
+                            }
+                            
+                        }
                     }
-                }
-                // else mouse pos bad
-                break;
-        }
-
+                    // else mouse pos bad
+                    break;
+            }
+        } // if usemouse
         if (kbhit())
         {
             key=GetKey();
@@ -390,10 +391,10 @@ void MenuCall(MENU *menu,void (* help)(void))
             switch (index)
             {
                 case 0 : case 1 : // left or right
-                    if (funcret) SetMouseMenuSub(menu,my);
+                    if ((usemouse) && (funcret)) SetMouseMenuSub(menu,my);
                     break;
                 case 2 : case 3 : // up or down
-                    if (funcret) SetMouseMenuItem(menu,mx);
+                    if ((usemouse) && (funcret)) SetMouseMenuItem(menu,mx);
                     break;
                 case 4 : case 5 : // SELECT or CANCEL
                     if (funcret) return; // menu finished

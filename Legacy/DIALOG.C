@@ -883,7 +883,7 @@ void DialogCurrentItemSet(DIALOG *d,int item)
     }
 }
 
-int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (* help)(void))
+int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (* help)(void),int usemouse)
 // purpose : runs a dialog, as is, in the viewport with the mempage as
 //           background, running function change whenever a controls current
 //           changes, using chars for control names, which are in left
@@ -899,62 +899,67 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
     DialogCurrentSet(d,d->elems-1);
     DialogStateGet(d,d->state);
     MemPagePut(mp);
-    c=DialogControlGet(d,d->current);
-    SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),MouseRow(d->current,d->elems));
 
+    if (usemouse)
+    {
+        c=DialogControlGet(d,d->current);
+        SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),MouseRow(d->current,d->elems));
+    }
     DialogDisplay(d,vp,mp,namefract,chars);
     SwapPage();
 
     for (;;)
     {
         used=FALSE;
-        btn=GetMouseInput(&mx,&my);
-        switch (btn)
+        if (usemouse)
         {
-            case LMB :
-                index=4;
-                used=KeySysIKey(d->ks,index,d,&funcret);
-                break;
-            case RMB :
-                index=5;
-                used=KeySysIKey(d->ks,index,d,&funcret);
-                break;
-            case NMB :
-                funcret=FALSE; index=-1;
-                
-                newcontrol=GetMouseControl(d,my);
-                if (newcontrol>=0) // valid mouse pos
-                {
-                    if (newcontrol!=d->current)
+            btn=GetMouseInput(&mx,&my);
+            switch (btn)
+            {
+                case LMB :
+                    index=4;
+                    used=KeySysIKey(d->ks,index,d,&funcret);
+                    break;
+                case RMB :
+                    index=5;
+                    used=KeySysIKey(d->ks,index,d,&funcret);
+                    break;
+                case NMB :
+                    funcret=FALSE; index=-1;
+                    
+                    newcontrol=GetMouseControl(d,my);
+                    if (newcontrol>=0) // valid mouse pos
                     {
-                        if (DialogMove(d,newcontrol-d->current))
+                        if (newcontrol!=d->current)
                         {
-                            index=2; 
-                            funcret=TRUE;
-                            used=TRUE;
-                        }
-                    }
-                    else // same control, possibly different item
-                    {
-                        newitem=GetMouseControlItem(d,mx);
-                        if ((newitem>=0) )// && (newitem<ControlRange(DialogControlGet(d,d->current))))
-                        // valid mouse pos
-                        {
-                            if (newitem!=DialogCurrentItemGet(d))
+                            if (DialogMove(d,newcontrol-d->current))
                             {
-                                index=0;
-                                DialogCurrentItemSet(d,newitem);
+                                index=2; 
                                 funcret=TRUE;
-                                used=2;
+                                used=TRUE;
+                            }
+                        }
+                        else // same control, possibly different item
+                        {
+                            newitem=GetMouseControlItem(d,mx);
+                            if ((newitem>=0) )// && (newitem<ControlRange(DialogControlGet(d,d->current))))
+                            // valid mouse pos
+                            {
+                                if (newitem!=DialogCurrentItemGet(d))
+                                {
+                                    index=0;
+                                    DialogCurrentItemSet(d,newitem);
+                                    funcret=TRUE;
+                                    used=2;
+                                }
                             }
                         }
                     }
-                }
-                // else mouse pos bad
+                    // else mouse pos bad
 
-                break;
-        }
-
+                    break;
+            }
+        } // if usemouse
         if (kbhit())
         {
             key=GetKey();
@@ -984,17 +989,21 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
                     if (funcret)
                     {
                         if (d->change!=NULL) d->change(d,index);
-                        c=DialogControlGet(d,d->current);
-                        if (used!=2)
+                        if ((usemouse) && (used!=2)) // mouse not used to move
+                        {
+                            c=DialogControlGet(d,d->current);
                             SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),my);
+                        }
                     }
                     break;
                 case 2 : case 3 : // UP or DOWN
                     if (funcret)
                     {
-                        c=DialogControlGet(d,d->current);
-                        if (used!=2)
+                        if ((usemouse) && (used!=2)) // mouse not used to move
+                        {
+                            c=DialogControlGet(d,d->current);
                             SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),MouseRow(d->current,d->elems));
+                        }
                     }
                     break;
                 case 4 : // SELECT
@@ -1009,8 +1018,11 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
                     }
                     else if (funcret==UNKNOWN)
                     {
-                        c=DialogControlGet(d,d->current);
-                        SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),MouseRow(d->current,d->elems));
+                        if ((usemouse))
+                        {
+                            c=DialogControlGet(d,d->current);
+                            SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),MouseRow(d->current,d->elems));
+                        }
                         break;    // reset
                     }
                 case 5 : // CANCEL

@@ -60,7 +60,9 @@ int BinFileWriteFull(BINFILE *bf,char *filename)
 // returns : TRUE if successful else FALSE
 
 {
-    FILE *file=fopen(filename,"wb");
+    FILE *file;
+    remove(filename);
+    file=fopen(filename,"wb");
     if (file==NULL) return FALSE;
     BinFileWrite(bf,file);
     fclose(file);

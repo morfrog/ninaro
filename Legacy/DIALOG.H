@@ -201,7 +201,7 @@ int DialogCancel(DIALOG *d);
 int DialogSelect(DIALOG *d);
 // purpose : sends a select signal to the dialog
 // returns : TRUE if OK, FALSE if cancel, UNKNOWN if reset
-int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (* help)(void));
+int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (* help)(void),int usemouse);
 // purpose : runs a dialog, as is, in the viewport with the mempage as
 //           background, running function change whenever a controls current
 //           changes, using chars for control names, which are in left

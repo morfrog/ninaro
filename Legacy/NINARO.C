@@ -98,7 +98,7 @@ int wentfirst;
 int ai_speed;
 int ai_delay; // milliseconds
 int hilite,back,text;
-
+int mouseusage;
 
 int BothPlayerAI(void)
 {
@@ -455,7 +455,7 @@ int KeyUp(void *vp)
 {
     KEYGROUP *kg=KeySysGroupGet(ks);
     MenuKeyGroupSet(mainmenu,kg);
-    MenuCall(mainmenu,HelpMenu);
+    MenuCall(mainmenu,HelpMenu,mouseusage==2); // full mouse use only
     return DisplayAll; // none or all could have changed in menucall
 }
 
@@ -654,7 +654,7 @@ int SaveCfg()
 {
     int ret,x;
     PLAYER *pl;
-    BINFILE *bf=BinFileNew((12+players->players)*sizeof(int));
+    BINFILE *bf=BinFileNew((13+players->players)*sizeof(int));
     BinFilePutInt(bf,grid_cols);
     BinFilePutInt(bf,grid_rows);
     BinFilePutInt(bf,win->tokens);
@@ -667,6 +667,7 @@ int SaveCfg()
     BinFilePutInt(bf,IsMute()?TRUE:FALSE);
     BinFilePutInt(bf,back);
     BinFilePutInt(bf,hilite);
+    BinFilePutInt(bf,mouseusage);
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -704,6 +705,7 @@ int LoadCfg()
         _remappalette(BLACK,_BRIGHTWHITE); _remappalette(WHITE,_BLACK);
     }
     hilite=BinFileGetInt(bf);
+    mouseusage=BinFileGetInt(bf);
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -744,7 +746,7 @@ void GameSizeCustom(void)
     cbuf[2]=win->tokens; cbuf[3]=0;
     DialogStateSet(boarddialog,cbuf);
     GameSizeFit(boarddialog,6);
-    if (DialogCall(boarddialog,&vp,vs->current,5,8,HelpBoardDialog))
+    if (DialogCall(boarddialog,&vp,vs->current,5,8,HelpBoardDialog,mouseusage==2))
     {
         DialogStateGet(boarddialog,cbuf);
         ResetGameSize(cbuf[1],cbuf[0],cbuf[2]);
@@ -757,6 +759,7 @@ void GameOptions(void)
     VIEWPORT vp={50,50,590,300};
     CONTROL *c1=DialogControlGet(gameoptionsdialog,0); // background
     CONTROL *c2=DialogControlGet(gameoptionsdialog,1);// hilite
+    CONTROL *c3=DialogControlGet(gameoptionsdialog,2);// mouse usage
 
     if (back==BLACK)
     {
@@ -771,7 +774,8 @@ void GameOptions(void)
         ControlCurrentSet(c1,1);
     }
     ControlCurrentSetTo(c2,hilite);
-    DialogCall(gameoptionsdialog,&vp,vs->current,5,11,HelpGameOptions);
+    ControlCurrentSetTo(c3,mouseusage);
+    DialogCall(gameoptionsdialog,&vp,vs->current,5,11,HelpGameOptions,mouseusage==2);
     if (ControlCurrentGet(c1)==0)
     {
         back=BLACK;
@@ -783,6 +787,7 @@ void GameOptions(void)
         _remappalette(BLACK,_BRIGHTWHITE); _remappalette(WHITE,_BLACK);
     }
     ControlValueGet(c2,ControlCurrentGet(c2),&hilite);
+    ControlValueGet(c3,ControlCurrentGet(c3),&mouseusage);
 }
 
 int PlayerDialog(int pnum)
@@ -793,10 +798,11 @@ int PlayerDialog(int pnum)
     CONTROL *c2=DialogControlGet(playerdialog,1);// colors
     int p;
     SetupPlayer(pnum);
-    if (DialogCall(playerdialog,&vp,vs->current,5,8,HelpPlayerDialog))
+    if (DialogCall(playerdialog,&vp,vs->current,5,8,HelpPlayerDialog,mouseusage==2))
     {
         ControlValueGet(c,ControlCurrentGet(c),&p); // which player
-        if (((pnum==player_two) && (p==player_one))
+        if ((p==0) || (p==1)) {}
+        else if (((pnum==player_two) && (p==player_one))
         || ((pnum==player_one) && (p==player_two)))
         {
             PlayerCopy(PlayerGroupPlayer(players,7),PlayerGroupPlayer(players,p));
@@ -845,7 +851,7 @@ void PlayerOptions(void)
     CONTROL *c;
     ControlCurrentSetTo(DialogControlGet(optionsdialog,0),goesfirst);
     ControlCurrentSetTo(DialogControlGet(optionsdialog,1),ai_speed);
-    if (DialogCall(optionsdialog,&vp,vs->current,5,11,HelpOptionsDialog))
+    if (DialogCall(optionsdialog,&vp,vs->current,5,11,HelpOptionsDialog,mouseusage==2))
     {
         goesfirst=ControlCurrentGet(DialogControlGet(optionsdialog,0));
         c=DialogControlGet(optionsdialog,1);
@@ -1060,7 +1066,7 @@ int ExtraFunctionality(int key)
         case 'm' : case ESC :
             KeyGroupCopy(pkeys,p2keys);
             // ESC to menu defaults to numeric keys
-            MenuCall(mainmenu,HelpMenu);
+            MenuCall(mainmenu,HelpMenu,mouseusage==2); // full mouse use only
             ViewSysDisplay(vs,DisplayAll); // none or all could have changed
             SwapPage();
             break;
@@ -1114,7 +1120,7 @@ int HumanMove(GRID *grid,int usemouse)
     int key,index=0,funcret,mx,my,newpos,btn;
 //    char bfg[20];
 
-    SetMouseCol(keypos);
+    if (mouseusage) SetMouseCol(keypos);
     
 //  Buzz(400,500,50,200);
     for (;;)
@@ -1128,7 +1134,7 @@ int HumanMove(GRID *grid,int usemouse)
                 switch (index)
                 {
                     case 0 : case 1 : // left or right
-                        SetMouseCol(keypos);
+                        if (mouseusage) SetMouseCol(keypos);
                         ViewSysDisplay(vs,funcret);
                         if (funcret!=NoDisplay) SwapPage(); break;
                     case 2 : case 5 : // up or cancel = menu
@@ -1146,7 +1152,7 @@ int HumanMove(GRID *grid,int usemouse)
             }
         }
 
-        if (usemouse)
+        if ((mouseusage) && (usemouse))
         {
             btn=GetMouseInput(&mx,&my);
             mx=mx%640;
@@ -1426,6 +1432,7 @@ void ProgInit() // initialises global variables
         wentfirst=player_one;
         ai_speed=2; // normal
         ai_delay=500; // half a second
+        mouseusage=1; // partial
     }
     win->win=malloc(win->tokens*sizeof(TOKEN));
     win_occured=FALSE;
@@ -1487,7 +1494,10 @@ void main()
             {
 
             }
-            if (GetMouseInput(&mx,&my)==RMB) KeyUp(NULL); // menu call
+            if (mouseusage)
+            {
+                if (GetMouseInput(&mx,&my)==RMB) KeyUp(NULL); // menu call
+            }
             if (kbhit())
             {
                 ExtraFunctionality(GetKey());
@@ -1497,7 +1507,7 @@ void main()
                 if (col!=keypos) // animate move
                 {
                     AnimateMove(col);
-                    SetMouseCol(col);
+                    if (mouseusage) SetMouseCol(col);
                 }   // now col==keypos;
                 keypos=col;
                 if (DropToken()!=Failure)
