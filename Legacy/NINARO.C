@@ -34,6 +34,7 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 #include <i86.h>
 #include "sys.h"
 #include "mouse.h"
+#include "mousein.h"
 #include "binfile.h"
 #include "sound.h"
 #include "key.h"
@@ -406,7 +407,7 @@ void HelpContentsFunc(void)
 void HelpAbout(void)
 {
     VIEWPORT vp={190,181,449,259}; // help viewport
-    MemPagePut(ViewSysCurrent(vs));
+    ViewSysDisplay(vs,DisplayCurrent);
     BorderedBox(180,100,459,269,GREY,LTBLUE);
     BorderedBox(190,110,449,179,BLACK,LTBLUE); // game name
     _setviewport(190,110,449,179);
@@ -415,7 +416,7 @@ void HelpAbout(void)
     SwapPage();
     MemPagePut(ViewSysCurrent(vs));     // both pages same
     HelpCall(aboutgame,&vp,ViewSysCurrent(vs));
-    ViewSysDisplay(vs,DisplayCurrent);      // refesh to normal
+//    ViewSysDisplay(vs,DisplayCurrent);      // refesh to normal
 }
 
 void HelpPlayerDialog(void)
@@ -673,8 +674,8 @@ int LoadCfg()
     wentfirst=BinFileGetInt(bf);
     ai_speed=BinFileGetInt(bf);
     ai_delay=BinFileGetInt(bf);
-    player_one=BinFileGetInt(bf);
-    player_two=BinFileGetInt(bf);
+    SetP1(BinFileGetInt(bf));
+    SetP2(BinFileGetInt(bf));
     Mute(BinFileGetInt(bf));
     for (x=0;x<players->players;x++)
     {
@@ -1002,45 +1003,92 @@ int ExtraFunctionality(int key)
     return TRUE;
 }
 
-int HumanMove(GRID *grid,KEYGROUP *kg)
+void AnimateMove(int col)
+{
+    int goright=col>keypos;
+    int dist=(goright?col-keypos:keypos-col);
+    int del=0;
+    if (dist==0) return;
+    del=(ai_speed*ai_delay)/(dist);   // ai_speed is a half second delay
+    do
+    {
+        if (goright) KeyRight(NULL); else KeyLeft(NULL);
+        ViewSysWindowChanged(vs,0,TRUE); // entry grid
+        ViewSysDisplay(vs,DisplayChanged); SwapPage();
+        delay(del); // delay appropriate amount of time as per ai_speed 
+    } while (keypos!=col);
+}
+
+void MouseMove(int x,int y,int width,int height)
+{
+    PLAYER *pl=RemoveToken(entrygrid,keypos);
+    keypos=x*grid_cols/width;
+    InsertTokenAtCR(entrygrid,keypos,0,pl);
+    ViewSysWindowChanged(vs,0,TRUE); // entrygrid
+}
+
+int HumanMove(GRID *grid)
 // returns column, returns -1 if anything other than a move occurs
 {
-    int key,index,funcret;
-    KeyGroupCopy(pkeys,kg);
-
+    int key,index,funcret,mx,my,newpos,x,dist;
+    char bfg[80];
+    ShowMouse();
+    Buzz(400,500,50,200);
     for (;;)
     {
-        key=GetKey();
-        if (KeySysKey(ks,key,NULL,&funcret,&index)) // key was used
+        switch (GetMouseInput(&mx,&my))
         {
-            switch (index)
+            case LMB :
+//                sprintf(bfg,"%d,%d",mx,my);
+//                TextBoxFixedAddLine(msgbox,bfg);
+//                ViewSysWindowChanged(vs,3,TRUE);
+//                ViewSysDisplay(vs,DisplayChanged); SwapPage();
+                if (ViewSysMouse(vs,mx,my))
+                    return keypos; 
+                break;
+            case RMB : 
+                funcret=KeyUp(NULL);
+                ViewSysDisplay(vs,funcret);
+                if (funcret!=NoDisplay) SwapPage();
+                return -1; // menu call
+                break;
+        }
+        
+        if (kbhit())
+        {
+            key=GetKey();
+            if (KeySysKey(ks,key,NULL,&funcret,&index)) // key was used
             {
-                case 0 : case 1 : // left or right
-                    ViewSysDisplay(vs,funcret);
-                    if (funcret!=NoDisplay) SwapPage(); break;
-                case 2 : case 5 : // up or cancel = menu
-                    return -1;
-                case 3 : case 4 : // down or select
-                    return keypos;
+                switch (index)
+                {
+                    case 0 : case 1 : // left or right
+                        ViewSysDisplay(vs,funcret);
+                        if (funcret!=NoDisplay) SwapPage(); break;
+                    case 2 : case 5 : // up or cancel = menu
+                        return -1;
+                    case 3 : case 4 : // down or select
+                        return keypos;
+                }
+            }
+            else // provide extra functionality
+            {
+                if (ExtraFunctionality(key)) return -1;
+                // else key does nothing
             }
         }
-        else // provide extra functionality
-        {
-            if (ExtraFunctionality(key)) return -1;
-            // else key does nothing
-        }
     }
-    
 }
 
 int P1Move(GRID *grid)
 {
-    return HumanMove(grid,p1keys);
+    KeyGroupCopy(pkeys,p1keys);
+    return HumanMove(grid);
 }
 
 int P2Move(GRID *grid)
 {
-    return HumanMove(grid,p2keys);
+    KeyGroupCopy(pkeys,p2keys);
+    return HumanMove(grid);
 }
 
 int AINoviceMove(GRID *grid)
@@ -1071,22 +1119,6 @@ int AIGeniusMove(GRID *grid)
     return RuleMove(grid,4,PlayerGroupPlayer(players,player_current),OtherPlayer());
 }
 
-void AnimateMove(int col)
-{
-    int goright=col>keypos;
-    int dist=(goright?col-keypos:keypos-col);
-    int del=0;
-    if (dist==0) return;
-    del=(ai_speed*ai_delay)/(dist);   // ai_speed is a half second delay
-    do
-    {
-        if (goright) KeyRight(NULL); else KeyLeft(NULL);
-        ViewSysWindowChanged(vs,0,TRUE); // entry grid
-        ViewSysDisplay(vs,DisplayChanged); SwapPage();
-        delay(del); // delay appropriate amount of time as per ai_speed 
-    } while (keypos!=col);
-}
-
 void SuggestMove(void)
 {
     PLAYER *pl=PlayerGroupPlayer(players,6); // AI genius
@@ -1114,9 +1146,9 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
 {
     VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,ClearViewport);
     ViewSysWindowNew(vs,0.0,0.0,0.6,0.08,TRUE,
-        DisplayEntryGrid,NULL,"Enter Your Token Here");      // entrygrid is 0
+        DisplayEntryGrid,MouseMove,"Enter Your Token Here");      // entrygrid is 0
     ViewSysWindowNew(vs,0.0,0.09,0.6,1.0,TRUE,
-        DisplayPlayGrid,NULL,"Enter Your Token Here");       // playgrid is 1
+        DisplayPlayGrid,MouseMove,"Enter Your Token Here");       // playgrid is 1
     ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,TRUE,
         DisplayGameName,NULL,"Ninaro - By the author 1998");
     ViewSysWindowNew(vs,0.61,0.52,1.0,1.0,TRUE,
@@ -1162,8 +1194,8 @@ void ProgInit() // initialises global variables
         win->tokens=4;
         grid_rows=8;
         grid_cols=7;
-        player_one=0;
-        player_two=1;
+        SetP1(0);
+        SetP2(1);
         goesfirst=GFSuccessive;
         wentfirst=player_one;
         ai_speed=2; // normal
@@ -1280,7 +1312,7 @@ void ProgFree() // frees global variables
 void main()
 {
     PLAYER *pl;
-    int waitesc,col,ccols,crows,csize;
+    int waitesc,col,ccols,crows,csize,mb,mx,my;
 
     ScreenInit();
     _setcolor(RED);
@@ -1289,10 +1321,8 @@ void main()
     _registerfonts( "*.fon" );
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
-    ResetMouse();
-    SetMousePage(0);
     ProgInit(); // some parts rely on graphics mode
-    
+ 
     ccols=grid_cols; crows=grid_rows; csize=win->tokens;
     TitleScreen();
     ResetGameSize(ccols,crows,csize);
@@ -1301,13 +1331,17 @@ void main()
     ViewSysDisplay(vs,DisplayAll);  // initialises viewsys current
     SwapPage();
     ResetPalette();
-            
+    GetMouseInput(&mx,&my);            
     for (;;)
     {
         while (ingame)
         {
             pl=PlayerGroupPlayer(players,player_current);
             col=pl->getmove(playgrid);
+            if (col==-1)
+            {
+
+            }
             if (kbhit())
             {
                 ExtraFunctionality(GetKey());

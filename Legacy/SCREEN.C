@@ -9,6 +9,7 @@ Updated        : 30 March 1998          ADDED BorderedBox
 #include <stdio.h>
 #include <graph.h>
 #include "defines.h"
+#include "mouse.h"
 #include "screen.h"
 
 VIEWPORT *currentvp; // for external use until viewsys properly reworked
@@ -76,6 +77,14 @@ void ResetPalette(void)
     _remapallpalette(colors);
 }
 
+void SwapPage()
+{
+    static int viewpage;
+    viewpage=_setvisualpage(viewpage);
+    _setactivepage(viewpage);
+    SetMousePage(_getvisualpage());
+}
+
 void ScreenInit()
 {
     _setvideomode(16); // 640x350 2 pages 16 colors
@@ -85,8 +94,11 @@ void ScreenInit()
     _setfont("t'Modern'");
     _setactivepage(0);
     _setvisualpage(1);
+    ResetMouse();
+    SetMousePage(0);
     _setviewport(0,0,639,349);
     ResetPalette();
+    SwapPage();
 }
 
 void DrawGrid(int x,int y)
@@ -127,13 +139,6 @@ void Exit_Failure(char *message)
 {
     ShutDown();
     printf("\n%s\n",message);
-}
-
-void SwapPage()
-{
-    static int viewpage;
-    viewpage=_setvisualpage(viewpage);
-    _setactivepage(viewpage);
 }
 
 int ShutDown( void )

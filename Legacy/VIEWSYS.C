@@ -17,6 +17,7 @@ Updated        : 2 May 1998         ADDED ViewSysMouse
 #include <string.h>
 #include <graph.h>
 #include "sys.h"
+#include "mouse.h"
 #include "sound.h"
 #include "screen.h"
 #include "mempage.h"
@@ -78,6 +79,7 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
 {
     WINDOW *wp;
     int n;
+    HideMouse();
     switch (mode)
     {
         case DisplayAll:
@@ -116,8 +118,9 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
         case DisplayCurrent :
             MemPagePut(vs->current);
             break;
-        default : return FALSE; break; // NoDisplay
+        default : ShowMouse(); return FALSE; break; // NoDisplay
     }
+    ShowMouse();
     return TRUE;
 }
 

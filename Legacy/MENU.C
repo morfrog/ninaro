@@ -14,6 +14,8 @@ Updated        : 1 May 1998         MODIFIED so that MenuCall has help func
 #include <conio.h>
 #include "defines.h"
 #include "sound.h"
+#include "mouse.h"
+#include "mousein.h"
 #include "screen.h"
 #include "key.h"
 #include "menu.h"
@@ -30,7 +32,7 @@ int MenuRight(MENU *m)
 // purpose : sets the current menu as the one to the right of the current
 // returns : TRUE if moved else FALSE
 {
-    if (m->current<m->submenus-1) {m->current+=1; return TRUE;}
+    if (m->current<(m->submenus-1)) {m->current+=1; return TRUE;}
     return FALSE;
 }
 
@@ -246,45 +248,95 @@ void MenuDisplay(MENU *menu)
     MenuDisplayBar(menu,&vp,TRUE);
 // submenu
     ResetViewport(&vp,
-        menu->vp->x1+(width*MenuSub(menu)/MenuSubs(menu)),menu->vp->y1+31,
+        menu->vp->x1+(width*MenuSub(menu)/MenuSubs(menu)),menu->vp->y1+30,
         menu->vp->x1+(width*(MenuSub(menu)+1)/MenuSubs(menu)),
-        menu->vp->y1+31+(MenuSubItems(menu)*30));
+        menu->vp->y1+30+(MenuSubItems(menu)*30));
     MenuDisplaySub(&(menu->submenu[MenuSub(menu)]),&vp);
+}
+
+void SetMouseToMenuItem(MENU *menu,int submenu,int item)
+// sets the mousepos to the center of the item in the submenu of the menu
+{
+    int width=menu->vp->x2-menu->vp->x1+1;
+    int smwidth=width/menu->submenus;
+    SetMousePos((submenu*smwidth)+(smwidth/2),31+(item*30));
+}
+
+int GetMouseMenuItem(MENU *menu,int submenu,int y)
+// returns the menuitem at mouse x,y, -1 == no item, -2 == menubar
+{
+    int items;
+    if (y<=30) return -2;
+    items=menu->submenu[submenu].items;
+    if (y>(30+(items*30))) return -1;
+    return (y-30)/30;
 }
 
 void MenuCall(MENU *menu,void (* help)(void))
 // purpose : calls the menu, runs help via F1 or H
 // returns : void
 {
-    int funcret,index,key,used;
-
+    int funcret,index,key,used,mx,my,btn,newmenu,newitem;
+    int width=menu->vp->x2-menu->vp->x1+1;
+    
+    HideMouse();    
     if (menu->current>=menu->submenus) menu->current=0;
     MenuDisplay(menu);
     SwapPage();
 
     for (;;)
-    {
-        key=GetKey();
-        used=KeySysKey(menu->ks,key,menu,&funcret,&index);
-        if (!used) // provide extra functionality
+    {   
+        btn=GetMouseInput(&mx,&my);
+        switch (btn)
         {
-            switch (key)
+            case LMB :
+                funcret=MenuSelect(menu);
+                used=TRUE;
+            break;
+            case RMB :
+                return; // menu finished
+            break;
+            case NMB :
+                newmenu=(mx*menu->submenus)/width;
+                if (newmenu!=menu->current)
+                {
+                    menu->current=newmenu;
+                    index=-1; // dont allow mouse updates, as mouse used                    
+                    used=TRUE; funcret=TRUE;
+                }
+                else used=FALSE;
+            break;
+        }
+        if ((!used) && (kbhit()))
+        {
+            key=GetKey();
+            used=KeySysKey(menu->ks,key,menu,&funcret,&index);
+            if (!used) // provide extra functionality
             {
-                case 'm' :    // cancel
-                case ESC : return;
-                case F1  :
-                case 'h' : help(); used=TRUE; funcret=TRUE; index=6; break;
+                switch (key)
+                {
+                    case 'm' :    // cancel
+                    case ESC : return;
+                    case F1  :
+                    case 'h' : help(); used=TRUE; funcret=TRUE; index=6; break;
+                }
             }
-        }    
+            
+        }
         if (used)
         // key is used, via extra functionality or keysys
         {
             switch (index)
             {
+                case 0 : case 1 : // left or right
+                    SetMouseToMenuItem(menu,MenuSub(menu),0); //MenuSubItem(menu));
+//                    SetMousePos((menu->current*smwidth)+(smwidth/2),0);
+                    break;
                 case 4 : case 5 : // SELECT or CANCEL
                     if (funcret) return; // menu finished
                     break;
             }
+//            Buzz(600,700,100,400);    
             if (funcret)
             {
                 MenuDisplay(menu);

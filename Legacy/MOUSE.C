@@ -11,21 +11,17 @@ Compiles without error under Borland C, Turbo C.
 > Finished first version 24/4/1996.
 
 If you have any problems/queries/comments, please send them to:-
-        
         mluckman@qldnet.com.au
 ******************************************************************************/
 
 #include <dos.h>
-#include <i86.h>
-#ifndef MOUSE_C
-    #define MOUSE_C
-#endif
+
 #include "mouse.h"
 
 #define TRUE 1
 #define FALSE 0
 
-static unsigned short arrow[] = {                                             /* screen mask for an arrow */
+static  int arrow[32] = {                                             /* screen mask for an arrow */
     0x1FFF, 0x0FFF, 0x07FF, 0x03FF,
     0x01FF, 0x00FF, 0x007F, 0x003F,
     0x001F, 0x003F, 0x01FF, 0x01FF,
@@ -37,7 +33,7 @@ static unsigned short arrow[] = {                                             /*
     0x0600, 0x0300, 0x0300, 0x0000
 };
 
-static unsigned short glove[] = {                                             /* screen mask for a glove */
+static int  glove[32] = {                                             /* screen mask for a glove */
     0xF3FF, 0xE1FF, 0xE1FF, 0xE1FF,
     0xE1FF, 0xE049, 0xE000, 0x8000,
     0x0000, 0x0000, 0x07FC, 0x07F8,
@@ -49,7 +45,7 @@ static unsigned short glove[] = {                                             /*
     0x4002, 0x4002, 0x2004, 0x1FF8
 };
 
-static unsigned short check[] = {                                              /* screen mask for a check */
+static int check[32] = {                                              /* screen mask for a check */
     0xFFF0, 0xFFE0, 0xFFC0, 0xFF81,
     0xFF03, 0x0607, 0x000F, 0x001F,
     0x803F, 0xC07F, 0xE0FF, 0xF1FF,
@@ -61,7 +57,7 @@ static unsigned short check[] = {                                              /
     0x0000, 0x0000, 0x0000, 0x0000
 };
 
-static unsigned short cross[] = {                                             /* screen mask for a cross */
+static  int cross[32] = {                                             /* screen mask for a cross */
     0xF01F, 0xE00F, 0xC007, 0x8003,
     0x0441, 0x0C61, 0x70C0, 0x0381,
     0x0381, 0x0C61, 0x0441, 0x8003,
@@ -73,7 +69,7 @@ static unsigned short cross[] = {                                             /*
     0x0920, 0x07C0, 0x0000, 0x0000
 };
 
-static unsigned short ibeam[] = {                                              /* screen mask for an I-beam */
+static int ibeam[32] = {                                              /* screen mask for an I-beam */
     0xF39F, 0xFD7F, 0xFEFF, 0xFEFF,
     0xFEFF, 0xFEFF, 0xFEFF, 0xFEFF,
     0xFEFF, 0xFEFF, 0xFEFF, 0xFEFF,
@@ -100,7 +96,7 @@ Post Condition:- returns TRUE if mouse is installed
 
 int NumButtons(void) {
 /******************************************************************
-Description:-    Resets the mouse & determinse how many buttons it
+Description:-    Resets the mouse & determines how many buttons it
                  has.
 Pre Condition:-  Nil
 Post Condition:- The number of buttons is returned
@@ -220,15 +216,6 @@ Post Condition:- MousePressInfo structure is updated.
     p->ButtonCount=outreg.x.ebx;
     p->xpos=outreg.x.ecx;
     p->ypos=outreg.x.edx;
-}
-
-int ButtonDown(MouseStatus *s) {
-/***************************************************************
-Description:-    Checks to see if there is a button being pressed.
-Pre Condition:-  You must pass in a MouseStatus that is current.
-Post Condition:- returns TRUE or FALSE if a button is being pressed.
-****************************************************************/
-return (s->left + s->center + s->right);
 }
 
 void SetXLimits(int min, int max) {
