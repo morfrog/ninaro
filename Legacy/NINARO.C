@@ -1646,7 +1646,7 @@ void main()
     GetMouseInput(&mx,&my); // first call inititalises
     if (!mouseinstalled)
     {
-        mouseusage=0; // NONE
+//        mouseusage=0; // NONE
         DialogControlEnable(gameoptionsdialog,2,FALSE);
         DialogControlEnable(gameoptionsdialog,3,TRUE);
     }
