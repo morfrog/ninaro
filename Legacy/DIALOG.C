@@ -129,6 +129,58 @@ void ControlPrint(CONTROL *c)
     }
 }
 
+int ControlValueGet(CONTROL *c,int pos,int *value)
+// purpose : to get the value of the control at position pos.
+//           Range pos would be 0 or 1, list 0..size
+// returns : if pos invalid FALSE is returned, else TRUE is returned and
+//           value set
+{
+    CLIST *cl; CRANGE *cr;
+    switch (c->controltype)
+    {
+        case List :
+            cl=(CLIST *)c->store;
+            if ((pos<0) || pos > (cl->elems-1)) return FALSE;
+            *value=cl->elem[pos].value;
+            return TRUE;
+        case Range :
+            cr=(CRANGE *)c->store;
+            switch (pos)
+            {
+                case 0 : *value=cr->min; return TRUE;
+                case 1 : *value=cr->max; return TRUE;
+                default : return FALSE;
+            }
+    }
+    return FALSE;
+}
+
+int ControlNameGet(CONTROL *c,int pos,char *name)
+// purpose : to get the name of the control at position pos.
+//           Range pos would be 0 or 1, list 0..size
+// returns : if pos invalid FALSE is returned, else TRUE is returned and
+//           name set
+{
+    CLIST *cl; CRANGE *cr;
+    switch (c->controltype)
+    {
+        case List :
+            cl=(CLIST *)c->store;
+            if ((pos<0) || pos > (cl->elems-1)) return FALSE;
+            name=cl->elem[pos].name;
+            return TRUE;
+        case Range :
+            cr=(CRANGE *)c->store;
+            switch (pos)
+            {
+                case 0 : name=cr->minname; return TRUE;
+                case 1 : name=cr->maxname; return TRUE;
+                default : return FALSE;
+            }
+    }
+    return FALSE;
+}
+
 int MoveTo(int min,int max,int to)
 {if ((to<min) || (to>max)) return FALSE; return TRUE;}
 
@@ -288,21 +340,31 @@ void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars)
     int width=vp->x2-vp->x1+1;
     int height=vp->y2-vp->y1+1;
     int edge=width/10;
-    int section=(width-edge-edge)/(range-1);
-    int x,at=vp->x1+edge;
+    int left=vp->x1+edge;
+    int section=(width-edge-edge);
+    int x,at;
 
     _setcharsize(height/2,(edge+edge)/chars);
     _settextalign(_CENTER,_HALF);
     _setcolor(CONTROLTEXT);
-    _moveto(at,vp->y2); _lineto(vp->x1+edge+((range-1)*section),vp->y2);
-    _moveto(at,vp->y1); _lineto(vp->x1+edge+((range-1)*section),vp->y1);
-    for (x=0;x<range;x++)
+    _moveto(left,vp->y2); _lineto(vp->x2-edge,vp->y2);
+    _moveto(left,vp->y1); _lineto(vp->x2-edge,vp->y1);
+    if (range==1)
     {
+        at=left+(section/2);
         _moveto(at,vp->y1);
         _lineto(at,vp->y2);
-        at+=section;
     }
-    at=vp->x1+edge+(pos*section);
+    else
+    {
+        for (x=0;x<range;x++)
+        {
+            at=left+((x*section)/(range-1));
+            _moveto(at,vp->y1);
+            _lineto(at,vp->y2);
+        }
+        at=left+(pos*section/(range-1));
+    }
     BorderedBox(at-edge,vp->y1+(height/4),at+edge,vp->y2-(height/4),CONTROLBACK,CONTROLHILITE);
     _setcolor(CONTROLTEXT);
     _grtext(at,vp->y1+height/2,value);
@@ -456,7 +518,7 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp)
     }            
 }
 
-DIALOG *DialogNew(KEYGROUP *kg,char *name,int controls,...)
+DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *d),char *name,int controls,...)
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
 // returns : the dialog
@@ -468,6 +530,7 @@ DIALOG *DialogNew(KEYGROUP *kg,char *name,int controls,...)
     ret->elems=controls+1;
     ret->elem=malloc((controls+1)*sizeof(DIALOGELEM));
     ret->state=malloc(ret->elems*sizeof(int));
+    ret->change=change;
     va_start(ap,controls);
     for (x=0;x<controls;x++)
     {
@@ -624,9 +687,11 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
     for (x=0;x<d->elems;x++) totalrows+=d->elem[x].store->rows;
     rowheight=height/totalrows;
     
+    MemPagePut(mp);
     _setcolor(CONTROLBACK);               // the back of the dialog
     _rectangle(_GFILLINTERIOR,vp->x1,vp->y1,vp->x2,vp->y2);
     _setcharsize(4*rowheight/5,width/20);
+    _setcharspacing(0);
     _settextalign(_CENTER,_HALF);         // the name of the dialog
     _setcolor(CONTROLTEXT);
     _grtext(vp->x1+(width/2),vp->y1+(rowheight/2),d->name);
@@ -657,7 +722,7 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         {
             _setlinestyle(0x5555);      // dotted line
             _setcolor(CONTROLTEXT);
-            _rectangle(_GBORDER,vp->x1+1,control.y1,vp->x2,control.y2);
+            _rectangle(_GBORDER,vp->x1+1,control.y1,vp->x2-1,control.y2);
             _setlinestyle(0xffff);            
         }
         if (d->elem[x].name[0]=='\0') control.x1=vp->x1;
@@ -687,15 +752,15 @@ void DialogPrint(DIALOG *dl)
 
 int DialogCancel(DIALOG *d)
 // purpose : sends a select signal to the dialog
-// returns : TRUE, as dialog is now finished
+// returns : FALSE, as dialog is finished
 {
     DialogStateSet(d,d->state);
-    return TRUE;
+    return FALSE;
 }
 
 int DialogSelect(DIALOG *d)
 // purpose : sends a select signal to the dialog
-// returns : TRUE if dialog finished, else FALSE
+// returns : TRUE if OK, FALSE if cancel, UNKNOWN if reset
 {
     switch (DialogDefaultGet(d))
     {
@@ -703,7 +768,8 @@ int DialogSelect(DIALOG *d)
             return TRUE;
         case 1 : // Reset
             DialogStateSet(d,d->state);
-            return FALSE;
+            if (d->change!=NULL) d->change(d);
+            return UNKNOWN;
         case 2 : // Cancel
             return DialogCancel(d);
         break;
@@ -711,17 +777,18 @@ int DialogSelect(DIALOG *d)
     return TRUE; // should never happen
 }
 
-void DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,void (* change)(DIALOG *d),int namefract,int chars)
+int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 // purpose : runs a dialog, as is, in the viewport with the mempage as
 //           background, running function change whenever a controls current
 //           changes, using chars for control names, which are in left
 //           1/namefract section of viewport
 //           kg keys are left,right,up,down,select,cancel
-// returns : void
+// returns : FALSE if cancelled, TRUE if OK'd
 {
-    int index,funcret;
+    int index,funcret,changed=FALSE;
     
     DialogStateGet(d,d->state);
+    MemPagePut(mp);
     DialogDisplay(d,vp,mp,namefract,chars);
     SwapPage();
 
@@ -733,17 +800,27 @@ void DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,void (* change)(DIALOG *d),in
             switch (index)
             {
                 case 0 : case 1 : // LEFT or RIGHT
-                    if (change!=NULL) change(d);
+                    if (d->change!=NULL) d->change(d);
                     break;
-                case 4 : case 5 : // SELECT or CANCEL
-                    if (funcret) return; // dialog finished
+                case 4 : // SELECT
+                    if (funcret==TRUE) // dialog finished via ok
+                    {
+                        return TRUE;
+                    }
+                    else if (funcret==UNKNOWN) break;    // reset
+                case 5 : // CANCEL
+                    return FALSE;     // dialog finished via cancel
             }
-            DialogDisplay(d,vp,mp,namefract,chars);
-            SwapPage();
+            if (funcret) // something has changed
+            {
+                MemPagePut(mp);
+                DialogDisplay(d,vp,mp,namefract,chars);
+                SwapPage();
+            }
         }
     }
 }
-
+/*
 void main()
 {
     char *a=NewString("Hellor");
@@ -772,4 +849,4 @@ void main()
     DialogCall(dl,&main2,NULL,NULL,8,7);
     ShutDown();
 }
-
+*/

@@ -59,6 +59,7 @@ struct DialogTag
     int current;        // the current control of the dialog
     int elems;          // the number of controls in the dialog
     int *state;         // the state of the dialog, used to save state
+    void (* change)(void *d); // func to run when controls change value
     DIALOGELEM *elem;   // array of controls in the dialog
 //  MEMPAGE *background;// the background image
     KEYSYS *ks;         // the key system of the dialog
@@ -80,6 +81,16 @@ CONTROL *ControlNew(int type,int display,int rows,int cols,int strwidth,...);
 void ControlPrint(CONTROL *c);
 // purpose : to print the contents of the control
 // returns : void
+int ControlValueGet(CONTROL *c,int pos,int *value);
+// purpose : to get the value of the control at position pos.
+//           Range pos would be 0 or 1, list 0..size
+// returns : if pos invalid FALSE is returned, else TRUE is returned and
+//           value set
+int ControlNameGet(CONTROL *c,int pos,char *name);
+// purpose : to get the name of the control at position pos.
+//           Range pos would be 0 or 1, list 0..size
+// returns : if pos invalid FALSE is returned, else TRUE is returned and
+//           name set
 int ControlMove(CONTROL *c,int howfar);
 // purpose : moves howfar in the control
 // returns : TRUE if moves else false;
@@ -107,7 +118,7 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp);
 // returns : void
 
 /*---------------------------DIALOG-----------------------------------*/
-DIALOG *DialogNew(KEYGROUP *kg,char *name,int controls,...);
+DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *d),char *name,int controls,...);
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
 // returns : the dialog
@@ -165,17 +176,17 @@ void DialogPrint(DIALOG *dl);
 // purpose : to print the contents of the dialog
 // returns : void
 int DialogCancel(DIALOG *d);
-// purpose : sends a select signal to the dialog
-// returns : TRUE, as dialog is now finished
+// purpose : sends a cancel signal to the dialog
+// returns : FALSE, as dialog finished
 int DialogSelect(DIALOG *d);
 // purpose : sends a select signal to the dialog
-// returns : TRUE if dialog finished, else FALSE
-void DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,void (* change)(DIALOG *d),int namefract,int chars);
+// returns : TRUE if OK, FALSE if cancel, UNKNOWN if reset
+int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars);
 // purpose : runs a dialog, as is, in the viewport with the mempage as
 //           background, running function change whenever a controls current
 //           changes, using chars for control names, which are in left
 //           1/namefract section of viewport
 //           kg keys are left,right,up,down,select,cancel
-// returns : void
+// returns : FALSE if cancelled, TRUE if OK'd
 
 #endif

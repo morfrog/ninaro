@@ -18,7 +18,7 @@
 #include "screen.h"
 #include "grid.h"
 #include "player.h"
-#include "controls.h"
+#include "dialog.h"
 #include "connectn.h"
 
 #define ColAdd 3
@@ -39,23 +39,21 @@ int keypos;     // the column at which the keys <- & -> place the token
 GRID *playgrid;
 GRID *entrygrid;
 PLAYERGROUP *players;
+KEYGROUP *pkeys;
 TXTBOX *msgbox;
 VIEWSYS *vs;
 MENU *mainmenu;
 DIALOG *playerdialog;
 DIALOG *boarddialog;
 DIALOG *optionsdialog;
+KEYSYS *ks;
 
 void SetP1Current()
 {
     int type;
     PlayerGroupCurrentSet(players,0);
     type=PlayerGetType(PlayerGroupCurrentGet(players));
-    // disable irrelevant keys
-    ViewSysKeyEnableGroup(vs,DISABLE,4,0,1,2,3);
-    if (type==Human) ViewSysKeyEnableGroup(vs,ENABLE,4,4,5,6,7);
-    else             ViewSysKeyEnableGroup(vs,DISABLE,4,4,5,6,7);
-                    // is Computer so disable all keys
+    KeyGroupReset(pkeys,'a','d','w','s','e','q');
 }
 
 void SetP2Current()
@@ -63,12 +61,7 @@ void SetP2Current()
     int type;
     PlayerGroupCurrentSet(players,1);
     type=PlayerGetType(PlayerGroupCurrentGet(players));
-
-    // disable irrelevant keys
-    ViewSysKeyEnableGroup(vs,DISABLE,4,4,5,6,7);
-    if (type==Human) ViewSysKeyEnableGroup(vs,ENABLE,4,0,1,2,3);
-    else             ViewSysKeyEnableGroup(vs,DISABLE,4,0,1,2,3);
-                    // is Computer so disable all keys
+    KeyGroupReset(pkeys,KP4,KP6,KP8,KP2,ENTER,BKSP);
 }
 
 void NextPlayer()
@@ -77,6 +70,23 @@ void NextPlayer()
         SetP2Current();
     else
         SetP1Current();
+}
+
+int MinOf(int a,int b) {if (a<b) return a; else return b;}
+int MaxOf(int a,int b) {if (a>b) return a; else return b;}
+
+void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
+void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
+
+void GameSizeFit(DIALOG *d)
+{
+    int rows=ControlCurrentGet(DialogControlGet(boarddialog,0)),
+        cols=ControlCurrentGet(DialogControlGet(boarddialog,1)),
+        size=MaxOf(cols,rows);
+    CONTROL *gsize=DialogControlGet(boarddialog,2);
+    if (ControlCurrentGet(gsize)>size)
+        ControlCurrentSet(gsize,size);
+    ControlReset(gsize,3,"",size,"");
 }
 
 void ResetGameSize(int cols,int rows,int inarow)
@@ -88,8 +98,10 @@ void ResetGameSize(int cols,int rows,int inarow)
     keypos=(cols/2)+(cols%2);
     win_occured=FALSE;
     SetWinSize(win,inarow);
+    GameSizeFit(boarddialog);
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
+    keypos=0;
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
 }
 
@@ -218,13 +230,15 @@ void DecP2Color(void) {DecPlayerColor(PlayerGroupUseGet(players,1));}
 void ClearScreen(void) {_clearscreen(_GCLEARSCREEN);}
 void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
-int KeyUp(void)
+int KeyUp(void *vp)
 {
+    KEYGROUP *kg=KeySysGroupGet(ks);
+    MenuKeyGroupSet(mainmenu,kg);
     MenuCall(mainmenu);
     return TRUE;
 }
 
-int KeyLeft(void)
+int KeyLeft(void *vp)
 {
     if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT))
     {
@@ -237,7 +251,7 @@ int KeyLeft(void)
         return NoDisplay;
 }
 
-int KeyRight(void)
+int KeyRight(void *vp)
 {
     if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT))
     {
@@ -250,7 +264,7 @@ int KeyRight(void)
         return NoDisplay;
 }
 
-int KeyDown(void)
+int KeyDown(void *vp)
 {
     switch(InsertTokenInCol(playgrid,keypos,PlayerGroupCurrentGet(players),win))
     {
@@ -281,6 +295,9 @@ int KeyDown(void)
     return NoDisplay; // should never happen
 }
 
+int KeySelect(void *vp) {return KeyDown(vp);}
+int KeyCancel(void *vp) {return KeyUp(vp);}
+
 void MsgGameN(void)
 {
     char buffer[40];
@@ -301,13 +318,12 @@ void ExitGame(void) {ProgFree(); ShutDown(); exit(0);}
 void HelpAbout(void)
 {
     ViewSysDisplay(vs,DisplayChanged);
-    _setviewport(200,100,439,249);
-    BorderedBox(0.0,0.0,1.0,1.0,GREY,LTBLUE);
+    BorderedBox(200,100,439,249,GREY,LTBLUE);
+    BorderedBox(210,140,429,209,BLACK,LTBLUE);
     _setviewport(210,140,429,209);
-    BorderedBox(0.0,0.0,1.0,1.0,BLACK,LTBLUE);
     DisplayGameName();
     SwapPage();
-    GetKey();
+    GetKey(); // should change so that only current player can do
 }
 
 void GameStatus(void)
@@ -324,166 +340,27 @@ void GameStatus(void)
     TextBoxScrollEnd(msgbox);
 }
 
-int MinOf(int a,int b) {if (a<b) return a; else return b;}
-int MaxOf(int a,int b) {if (a>b) return a; else return b;}
-
-void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
-void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
 void GameSizeCustom(void)
 {
     VIEWPORT vp={50,50,590,300};
-    int cols=grid_cols,rows=grid_rows,inarow=win->tokens;
-
-    ControlsDialogSet(boarddialog,1,cols);
-    ControlsDialogSet(boarddialog,2,rows);
-    ControlsDialogSet(boarddialog,3,inarow);
-    ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
-    for (;;)
+    int buffer[4];
+    buffer[0]=grid_rows;
+    buffer[1]=grid_cols;
+    buffer[2]=win->tokens;
+    buffer[3]=0;
+    DialogStateSet(boarddialog,buffer);
+    if (DialogCall(boarddialog,&vp,vs->current,5,8))
     {
-        MemPagePut(vs->current);
-        ControlsDialogDisplay(&vp,boarddialog,2);    
-        SwapPage();
-        switch(GetKey())
-        {
-            case KP4 :
-                if (ControlsDialogControlPrev(boarddialog))
-                {
-                    switch (boarddialog->current)
-                    {
-                        // case 0 : Name
-                        case 1 : --cols; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
-                            break; 
-                        case 2 : --rows; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
-                            break;
-                        case 3 : --inarow;
-                        // case 4 : buttons
-                    }
-                }
-                break;
-            case KP6 :
-                if (ControlsDialogControlNext(boarddialog))
-                {
-                    switch (boarddialog->current)
-                    {
-                        // case 0 : Name
-                        case 1 : ++cols; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
-                            break; 
-                        case 2 : ++rows; ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
-                            break;
-                        case 3 : ++inarow;
-                        // case 4 : buttons
-                    }
-                }
-                break;
-            case KP8 : ControlsDialogPrev(boarddialog); break;
-            case KP2 : ControlsDialogNext(boarddialog); break;
-            case ENTER :                          // process button
-                switch (ControlsDialogDefaultButton(boarddialog))
-                {
-                    case 0 :                                 // OK
-                        ResetGameSize(cols,rows,inarow); GameStatus();
-                        return; break;
-                    case 1 :                                 // Reset
-                        cols=grid_cols;
-                        ControlsControlListChange(ControlsDialogList(boarddialog,1),3,50);
-                        ControlsDialogSet(boarddialog,1,cols);
-                        rows=grid_rows;
-                        ControlsControlListChange(ControlsDialogList(boarddialog,2),3,50);
-                        ControlsDialogSet(boarddialog,2,rows);
-                        inarow=win->tokens;
-                        ControlsControlListChange(ControlsDialogList(boarddialog,3),3,MaxOf(cols,rows));
-                        ControlsDialogSet(boarddialog,3,inarow);
-                        break;
-                    case 2 : return; break;                 // Cancel
-    
-                }
-                break;
-            case ESC : return;                  // auto cancel
-        }
+        DialogStateGet(boarddialog,buffer);
+        ResetGameSize(buffer[1],buffer[0],buffer[2]);
     }
-}
-
-void PlayerDialogPlayer(PLAYER *player)
-{
-    ControlsDialogSet(playerdialog,1,PlayerGetType(player));
-    if (PlayerGetType(player)==Human) {
-        ControlsDialogControlEnable(playerdialog,2,FALSE); // computers
-        ControlsDialogControlEnable(playerdialog,3,TRUE);  // humans
-        ControlsDialogSet(playerdialog,3,PlayerGetName(player));
-        // set the name in the human radio control to the players name
-        //        666
-    }
-    else { // computer
-        ControlsDialogControlEnable(playerdialog,2,TRUE); // computers
-        ControlsDialogControlEnable(playerdialog,3,FALSE);// humans
-        ControlsDialogSet(playerdialog,2,PlayerGetName(player));
-    }
-    ControlsDialogSet(playerdialog,4,PlayerGetColor(player));
-    ControlsDialogSet(playerdialog,5,PlayerGetSkill(player));
+    GameStatus();
 }
 
 void PlayerDialog(int pnum)
 {
     VIEWPORT vp={50,50,590,300};
-    PLAYER *player=PlayerGroupPlayer(players,pnum);
-    PLAYER *select;
-    int type=PlayerGetType(player);
-    int name=PlayerGroupFind(players,player);
-    int color=PlayerGetColor(player);
-    int skill=PlayerGetSkill(player);
-    int at;
-    int key,success;
-
-    PlayerDialogPlayer(player);
-    for (;;)
-    {
-        MemPagePut(vs->current);
-        ControlsDialogDisplay(&vp,playerdialog,2);    
-        SwapPage();
-        key=GetKey();
-        success=FALSE;
-        switch (key)
-        {
-            case KP4 : success=ControlsDialogControlPrev(playerdialog); break;
-            case KP6 : success=ControlsDialogControlNext(playerdialog); break;
-            case KP8 : ControlsDialogPrev(playerdialog); break;
-            case KP2 : ControlsDialogNext(playerdialog); break;
-            case ESC : return; break;
-            case ENTER :
-                switch (ControlsDialogDefaultButton(boarddialog))
-                {
-                    case 0 : // OK
-                       
-                    case 1 : // Reset
-                        
-                    case 2 : // Cancel
-                        return; break;
-                }
-            break;
-        }
-        if (success)
-        {
-            at=ControlsDialogGet(playerdialog,playerdialog->current);
-            switch (playerdialog->current)
-            {
-                // case 0 : dialog name
-                case 1 : // type
-                    type=ControlsDialogGet(playerdialog,1);
-                case 2 : case 3 : // computers, humans
-                    name=ControlsDialogGet(playerdialog,type==Computer?2:3);
-                    if (name==-1) break; // is new player so no changes
-                    player=PlayerGroupPlayer(players,name);
-                    color=PlayerGetColor(player);
-                    skill=PlayerGetSkill(player);
-                    PlayerDialogPlayer(player);
-                    break;
-                case 4 : // color
-                break;
-                case 5 : // skill
-                break;                            
-            }
-        }
-    }    
+    DialogCall(playerdialog,&vp,vs->current,5,8);
 }
 
 void P1Dialog(void)
@@ -542,17 +419,7 @@ void ProgInit() // initialises global variables
     grid_cols=7;
 
     vs=ViewSysInit(0,0,639,349,20,20);
-
-    ViewSysKeyAdd(vs,KP4,KeyLeft,DISABLE);  // move token left
-    ViewSysKeyAdd(vs,KP6,KeyRight,DISABLE); // move token right
-    ViewSysKeyAdd(vs,KP8,KeyUp,DISABLE);    // call menu
-    ViewSysKeyAdd(vs,KP2,KeyDown,DISABLE);  // drop token
-    ViewSysKeyAdd(vs,'a',KeyLeft,DISABLE);  // move token left
-    ViewSysKeyAdd(vs,'d',KeyRight,DISABLE); // move token right
-    ViewSysKeyAdd(vs,'w',KeyUp,DISABLE);    // call menu
-    ViewSysKeyAdd(vs,'s',KeyDown,DISABLE);  // drop token
-    ViewSysKeyAdd(vs,ESC,KeyUp,ENABLE);     // call menu
-
+    
     msgbox=TextBoxNew(8,RED,WHITE,40);
 
     players=PlayerGroupNew(2,7, // allows for only two humans
@@ -563,6 +430,7 @@ void ProgInit() // initialises global variables
         PlayerNew("Tammy Tree",BLUE,Computer,High),
         PlayerNew("Rodney Rule",ORANGE,Computer,Medium),
         PlayerNew("Minny Maxx",PURPLE,Computer,Medium));
+    pkeys=KeyGroupNew(6,'a','d','w','s','e','q');
     SetP1Current();
 
     TextBoxAddLine(msgbox,"Player1 Arrives",ATEND);
@@ -574,66 +442,55 @@ void ProgInit() // initialises global variables
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
+    playerdialog=DialogNew(pkeys,NULL,"Player One",3,
+        "Type",TRUE,TRUE,ControlNew(List,Radio,1,2,10,2,
+                        Computer,"Computer",
+                        Human,"Human"),
+        "Name",TRUE,TRUE,ControlNew(List,Radio,3,2,13,5,
+                        2,PlayerGetName(PlayerGroupPlayer(players,2)),
+                        3,PlayerGetName(PlayerGroupPlayer(players,3)),
+                        4,PlayerGetName(PlayerGroupPlayer(players,4)),
+                        5,PlayerGetName(PlayerGroupPlayer(players,5)),
+                        6,PlayerGetName(PlayerGroupPlayer(players,6))),
+        "Color",TRUE,TRUE,ControlNew(Range,Color,1,10,5,
+                        1,"",7,""));
+    boarddialog=DialogNew(pkeys,GameSizeFit,"Custom Board Size",3,
+        "Rows",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
+                        3,"",50,""),
+        "Columns",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
+                        3,"",50,""),
+        "Size",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
+                        3,"",MaxOf(grid_rows,grid_cols),""));
 
-    playerdialog=ControlsDialogNew(0.2,6,
-        TRUE,NULL,        1,  1, 15,  0.1,
-            ControlsControlListNew(Name,TRUE,1,"Player Setup"),
-        TRUE,"Type",    2,  1,  10, 0.1,
-            ControlsControlListNew(Radio,FALSE,2,Computer,"Computer",Human,"Human"),
-        TRUE,"Name",    2,  3,  15, 0.3,
-            ControlsControlListNew(Radio,TRUE,5,2,PlayerGetName(PlayerGroupPlayer(players,2)),
-                                           3,PlayerGetName(PlayerGroupPlayer(players,3)),
-                                           4,PlayerGetName(PlayerGroupPlayer(players,4)),
-                                           5,PlayerGetName(PlayerGroupPlayer(players,5)),
-                                           6,PlayerGetName(PlayerGroupPlayer(players,6))),
-        FALSE,"Name",   2,  3,    15, 0.3,
-            ControlsControlListNew(Radio,TRUE,2,0,PlayerGetName(PlayerGroupPlayer(players,0)),
-                                                -1,"New Player"),
-        TRUE,"Color",   10,  1,  0,  0.1,
-            ControlsControlListNew(Color,TRUE,10,TRUE,1),
-        TRUE,"Skill",   1,  1, 6,  0.2,
-            ControlsControlListNew(Range,TRUE,10,1));
-    boarddialog=ControlsDialogNew(0.2,4,
-        TRUE,NULL,        1,  1, 15,  0.2,
-            ControlsControlListNew(Name,TRUE,1,"Custom Board Size"),
-        TRUE,"Columns",   1,  1, 6,  0.2,
-            ControlsControlListNew(Range,TRUE,50,3),
-        TRUE,"Rows",   1,  1, 6,  0.2,
-            ControlsControlListNew(Range,TRUE,50,3),
-        TRUE,"Game Size",   1,  1, 6,  0.2,
-            ControlsControlListNew(Range,TRUE,50,3));
-            
-    optionsdialog=ControlsDialogNew(0.2,3,
-        TRUE,NULL,      1,  1,  6,  0.2,
-            ControlsControlListNew(Name,TRUE,1,"Player Options"),
-        TRUE,"Goes First",      1,  1,  6,  0.2,
-            ControlsControlListNew(Radio,TRUE,4,0,"Winner",
-                                                1,"Loser",
-                                                2,"Random",
-                                                3,"Successive"));
-            
-            
-    mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs));
+              
+    mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
     MenuNewSub(mainmenu,"Game",7,
-        "New",      CN, NewGame,    ItemEnabled,
-        "End",      CE, EndGame,    ItemDisabled,
-        "Status",   CS, GameStatus, ItemEnabled,
-        "High Scores",NONE,NULL,    ItemEnabled,
-        "Suggest Move",NONE,NULL,   ItemEnabled,
-        "Sound",    NONE,NULL,      ItemEnabled,
-        "Exit",     CX, ExitGame,   ItemEnabled);
+        "New",      CN, NewGame,    TRUE,
+        "End",      CE, EndGame,    FALSE,
+        "Status",   CS, GameStatus, TRUE,
+        "High Scores",NONE,NULL,    TRUE,
+        "Suggest Move",NONE,NULL,   TRUE,
+        "Sound",    NONE,NULL,      TRUE,
+        "Exit",     CX, ExitGame,   TRUE);
     MenuNewSub(mainmenu,"Board",3,
-        "7x8x4",    NONE,GameSize7x8x4,      ItemEnabled,
-        "12x13x6",  NONE,GameSize12x13x6,      ItemEnabled, 
-        "Custom...",NONE,GameSizeCustom,      ItemEnabled);
+        "7x8x4",    NONE,GameSize7x8x4,      TRUE,
+        "12x13x6",  NONE,GameSize12x13x6,      TRUE, 
+        "Custom...",NONE,GameSizeCustom,      TRUE);
     MenuNewSub(mainmenu,"Player",3,
-        "One...",   NONE,P1Dialog,      ItemDisabled,
-        "Two...",   NONE,P2Dialog,      ItemEnabled,
-        "Options",  NONE,NULL,          ItemEnabled);
+        "One...",   NONE,P1Dialog,      FALSE,
+        "Two...",   NONE,P2Dialog,      TRUE,
+        "Options",  NONE,NULL,          TRUE);
     MenuNewSub(mainmenu,"Help",2,
-        "Contents", NONE,NULL,      ItemEnabled,
-        "About",    NONE,HelpAbout, ItemEnabled);                              
-    MenuKeysSet(mainmenu,KP4,KP6,KP8,KP2,ENTER,ESC);
+        "Contents", NONE,NULL,      TRUE,
+        "About",    NONE,HelpAbout, TRUE);
+
+    ks=KeySysNew(pkeys);
+    KeySysIFunc(ks,0,KeyLeft);
+    KeySysIFunc(ks,1,KeyRight);
+    KeySysIFunc(ks,2,KeyUp);
+    KeySysIFunc(ks,3,KeyDown);
+    KeySysIFunc(ks,4,KeySelect);
+    KeySysIFunc(ks,5,KeyCancel);
 }
 
 void ProgFree() // frees global variables
@@ -650,8 +507,9 @@ void ProgFree() // frees global variables
 
 void main()
 {
-    int ever=1,keyused=FALSE,key;
+    int keyused=FALSE,key,index,funcret;
     keypos=0;
+    
 
     ScreenInit();
     _setcolor(RED);
@@ -665,29 +523,23 @@ void main()
     ViewSysDisplay(vs,DisplayAll);
     SwapPage();
     
-    for (;ever;)
+    for (;;)
     {
-        if (kbhit())
+        if (KeySysKey(ks,GetKey(),NULL,&funcret,&index))
+        // key was used
         {
-            key=GetKey();
-            switch (key)
+            switch (index)
             {
-                case CF10 : case CQ : case CX : ever=0; break;
-                case 'c' :
-                    if (Continuance(playgrid,win->tokens))
-                    {
-                        ViewSysWindowChanged(vs,1,CHANGED);
-                        ViewSysDisplay(vs,DisplayChanged);
-                        SwapPage();
-                    }
-                    break;
+                case 2 : case 5 : // menu was called
+                    ViewSysDisplay(vs,DisplayAll);
+                    SwapPage();
+                break;
                 default :
-                    if (ViewSysDisplay(vs,ViewSysKey(vs,key,&keyused)))
-                        SwapPage();
-                    break;
-            } // switch (GetKey)
-        } // if kbhit
-    } // for (;ever;)
-    ShutDown();
-    ProgFree();
+                    ViewSysDisplay(vs,funcret);
+                    if (funcret!=NoDisplay) SwapPage();
+                break;
+            }
+            
+        }
+    }
 }

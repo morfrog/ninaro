@@ -230,7 +230,7 @@ void MenuDisplay(MENU *menu)
     int width=menu->vp->x2-menu->vp->x1+1;
     VIEWPORT vp;
 
-//    MemPagePut(menu->background); 666
+    MemPagePut(menu->background);
 
 // menu bar
     ResetViewport(&vp,menu->vp->x1,menu->vp->y1,
@@ -291,6 +291,7 @@ void MenuFree(MENU *menu)
     free(menu);
 }
 
+/*
 void main()
 {
     VIEWPORT main;
@@ -324,7 +325,7 @@ void main()
     MenuCall(mainmenu);
     ShutDown();
 }
-
+*/
 /*
         if (kbhit())
         {

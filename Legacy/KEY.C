@@ -71,7 +71,9 @@ void KeyGroupReset(KEYGROUP *kg,...)
     va_start(ap,kg);
     for (x=0;x<kg->keys;x++)
     {
+        SetDel(kg->ingroup,kg->key[x]);
         kg->key[x]=va_arg(ap,int);
+        SetAdd(kg->ingroup,kg->key[x]);
     }
     va_end(ap);
 }

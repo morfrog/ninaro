@@ -244,7 +244,7 @@ void BinFileEncryptExpand(BINFILE *bf,int direction)
 }
 
 
-
+/*
 void main()
 {
     char buffer[20];
@@ -275,4 +275,4 @@ void main()
     BinFilePrint(bf);            
     BinFileFree(bf);
 }
-
+*/
