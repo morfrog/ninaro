@@ -3,8 +3,6 @@
 #include "screen.h"
 #include "grid.h"
 
-    
-
 GRID *NewGrid(int width,int height)
 {
     int x,y;
@@ -65,6 +63,9 @@ PLAYER *RemoveTokenAtCR(GRID *grid,int col,int row)
 }
 
 int MoveTokenAtCR(GRID *grid,int col,int row,int direction)
+// moves the grid token at col,row one space in direction if possible
+// to do so without rejecting token from grid, returns TRUE if moved token
+// else FALSE
 {
     int targetcol=col,targetrow=row;
     

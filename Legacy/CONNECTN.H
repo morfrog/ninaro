@@ -4,6 +4,8 @@
 #include "grid.h"
 #include "player.h"
 
+enum {Win,Success,Failure};
+
 struct TokenTag
 {
     int row;
@@ -21,8 +23,8 @@ struct winTag
 typedef struct winTag WIN;
 
 int Continuance(GRID *grid,int size);
+int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win);
 int InsertTokenTarget(GRID *grid,int col);
-int InsertToken(GRID *grid,int col,PLAYER *player);
 int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win);
 int CheckForWin(GRID *grid,int size,int col,int row,WIN *win);
 

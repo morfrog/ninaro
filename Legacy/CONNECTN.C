@@ -74,4 +74,18 @@ int CheckForWin(GRID *grid,int size,int col,int row,WIN *win)
     else return FALSE;
 }
 
-
+int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win)
+// inserts player token in col on grid, returns Win and sets the win* to
+// be the win if this makes a win, else Success if the token is
+// successfully inserted, else Failure if the token could not be inserted
+{
+    int row=InsertTokenTarget(grid,col);
+    if (InsertToken(grid,col,player))
+    {
+        if (CheckForWin(grid,win->tokens,col,row,win))
+            return Win;
+        else
+            return Success;
+    }
+    else return Failure;
+}

@@ -1,9 +1,12 @@
+// will have to use DisplayAll until a mechanism is worked out that will
+// enable the display of changed windows to appear properly without destroying
+// the background - in hopes that one day the background will be a picture,
+// not just an inconsequential black emptiness
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
 #include <graph.h>
 #include <i86.h>
-#include "mouse.h"
 #include "sound.h"
 #include "txtbox.h"
 #include "viewsys.h"
@@ -27,32 +30,47 @@ int win_occured;
 WIN *win;
 int grid_cols;
 int grid_rows;
+int keypos;     // the column at which the keys <- & -> place the token
 GRID *playgrid;
 GRID *entrygrid;
 PLAYER **players; // array of player *
-PLAYER *player_one;
-PLAYER *player_two;
+PLAYER *player_one; 
+PLAYER *player_two; 
 PLAYER *player_current;
 TXTBOX *msgbox;
 VIEWSYS *vs;
 
-void MSwapPage()
+void SetP1Current()
 {
-    static int mpage=0;
-    SwapPage();
-    SetMousePage(mpage);
-    if (mpage==0) mpage=1; else mpage=0;
+    int type=PlayerGetType(player_one);
+    player_current=player_one;
+
+    // disable irrelevant keys
+    ViewSysEnableGroup(vs,DISABLE,3,0,1,2);
+    if (type==Human) ViewSysEnableGroup(vs,ENABLE,3,3,4,5);
+    else             ViewSysEnableGroup(vs,DISABLE,3,3,4,5);
+                    // is Computer so disable all keys
+}
+
+void SetP2Current()
+{
+    int type=PlayerGetType(player_two);
+    player_current=player_two;
+
+    // disable irrelevant keys
+    ViewSysEnableGroup(vs,DISABLE,3,3,4,5);
+    if (type==Human) ViewSysEnableGroup(vs,ENABLE,3,0,1,2);
+    else             ViewSysEnableGroup(vs,DISABLE,3,0,1,2);
+                    // is Computer so disable all keys
 }
 
 void NextPlayer()
 {
-    if (player_current==player_one)
-        player_current=player_two;
-    else
-        player_current=player_one;
+    if (player_current==player_one) SetP2Current();
+    else                            SetP1Current();
 }
 
-void DrawHuman(int primary,int secondary)
+void DisplayHuman(int primary,int secondary)
 // draws a human in the current viewport
 {
     _setcolor(primary);
@@ -64,7 +82,7 @@ void DrawHuman(int primary,int secondary)
     _moveto_w(0.1,0.4); _lineto_w(0.9,0.4);     // arms
 }
 
-void DrawComputer(int primary,int secondary)
+void DisplayComputer(int primary,int secondary)
 // draws a computer in the current viewport
 {
     _setcolor(primary);
@@ -87,8 +105,8 @@ void DisplayPlayerColor(PLAYER *player)
 void DisplayPlayerType(PLAYER *player)
 {
     int pc=PlayerGetColor(player);
-    if (PlayerGetType(player)==Human) DrawHuman(pc,pc+ColAdd);
-    else                       DrawComputer(pc,pc+ColAdd);
+    if (PlayerGetType(player)==Human) DisplayHuman(pc,pc+ColAdd);
+    else                       DisplayComputer(pc,pc+ColAdd);
 }
 
 void DisplayPlayerName(PLAYER *player)
@@ -123,13 +141,13 @@ void DisplayPlayGrid(void)
     int col,row;
     _setcolor(GREEN);
     DisplayGrid(playgrid);
-
-    for (x=0;x<win->tokens;x++)
-    {
-        col=win->win[x].col;
-        row=win->win[x].row;
-        DrawDisc(col,playgrid->width,row,playgrid->height,PlayerGetColor(playgrid->grid[col][row]),0.9);
-    }
+    if (win_occured)
+        for (x=0;x<win->tokens;x++)
+        {
+            col=win->win[x].col;
+            row=win->win[x].row;
+            DrawDisc(col,playgrid->width,row,playgrid->height,PlayerGetColor(playgrid->grid[col][row]),0.9);
+        }
 }
 
 void DisplayGameName(void)
@@ -165,40 +183,89 @@ void ChangePlayerType(PLAYER *player)
 void IncPlayerColor(PLAYER *player) {PlayerChangeColor(player,1);}
 void DecPlayerColor(PLAYER *player) {PlayerChangeColor(player,-1);}
 
-void ChangeP1Type(int a,int b) {ChangePlayerType(player_one);}
-void ChangeP2Type(int a,int b) {ChangePlayerType(player_two);}
-void IncP1Color(int a,int b) {IncPlayerColor(player_one);}
-void IncP2Color(int a,int b) {IncPlayerColor(player_two);}
-void DecP1Color(int a,int b) {DecPlayerColor(player_one);}
-void DecP2Color(int a,int b) {DecPlayerColor(player_two);}
+void ChangeP1Type(void) {ChangePlayerType(player_one);}
+void ChangeP2Type(void) {ChangePlayerType(player_two);}
+void IncP1Color(void) {IncPlayerColor(player_one);}
+void IncP2Color(void) {IncPlayerColor(player_two);}
+void DecP1Color(void) {DecPlayerColor(player_one);}
+void DecP2Color(void) {DecPlayerColor(player_two);}
+
+void ClearScreen(void) {_clearscreen(_GCLEARSCREEN);}
+void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
+
+int KeyLeft(void)
+{
+    if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT))
+        {--keypos; return DisplayAll;}
+        // 0 is entry grid
+    else
+        return NoDisplay;
+}
+
+int KeyRight(void)
+{
+    if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT))
+        {++keypos; return DisplayAll;}
+        // 0 is entry grid
+    else
+        return NoDisplay;
+}
+
+int KeyDropToken(void)
+{
+    switch(InsertTokenInCol(playgrid,keypos,player_current,win))
+    {
+        case Success :
+            RemoveTokenAtCR(entrygrid,keypos,0);
+            NextPlayer();
+            InsertTokenAtCR(entrygrid,keypos,0,player_current);
+            return DisplayAll;
+            break;
+        case Win :
+            PlayTune(4,100,50,300,50,500,100,400,5);
+            win_occured=TRUE;
+            RemoveTokenAtCR(entrygrid,keypos,0);
+            NextPlayer(); // should be removed from proper system, though
+                          // could be used for loser goes first
+            InsertTokenAtCR(entrygrid,keypos,0,player_current);
+            return DisplayAll;
+            break;
+        case Failure :
+            Buzz(200,400,20,100);
+            return NoDisplay;
+            break;
+    }
+    Buzz(100,500,20,200);
+    return NoDisplay; // should never happen
+}
 
 VIEWSYS *ViewSysInit(int maxwindows,int maxkeys,int x1,int y1,int x2,int y2)
 {
-    VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys);
+    VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys,ClearViewport);
     ViewSysNewWindow(vs,0.0,0.0,0.6,0.09,ACTIVE,
-        DisplayEntryGrid,NULL,NULL,"Enter Your Token Here");
+        DisplayEntryGrid,"Enter Your Token Here");      // entrygrid is 0
     ViewSysNewWindow(vs,0.0,0.1,0.6,1.0,ACTIVE,
-        DisplayPlayGrid,NULL,NULL,"Enter Your Token Here");
+        DisplayPlayGrid,"Enter Your Token Here");
     ViewSysNewWindow(vs,0.61,0.0,1.0,0.1,ACTIVE,
-        DisplayGameName,NULL,NULL,"Ninaro - By the author 1998");
+        DisplayGameName,"Ninaro - By the author 1998");
     ViewSysNewWindow(vs,0.61,0.1,1.0,0.4,ACTIVE,
-        DisplayMsgBox,NULL,NULL,"Messages appear here");
+        DisplayMsgBox,"Messages appear here");
     ViewSysNewWindow(vs,0.61,0.4,0.65,0.448,ACTIVE,
-        DisplayP1Color,IncP1Color,DecP1Color,"Player One's Color");
+        DisplayP1Color,"Player One's Color");
     ViewSysNewWindow(vs,0.65,0.4,0.70,0.448,ACTIVE,
-        DisplayP1Type,ChangeP1Type,ChangeP1Type,"Player One's Type");
+        DisplayP1Type,"Player One's Type");
     ViewSysNewWindow(vs,0.7,0.4,0.96,0.448,ACTIVE,
-        DisplayP1Name,NULL,NULL,"Player One's Name");
+        DisplayP1Name,"Player One's Name");
     ViewSysNewWindow(vs,0.96,0.4,1.0,0.448,ACTIVE,
-        DisplayP1Score,NULL,NULL,"Player One's Score");
+        DisplayP1Score,"Player One's Score");
     ViewSysNewWindow(vs,0.61,0.452,0.65,0.5,ACTIVE,
-        DisplayP2Color,IncP2Color,DecP2Color,"Player Two's Color");
+        DisplayP2Color,"Player Two's Color");
     ViewSysNewWindow(vs,0.65,0.452,0.7,0.5,ACTIVE,
-        DisplayP2Type,ChangeP2Type,ChangeP2Type,"Player Two's Type");
+        DisplayP2Type,"Player Two's Type");
     ViewSysNewWindow(vs,0.7,0.452,0.96,0.5,ACTIVE,
-        DisplayP2Name,NULL,NULL,"Player Two's Name");
+        DisplayP2Name,"Player Two's Name");
     ViewSysNewWindow(vs,0.96,0.452,1.0,0.5,ACTIVE,
-        DisplayP2Score,NULL,NULL,"Player Two's Score");
+        DisplayP2Score,"Player Two's Score");
     return vs;
 }
 
@@ -214,6 +281,13 @@ void ProgInit() // initialises global variables
 
     vs=ViewSysInit(20,20,0,0,639,349);
 
+    ViewSysAddKey(vs,KP4,KeyLeft,DISABLE);
+    ViewSysAddKey(vs,KP6,KeyRight,DISABLE);
+    ViewSysAddKey(vs,KP2,KeyDropToken,DISABLE);
+    ViewSysAddKey(vs,'a',KeyLeft,DISABLE);
+    ViewSysAddKey(vs,'d',KeyRight,DISABLE);
+    ViewSysAddKey(vs,'s',KeyDropToken,DISABLE);
+
     msgbox=TextBoxNew(5,RED,WHITE,40);
 
     players=malloc(numplayers*sizeof(PLAYER *));
@@ -225,13 +299,13 @@ void ProgInit() // initialises global variables
     players[5]=PlayerNew("Rodney Rule",ORANGE,Computer,Medium);
     players[6]=PlayerNew("Minny Maxx",PURPLE,Computer,Medium);
     player_one=players[0];
-    player_two=players[2];
-    player_current=player_one;
+    player_two=players[1];
+    SetP1Current();
 
     TextBoxAddLine(msgbox,"Player1 Arrives",ATEND);
     TextBoxAddLine(msgbox,"Ronda Random Arrives",ATEND);
-    TextBoxAddLine(msgbox,"Let The Game Begin",ATEND);
     TextBoxAddLine(msgbox,"This is the first line",ATSTART);
+    TextBoxAddLine(msgbox,"Let The Game Begin",ATEND);
     TextBoxScrollEnd(msgbox);
                 
     playgrid=NewGrid(grid_cols,grid_rows);
@@ -245,18 +319,20 @@ void ProgFree() // frees global variables
     printf("Freeing Memory...\n");
     free(win->win);
     free(win);
+    printf("Freeing ViewSystem...\n");
     ViewSysFree(vs);
     printf("Freeing Players...\n");
     for (x=0;x<numplayers;x++)
         free(players[x]);
     free(players);
+    printf("Freeing Textbox...\n");
+    printf("Freeing Grids...\n");
 }
 
 void main()
 {
-    int ever=1,keypos=0,keyrow;
-    MouseStatus ms;
-    int mouseclear=1;
+    int ever=1,keyused=FALSE,key;
+    keypos=0;
 
     ProgInit();
 
@@ -270,59 +346,26 @@ void main()
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
     
-    ResetMouse();
-    ShowMouse();
     ViewSysDisplay(vs,DisplayAll);
-    MSwapPage();
+    SwapPage();
     ViewSysDisplay(vs,DisplayAll);
-    MSwapPage();
+    SwapPage();
 
     for (;ever;)
     {
-//        MouseStat(&ms);
         if (kbhit())
         {
-            switch (GetKey())
+            key=GetKey();
+            switch (key)
             {
-                case ESC   : ever=0; break;
-                case SPACE :
-                case ENTER :
-                case KP2 :
-                    keyrow=InsertTokenTarget(playgrid,keypos);
-                    if (InsertToken(playgrid,keypos,player_current))
-                    {
-                        RemoveTokenAtCR(entrygrid,keypos,0);
-                        NextPlayer();
-                        InsertTokenAtCR(entrygrid,keypos,0,player_current);
-                        ViewSysDisplay(vs,DisplayAll);
-                        MSwapPage();
-
-                        if (CheckForWin(playgrid,win->tokens,keypos,keyrow,win))
-                        {
-                            PlayTune(4,100,50,300,50,500,100,400,5);
-                            win_occured=TRUE;
-                            ViewSysDisplay(vs,DisplayAll);
-                            MSwapPage();
-                        }
-                    }
-                    else // already full so entry not possible
-                    {
-                        Buzz(200,400,20,100);
-                    }
+                case CF10 : case CQ : case CX : ever=0; break;
+                case 'c' :
+                    if (Continuance(playgrid,win->tokens))
+                    {ViewSysDisplay(vs,DisplayAll); SwapPage();}
                     break;
-                case KP4 :
-                    if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT)) --keypos;
-                    ViewSysDisplay(vs,DisplayAll);
-                    MSwapPage();
-                    break;
-                case KP6 :
-                    if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT)) ++keypos;
-                    ViewSysDisplay(vs,DisplayAll);
-                    MSwapPage();
-                    break;
-                case 'c' : Continuance(playgrid,win->tokens);
-                    ViewSysDisplay(vs,DisplayAll);
-                    MSwapPage();
+                default :
+                    if (ViewSysDisplay(vs,ViewSysKey(vs,key,&keyused)))
+                        SwapPage();
                     break;
             } // switch (GetKey)
         } // if kbhit

@@ -6,7 +6,9 @@
 #define byte unsigned char
 
 // prefixes : S=SHIFT C=CTRL A=ALT KP=keypad(numlock off)
-enum {BKSP=8,SENTER=10,ENTER=13,ESC=27,SPACE=32,DEL=127,    // Normal Keys
+enum {BKSP=8,SENTER=10,ENTER=13,ESC=27,SPACE=32,DEL=127}; // Normal Keys
+enum {Cat=0/* =C@ */,CA,CB,CC,CD,CE,CF,CG,CH,CI,CJ,CK,CL,CM,CN,CO,CP,CQ,CR,
+      CS,CT,CU,CV,CW,CX,CY,CZ,
       F1=256+59,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11=256+133,F12,// Function Keys
       KP7=256+71,KP8,KP9,KP4=256+75,KP5,KP6,KP1=256+79,KP2,KP3,KP0,KPDEL,
                                                             // Keypad Keys
