@@ -948,6 +948,7 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
                                 col[x]-=20;
                             }
                         }
+//                        if (
 
                         // also if opponent can make a move which gives them
                         // size-1 in a row with a gap either side block that
@@ -992,9 +993,13 @@ void TitleScreen(void)
     PLAYER *pl;
     GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
     int x,tokens,scol; // source col
-    int up=1,add=0;
-    long sety,adds[3]={0x010100L,0x000101L,0x010001L};
-    long bottom=0x010000L,top=bottom+0x030303L;
+    int up=1,add=0,row;
+
+//    long sety,adds[3]={0x010001L,0x000200L,0x010001L};
+//    long bottom=0x010201L,top=bottom+0x0f0f0fL;
+
+    long sety,adds[3]={0x010000L,0x000100L,0x000001L};
+    long bottom=0x020306L,top=bottom+0x080808L;
 
     if (filegrid==NULL) return;
     ResetViewport(&vp,vs->main.x1,vs->main.y1,vs->main.x2,vs->main.y2-30);
@@ -1005,9 +1010,7 @@ void TitleScreen(void)
     _setcolor(WHITE); _setcharsize(20,10); _setcharspacing(0);
     _settextalign(_CENTER,_TOP);
     _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
-    SwapPage();
-    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
-    SwapPage();
+    _setvisualpage(_getactivepage());
     SetViewport(&(vp));
     _setcolor(GREEN); DisplayGrid(playgrid,0.95);
     sety=bottom;
@@ -1018,20 +1021,24 @@ void TitleScreen(void)
         {
             scol=AIRandomMove(playgrid);
             pl=RemoveToken(filegrid,scol);
+            row=InsertTokenTarget(playgrid,scol);
             InsertTokenInCol(playgrid,scol,PlayerGroupFind(players,pl)==0?plback:plname,win);
-            _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
+
+            DrawDisc(scol,GridCols(playgrid),row,GridRows(playgrid),PlayerGetColor(StatusOfCR(playgrid,scol,row)),0.95);    
+
             x++;
         }
         if (up)
         {
-            sety+=adds[add]; if (add==2) add=0; else ++add;
+            sety+=adds[add]; 
             if (sety>top) up=0;
         }
         else // down
         {
-            sety-=adds[add]; if (add==2) add=0; else ++add;
+            sety-=adds[add];
             if (sety<bottom) up=1;
         }
+        if (add==2) add=0; else ++add;
         _remappalette(YELLOW,sety);
     }
     while (!kbhit());
@@ -1040,6 +1047,8 @@ void TitleScreen(void)
     GridFree(filegrid);
     PlayerFree(plname);
     PlayerFree(plback);
+    _setvisualpage(0);
+    _setactivepage(1);
 }
 
 void Test(void)

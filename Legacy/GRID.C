@@ -53,10 +53,18 @@ int GridRows(GRID *grid)
 
 int GridInRow(GRID *grid,int row)
 // purpose : how many tokens are in row of grid, row = 0..
-// returns : -1 of row out of range, else the number
+// returns : -1 if col out of range, else the number
 {
     if (row>=grid->height) return -1;
     return (grid->numinrow[row]);
+}
+
+int GridNotInRow(GRID *grid,int row)
+// purpose : how many tokens are in row of grid, row = 0..
+// returns : -1 if col out of range, else the number
+{
+    if (row>=grid->height) return -1;
+    return (grid->width-grid->numinrow[row]);
 }
 
 int GridCols(GRID *grid)
@@ -68,10 +76,18 @@ int GridCols(GRID *grid)
 
 int GridInCol(GRID *grid,int col)
 // purpose : how many tokens are in col of grid, col = 0..
-// returns : -1 of row out of range, else the number
+// returns : -1 of col out of range, else the number
 {
     if (col>=grid->width) return -1;
     return (grid->numincol[col]);
+}
+
+int GridNotInCol(GRID *grid,int col)
+// purpose : how many tokens of col in grid are empty, col = 0..
+// returns : -1 if col out of range, else the number 
+{
+    if (col>=grid->width) return -1;
+    return grid->height-grid->numincol[col];
 }
 
 void GridFree(GRID *grid)

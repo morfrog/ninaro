@@ -40,7 +40,8 @@ int Continuance(GRID *grid,int size)
 int InsertTokenTarget(GRID *grid,int col)
 // returns which row the token will fall to.
 {
-    return (GridRows(grid))-(GridInCol(grid,col))-1;
+      return (GridNotInCol(grid,col)-1);
+//    return (GridRows(grid))-(GridInCol(grid,col))-1;
 }
 
 int RemoveTokenTarget(GRID *grid,int col)
@@ -134,6 +135,29 @@ int WinPotential(GRID *grid,int size,int col,int row,PLAYER *player,
                      // check \          -1  -1
     ret=(max*ret)/(((size-1)*tokenvalue)*8);
     return ret;
+}
+
+int UnBlockableWin(GRID *grid,int size,int col,PLAYER *player)
+// purpose : to find out if player goes here, will they have size-1 in a
+//           row with blanks on either side (thus two ways to score a win,
+//           opponent can only block one). the blanks must be immediately
+//           potential moves in their own right (have a token below or are
+//           in bottom row).
+// returns : TRUE if they do, else FALSE
+{
+    int row=InsertTokenTarget(grid,col);
+    int left,right;
+// vertical not a possibility.
+
+//    left=FuncNumInDirection(grid,col,row,col_dir,row_dir,player,FuncNotEqual);
+
+// move in this column means one above is a blank, and in some direction
+// from that blank lies size-1 player tokens followed by a blank, which
+// is a potential move.
+// OR
+// move in this column is a token which is part of a size-1 run with
+// potential move blanks either side.
+
 }
 
 int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win)

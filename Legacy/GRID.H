@@ -35,13 +35,19 @@ int GridRows(GRID *grid);
 // returns : void
 int GridInRow(GRID *grid,int row);
 // purpose : how many tokens are in row of grid, row = 0..
-// returns : -1 of row out of range, else the number
+// returns : -1 if col out of range, else the number
+int GridNotInRow(GRID *grid,int row);
+// purpose : how many tokens are in row of grid, row = 0..
+// returns : -1 if col out of range, else the number
 int GridCols(GRID *grid);
 // purpose : to get the number of columns in the grid
 // returns : void
 int GridInCol(GRID *grid,int col);
 // purpose : how many tokens are in col of grid, col = 0..
-// returns : -1 of row out of range, else the number
+// returns : -1 if col out of range, else the number
+int GridNotInCol(GRID *grid,int col);
+// purpose : how many tokens of col in grid are empty, col = 0..
+// returns : -1 if col out of range, else the number 
 void GridEmpty(GRID *grid);
 // purpose : empties the grid of all tokens
 // returns : void
