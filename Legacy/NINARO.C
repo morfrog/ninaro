@@ -124,6 +124,14 @@ void NextPlayer()
     else                            SetP1Current();
 }
 
+PLAYER *OtherPlayer(void)
+{
+    if (player_current==player_one)
+        return PlayerGroupPlayer(players,player_two);
+    else
+        return PlayerGroupPlayer(players,player_one);
+}
+
 void ResetScores(void)
 {
     player_one_score=0;
@@ -694,16 +702,30 @@ void PlayerOptions(void)
     }
 }
 
-int RandomMoveFromBools(int size,int *bool,int n)
-// returns the index of the random'th TRUE in list bool of size where there
+int RandomMoveFromList(int size,int *list)
+// returns the index of the random'th maximum in list of size where there
 // are n TRUE's.
 {
-    int move,x,found=0;
-    move=Random(n);
-    
-    for (x=0;x<size;x++)
+    int max=list[0],howmany=1,first=0,x;
+    int move,found;
+    for (x=1;x<size;x++)
     {
-        if (bool[x])
+        if (list[x]>max)
+        {
+            max=list[x]; howmany=1; first=x;
+        }
+        else if (list[x]==max)
+        {
+            ++howmany;
+        }
+        // else ignore
+    }
+    move=Random(howmany);
+
+    found=0;
+    for (x=first;x<size;x++)
+    {
+        if (list[x]==max)
         {
             ++found;
             if (found==move+1) return x;
@@ -712,41 +734,80 @@ int RandomMoveFromBools(int size,int *bool,int n)
     return -1;
 }
 
-int RuleMove(GRID *grid,int level,PLAYER *player)
+int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
 // level is how many rules to invoke
 {
     int cols=GridCols(grid),rows=GridRows(grid);
     int x,*col=malloc(sizeof(int)*cols);
-    int atlevel,canuse=0,ret;
+    int atlevel,canuse=FALSE,ret;
+    int triggered=FALSE;
     
     for (x=0;x<cols;x++) // find how many can columns still get tokens
     {
-        col[x]=(GridInCol(grid,x)<rows?TRUE:FALSE);
-        if (col[x]) ++canuse;
+        col[x]=(GridInCol(grid,x)<rows?100:0);
+        if (col[x]) canuse=TRUE;
     }
+    if (!canuse) {free(col); return -1;}
 
     for (atlevel=0;atlevel<=level;atlevel++)
     {
         switch (atlevel)
         {
             case 0 : break; // invoke zero rules is just random
-            case 1 : break; // take win rule
-            case 2 : break; // dont lose rule
-            case 3 : break;
+            case 1 : // take win rule
+                for (x=0;x<cols;x++)
+                {
+                    if (col[x])
+                    {
+                        if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x),win,thisplayer))
+                        {
+                            col[x]+=1;
+                            triggered=TRUE;
+                        }
+                    }
+                }
+                if (triggered) atlevel=level+1; // get out of loop
+            break; 
+            case 2 : // block opponent rule
+                for (x=0;x<cols;x++)
+                {
+                    if (col[x])
+                    {
+                        if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x),win,otherplayer))
+                        {
+                            col[x]+=20;
+                        }
+                    }
+                }
+            break;
+            case 3 : // other above rule, requires at least 2 empties in col
+                for (x=0;x<cols;x++)
+                {
+                    if (col[x])
+                    {
+                        if (rows-GridInCol(playgrid,x)>1) // rule applicable
+                        {
+                            if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x)-1,win,otherplayer))
+                            {
+                                col[x]-=90;
+                            }
+                        }
+                    }
+                }
+            break;
             case 4 : break;
         }
     }
-    if (canuse==0) ret=-1;
-    else ret=RandomMoveFromBools(cols,col,canuse);
+    ret=RandomMoveFromList(cols,col);
     free(col);
     return ret;
 }
 
-int RandomMove(GRID *grid)
+int AIRandomMove(GRID *grid)
 // purpose : find a column which has space for a token to be inserted
 // returns : -1 if unable to make a move, else the moves column is returned
 {
-    return RuleMove(grid,0,PlayerGroupPlayer(players,player_current));
+    return RuleMove(grid,0,PlayerGroupPlayer(players,player_current),OtherPlayer());
 }
 
 void TitleScreen(void)
@@ -780,7 +841,7 @@ void TitleScreen(void)
     {
         if (x<tokens)
         {
-            scol=RandomMove(playgrid);
+            scol=AIRandomMove(playgrid);
             pl=RemoveToken(filegrid,scol);
             InsertTokenInCol(playgrid,scol,pl,win);
             _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
@@ -868,6 +929,34 @@ int P2Move(GRID *grid)
     return HumanMove(grid,p2keys);
 }
 
+int AINoviceMove(GRID *grid)
+// purpose : find a column which has space for a token to be inserted
+// returns : -1 if unable to make a move, else the moves column is returned
+{
+    return RuleMove(grid,1,PlayerGroupPlayer(players,player_current),OtherPlayer());
+}
+
+int AINormalMove(GRID *grid)
+// purpose : find a column which has space for a token to be inserted
+// returns : -1 if unable to make a move, else the moves column is returned
+{
+    return RuleMove(grid,2,PlayerGroupPlayer(players,player_current),OtherPlayer());
+}
+
+int AIExpertMove(GRID *grid)
+// purpose : find a column which has space for a token to be inserted
+// returns : -1 if unable to make a move, else the moves column is returned
+{
+    return RuleMove(grid,3,PlayerGroupPlayer(players,player_current),OtherPlayer());
+}
+
+int AIGeniusMove(GRID *grid)
+// purpose : find a column which has space for a token to be inserted
+// returns : -1 if unable to make a move, else the moves column is returned
+{
+    return RuleMove(grid,4,PlayerGroupPlayer(players,player_current),OtherPlayer());
+}
+
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
 {
     VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,ClearViewport);
@@ -910,11 +999,11 @@ void ProgInit() // initialises global variables
     players=PlayerGroupNew(7, // allows for only two humans
         PlayerNew("Player One",YELLOW,Human,P1Move),
         PlayerNew("Player Two",RED,Human,P2Move),
-        PlayerNew("AI Random",ORANGE,Computer,RandomMove),
-        PlayerNew("AI Novice",GREEN,Computer,RandomMove),
-        PlayerNew("AI Normal",BLUE,Computer,RandomMove),
-        PlayerNew("AI Expert",YELLOW,Computer,RandomMove),
-        PlayerNew("AI Genius",PURPLE,Computer,RandomMove));
+        PlayerNew("AI Random",ORANGE,Computer,AIRandomMove),
+        PlayerNew("AI Novice",GREEN,Computer,AINoviceMove),
+        PlayerNew("AI Normal",BLUE,Computer,AINormalMove),
+        PlayerNew("AI Expert",YELLOW,Computer,AIExpertMove),
+        PlayerNew("AI Genius",PURPLE,Computer,AIGeniusMove));
     pkeys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
     p1keys=KeyGroupNew(6,'a','d','w','s','e','q');
     p2keys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
