@@ -1,4 +1,4 @@
-// todo :
+//  todo :
 //  DONE  grid save and load
 //  DONE  title screen
 //        player has new attribute (* func)(GRID *grid) which gets move
@@ -81,6 +81,12 @@ int isdraw;
 int goesfirst;
 int wentfirst;
 int ai_speed;
+int newgame;    // used to request a new game
+
+int BothPlayerAI(void)
+{
+    return ((player_one>1) && (player_two>1));
+}
 
 void SetP1(int player)
 {
@@ -98,8 +104,6 @@ void SetP1Current()
 {
     int type;
     player_current=player_one;
-    type=PlayerGetType(PlayerGroupPlayer(players,player_current));
-    if (type==Human) KeyGroupCopy(pkeys,p1keys);
     MenuItemEnable(mainmenu,2,0,TRUE);
     MenuItemEnable(mainmenu,2,1,FALSE);
     MenuSubCurrentSet(mainmenu,2,0);
@@ -109,8 +113,6 @@ void SetP2Current()
 {
     int type;
     player_current=player_two;
-    type=PlayerGetType(PlayerGroupPlayer(players,player_current));
-    if (type==Human) KeyGroupCopy(pkeys,p2keys);
     MenuItemEnable(mainmenu,2,1,TRUE);
     MenuItemEnable(mainmenu,2,0,FALSE);
     MenuSubCurrentSet(mainmenu,2,1);
@@ -139,7 +141,6 @@ void PlayerSwap(void) // not in use
     player_two_score=player_one_score;
     NextPlayer();
     ResetTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));        
-    
 }
 
 int MinOf(int a,int b) {if (a<b) return a; else return b;}
@@ -207,9 +208,9 @@ void ModifyPlayer(DIALOG *d,int last)
             ControlValueGet(c,ControlCurrentGet(c),&p); // which player
             ControlCurrentSetTo(DialogControlGet(d,1),
                 PlayerGetColor(PlayerGroupPlayer(players,p))); // set color
+        // 666 must ensure p1!=p2
         // cascade to changing colors to ensure p1.color!=p2.color
         case 1 : // changing colors
-
             ControlValueGet(c,0,&p); // which player human is
             if (p==0) // is player one dialog
                 notcolor=PlayerGetColor(PlayerGroupPlayer(players,player_two));
@@ -218,10 +219,8 @@ void ModifyPlayer(DIALOG *d,int last)
 
             c=DialogControlGet(d,1); // color control
             thiscolor=ControlCurrentGet(c);  // color control current
-
             if (thiscolor==notcolor)
             {
-                
                 switch (last)
                 {
                     case 0 : // LEFT
@@ -493,6 +492,11 @@ int KeyDown(void *vp)
 int KeySelect(void *vp) {return KeyDown(vp);}
 int KeyCancel(void *vp) {return KeyUp(vp);}
 
+void RequestNewGame(void)
+{
+    newgame=TRUE;
+}
+
 void NewGame(void)
 {
     switch (goesfirst)
@@ -529,26 +533,20 @@ void NewGame(void)
     }
     wentfirst=player_current;
     GridEmpty(playgrid); GridEmpty(entrygrid);
+    ViewSysWindowChanged(vs,0,TRUE); ViewSysWindowChanged(vs,1,TRUE);
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
     win_occured=FALSE; 
-    KeySysIEnable(ks,0,TRUE); // LEFT
-    KeySysIEnable(ks,1,TRUE); // RIGHT
-    KeySysIEnable(ks,3,TRUE); // DOWN
-    KeySysIEnable(ks,4,TRUE); // SELECT
+    isdraw=FALSE;
     MenuItemEnable(mainmenu,0,3,TRUE); // enable end game
     MenuItemEnable(mainmenu,0,0,FALSE); // disable new game
     MenuSubCurrentSet(mainmenu,0,1);
     ingame=TRUE;
-    isdraw=FALSE;
     TextBoxFixedAddLine(msgbox,"Currently Playing Game.");
+    ViewSysWindowChanged(vs,3,TRUE); 
 }
 
 void EndGame(void)
 {
-    KeySysIEnable(ks,0,FALSE); // LEFT
-    KeySysIEnable(ks,1,FALSE); // RIGHT
-    KeySysIEnable(ks,3,FALSE); // DOWN
-    KeySysIEnable(ks,4,FALSE); // SELECT
     MenuItemEnable(mainmenu,2,0,TRUE); // enable players one and two
     MenuItemEnable(mainmenu,2,1,TRUE);
     MenuItemEnable(mainmenu,0,3,FALSE); // disable end game
@@ -557,32 +555,6 @@ void EndGame(void)
     TextBoxFixedAddLine(msgbox,"Currently Not Playing.");
     ingame=FALSE;
     GridEmpty(playgrid);
-}
-
-int PlayersInGrid(GRID *grid,int *p1,int *p2)
-// purpose : to find which players are in the grid
-// returns : TRUE if got players, else FALSE if was unable to
-{
-    int cols=GridCols(grid),rows=GridRows(grid);
-    PLAYER *pl;
-    int find,x,y;
-
-    *p1=-1; // not found
-    *p2=-1; // not found
-    
-    for (x=0;x<cols;x++)
-        for (y=0;y<rows;y++)
-        {
-            pl=StatusOfCR(grid,x,y);
-            if (pl!=NULL)
-            {
-                find=PlayerGroupFind(players,pl);
-                if (*p1==-1) *p1=find;
-                else if (*p2==-1) {if (*p1!=find) *p2=find;}
-                else return TRUE;    // both are initialised
-            }
-        }
-    return FALSE;
 }
 
 void LoadGame(void)
@@ -602,8 +574,7 @@ void LoadGame(void)
         player_current=current;
         TextBoxFixedAddLine(msgbox,"Game Loaded");
         win_occured=FALSE; 
-        RemoveTokenAtCR(entrygrid,keypos,0);
-        InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
+        ResetTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
     }
 }
 
@@ -623,7 +594,7 @@ void ExitGame(void) {ProgFree(); ShutDown(); exit(0);}
 
 void GameStatus(void)
 {
-    char gbuf[50];
+    char gbuf[30];
     TextBoxSetLine(statusbox,1,"Columns  Rows  Connect  Sound");
     sprintf(gbuf,"~%5d  %4d  %6d      %s",grid_cols,grid_rows,win->tokens,IsMute()?"Off":"On");
     TextBoxSetLine(statusbox,2,gbuf);
@@ -634,10 +605,8 @@ void GameSizeCustom(void)
 {
     VIEWPORT vp={50,50,590,300};
     int cbuf[4];
-    cbuf[0]=grid_rows;
-    cbuf[1]=grid_cols;
-    cbuf[2]=win->tokens;
-    cbuf[3]=0; // OK
+    cbuf[0]=grid_rows; cbuf[1]=grid_cols;
+    cbuf[2]=win->tokens; cbuf[3]=0;
     DialogStateSet(boarddialog,cbuf);
     GameSizeFit(boarddialog,6);
     if (DialogCall(boarddialog,&vp,vs->current,5,8,HelpBoardDialog))
@@ -677,7 +646,7 @@ void P1Dialog(void)
         SetP1(player);
         player_one_score=0;
         player_two_score=0;
-        if (ingame) NewGame();
+        if (ingame) newgame=TRUE;
     }
 }
 
@@ -692,8 +661,7 @@ void P2Dialog(void)
         SetP2(player);
         player_one_score=0;
         player_two_score=0;
-        if (ingame) NewGame();
-
+        if (ingame) newgame=TRUE;
     }
 }
 
@@ -816,11 +784,11 @@ void ToggleSound(void)
     GameStatus();
 }
 
-int HumanMove(GRID *grid)
-// returns column
+int HumanMove(GRID *grid,KEYGROUP *kg)
+// returns column, returns -1 if game ends or new game created via menus
 {
     int key,index,funcret;
-
+    KeyGroupCopy(pkeys,kg);
     for (;;)
     {
         key=GetKey();
@@ -828,6 +796,7 @@ int HumanMove(GRID *grid)
         {
             ViewSysDisplay(vs,funcret);
             if (funcret!=NoDisplay) SwapPage();
+            if ((newgame) || (!ingame)) return -1;
         }
         else
         {   // not used but still in group
@@ -837,36 +806,34 @@ int HumanMove(GRID *grid)
             {
                 switch (key)
                 {
-                    case 'h' :
-                    case F1  :
+                    case 'h' : case F1  :
                         KeyGroupCopy(pkeys,p2keys);
                         // F1 to help defaults to numeric keys
-                        HelpContentsFunc();
-                        ViewSysDisplay(vs,DisplayAll);
-                        SwapPage();
-                        if (player_current==player_one)
-                            SetP1Current();
-                        else
-                            SetP2Current();
-                        break;
-                    case 'm' :
-                    case ESC :
+                        HelpContentsFunc(); KeyGroupCopy(pkeys,kg);
+                        ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
+                    case 'm' : case ESC :
                         KeyGroupCopy(pkeys,p2keys);
                         // ESC to menu defaults to numeric keys
-                        MenuCall(mainmenu,HelpMenu);
-                        ViewSysDisplay(vs,DisplayAll);
-                        SwapPage();
-                        if (player_current==player_one)
-                            if (ingame) SetP1Current();
-                        else
-                            if (ingame) SetP2Current();
+                        MenuCall(mainmenu,HelpMenu); KeyGroupCopy(pkeys,kg);
+                        ViewSysDisplay(vs,DisplayAll); SwapPage();
+                        if ((newgame) || (!ingame)) return -1;
                         break;
                     case AF4 : case CX : case CQ :
                     case F10 : ExitGame(); break;
                 } // switch
-            } // if
-        } // if
+            } // if index==
+        } // if keysyskey
     } // for
+}
+
+int P1Move(GRID *grid)
+{
+    return HumanMove(grid,p1keys);
+}
+
+int P2Move(GRID *grid)
+{
+    return HumanMove(grid,p2keys);
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
@@ -909,8 +876,8 @@ void ProgInit() // initialises global variables
     vs=ViewSysInit(0,0,639,349,20);
         
     players=PlayerGroupNew(7, // allows for only two humans
-        PlayerNew("Player One",YELLOW,Human,HumanMove),
-        PlayerNew("Player Two",RED,Human,HumanMove),
+        PlayerNew("Player One",YELLOW,Human,P1Move),
+        PlayerNew("Player Two",RED,Human,P2Move),
         PlayerNew("AI Random",ORANGE,Computer,RandomMove),
         PlayerNew("AI Novice",GREEN,Computer,RandomMove),
         PlayerNew("AI Normal",BLUE,Computer,RandomMove),
@@ -981,7 +948,7 @@ void ProgInit() // initialises global variables
 */            
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
     MenuNewSub(mainmenu,"Game",7,
-        "New",      CN, NewGame,    FALSE,
+        "New",      CN, RequestNewGame,FALSE,
         "Load",   NONE, LoadGame,   TRUE,
         "Save",   NONE, SaveGame,   TRUE,
         "End",      CE, EndGame,    TRUE,
@@ -1027,6 +994,7 @@ void ProgInit() // initialises global variables
     goesfirst=GFSuccessive;
     wentfirst=player_one;
     ai_speed=2; // normal
+    newgame=FALSE;
     NewGame();
 }
 
@@ -1045,7 +1013,7 @@ void ProgFree() // frees global variables
 void main()
 {
     PLAYER *pl;
-    int col,dist,del;
+    int col,dist,del,kd,gotmove;
 
     ScreenInit();
     _setcolor(RED);
@@ -1064,49 +1032,75 @@ void main()
             
     for (;;)
     {
-        pl=PlayerGroupPlayer(players,player_current);
-        do
+
+        if (ingame)
         {
-            col=pl->getmove(playgrid);
-            if (col!=keypos)
+            pl=PlayerGroupPlayer(players,player_current);
+            gotmove=FALSE;
+            do
             {
-                dist=col-keypos;
-                dist=(dist>0?dist:-1*dist);
-                del=(ai_speed*1000)/dist;   // ai_speed is seconds delay
-                do
+                col=pl->getmove(playgrid);
+                if (col==-1) // request for newgame or endgame
+                    gotmove=TRUE;
+                else
                 {
-                    if (col<keypos) KeyLeft(NULL); else KeyRight(NULL);
-                    ViewSysWindowChanged(vs,0,TRUE); // entry grid
-                    ViewSysDisplay(vs,DisplayChanged);
-                    SwapPage();
-                    delay(del); // delay appropriate amount of time as per ai_speed 
-                } while (keypos!=col);
-            }   // now col==keypos;
-        } while (KeyDown(NULL)==Failure);
-        if ((win_occured) || (isdraw))
-        {
-            if (ai_speed)
-                TextBoxFixedAddLine(msgbox,"~Press the ESC Key To Continue");
-            ViewSysDisplay(vs,DisplayAll); SwapPage();
-            NewGame();
-            if (ai_speed) do {} while (GetKey()!=ESC);
-            ViewSysDisplay(vs,DisplayAll);
-            SwapPage();
-        }
-        else // just a normal move
-        {
-            ViewSysDisplay(vs,DisplayChanged); SwapPage();
+                    if (col!=keypos) // animate move
+                    {
+                        dist=col-keypos; dist=(dist>0?dist:-1*dist);
+                        del=(ai_speed*1000)/dist;   // ai_speed is seconds delay
+                        do
+                        {
+                            if (col<keypos) KeyLeft(NULL); else KeyRight(NULL);
+                            ViewSysWindowChanged(vs,0,TRUE); // entry grid
+                            ViewSysDisplay(vs,DisplayChanged); SwapPage();
+                            delay(del); // delay appropriate amount of time as per ai_speed 
+                        } while (keypos!=col);
+                    }   // now col==keypos;
+                    if (KeyDown(NULL)!=Failure) gotmove=TRUE;
+                }
+            } while (!gotmove);
+
+            if (col==-1)
+            {
+                if (newgame)
+                {
+                    NewGame(); newgame=FALSE;
+                    ViewSysDisplay(vs,DisplayChanged); SwapPage();                    
+                }
+            }
+            else if ((win_occured) || (isdraw))
+            {
+                if ((ai_speed) || (!BothPlayerAI()))
+                    TextBoxFixedAddLine(msgbox,"~Press the ESC Key To Continue");
+                ViewSysDisplay(vs,DisplayAll); SwapPage();
+                NewGame();
+                if ((ai_speed) || (!BothPlayerAI())) do {} while (GetKey()!=ESC);
+                ViewSysDisplay(vs,DisplayAll); SwapPage();
+            }
+            else // just a normal move
+            {
+                ViewSysDisplay(vs,DisplayChanged); SwapPage();
+            }
         }
         if (kbhit())
         {
             switch (GetKey())
             {
                 case ESC : case 'm' :
-                    ViewSysDisplay(vs,KeyUp(NULL)); SwapPage(); break;
+                    KeyGroupCopy(pkeys,p2keys);
+                    ViewSysDisplay(vs,KeyUp(NULL)); SwapPage();
+                    if (newgame)
+                    {
+                        NewGame(); newgame=FALSE;
+                        ViewSysDisplay(vs,DisplayChanged); SwapPage();
+                    }
+                    break;
                 case F1 : case 'h' :
+                    KeyGroupCopy(pkeys,p2keys);
                     HelpContents();
                     ViewSysDisplay(vs,DisplayCurrent); SwapPage(); break;
             }
         }
     }
 }
+
