@@ -5,6 +5,7 @@ Module Purpose : to provide a player object
 Creation Date  : 2 March 1998
 Updated        : 12 April 1998  CREATED PlayerGroup's
                  2 MAY 1998     ADDED getmove func to player
+                 6 May 1998     CREATED PlayerCopy
 ****************************************************************/
 #ifndef PLAYER_H
 #define PLAYER_H
@@ -36,13 +37,27 @@ PLAYER *PlayerNew(char *name,int color,int type,int (* getmove)(void *));
 void PlayerReset(PLAYER *player,char *name,int color,int type,int (* getmove)(void *));
 // purpose : to reset a players attributes
 // returns : void
+void PlayerCopy(PLAYER *dest,PLAYER *source);
+// purpose : to copy one source players attributes to dest players attributes
+// returns : void
 int  PlayerGetColor(PLAYER *player);
+// purpose : to get player's color
+// returns : player's color
 void PlayerSetColor(PLAYER *player,int color);
+// purpose : to set player's color
+// returns : void
 int  PlayerGetType(PLAYER *player);
+// purpose : to get player's type
+// returns : player's type
 void PlayerSetType(PLAYER *player,int type);
+// purpose : to set player's type
+// returns : void
 char *PlayerGetName(PLAYER *player);
+// purpose : to get player's name
+// returns : player's name
 void PlayerSetName(PLAYER *player,char *name);
-
+// purpose : to set player's name
+// returns : void
 PLAYERGROUP *PlayerGroupNew(int players,...);
 // purpose : creates a new player group containing players
 //           ... is players*{PLAYER *}

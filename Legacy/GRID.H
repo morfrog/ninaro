@@ -89,6 +89,15 @@ int FuncNumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
 //           not FALSE. compare function parameters are {player at grid pos},
 //           player. Does not include the token at col,row.
 // returns : the number of such tokens found 
+int NumsInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
+        PLAYER *p1,int *p1i,PLAYER *p2,int *p2i,PLAYER *stop,int istop);
+// purpose : to find how many tokens of type p1,p2 are in direction
+//           (col_mod,row_mod) before token stop is found or istop tokens
+//           are visited(-1==infinity). Starting at row, col in grid, modifies
+//           current position by col_mod and row_mod till stop player token
+//           found. Does not include the token at col,row.
+// returns : the total number of such tokens found, p1i and p2i are set
+// NOTE    : func is very specific, use own func with StatusAtCR if req'd
 void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap);
 // purpose : moves all tokens in the grid across col_dir and down row_dir
 //           if moving a token in this way causes it to fall off the grid,

@@ -41,7 +41,10 @@ int CheckForWin(GRID *grid,int size,int col,int row,WIN *win,PLAYER *player);
 // checks for win which includes the player token 
 // if there isn't one 0 is returned else
 // 1 is returned and the tokens which are the win are in the WIN *
-
+int AnglePotential(GRID *grid,int size,int col,int row,int col_dir,int row_dir,
+    PLAYER *p1,PLAYER *p2);
+int WinPotential(GRID *grid,int size,int col,int row,PLAYER *player,
+        PLAYER *other);
 void SetWinSize(WIN *win,int size);
 int GameSave(int p1,int p2,int current,int size,GRID *grid,PLAYERGROUP *pg,
                 char *filename);

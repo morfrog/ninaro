@@ -211,14 +211,12 @@ int FuncNumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
 //           player. Does not include the token at col,row.
 // returns : the number of such tokens found 
 {
-    int cur_col=col;
-    int cur_row=row;
+    int cur_col=col, cur_row=row;
     int number=0;
 
     for (;;)
     {
-        cur_col+=col_mod;
-        cur_row+=row_mod;
+        cur_col+=col_mod; cur_row+=row_mod;
         if ((cur_col>grid->width-1) || (cur_col<0) ||
             (cur_row>grid->height-1) || (cur_row<0)) // then out of range
             return number;
@@ -226,6 +224,43 @@ int FuncNumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
             return number;
         else // in range compare FALSE
             ++number;        
+    }
+}
+
+int NumsInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
+        PLAYER *p1,int *p1i,PLAYER *p2,int *p2i,PLAYER *stop,int istop)
+// purpose : to find how many tokens of type p1,p2 are in direction
+//           (col_mod,row_mod) before token stop is found or istop tokens
+//           are visited(-1==infinity). Starting at row, col in grid, modifies
+//           current position by col_mod and row_mod till stop player token
+//           found. Does not include the token at col,row.
+// returns : the total number of such tokens found, p1i and p2i are set
+// NOTE    : func is very specific, use own func with StatusAtCR if req'd
+{
+    int cur_col=col, cur_row=row;
+    int number=0;
+    PLAYER *atCR;
+    *p1i=0; *p2i=0;
+    for (;;)
+    {
+        cur_col+=col_mod; cur_row+=row_mod;
+        if ((cur_col>grid->width-1) || (cur_col<0) ||
+            (cur_row>grid->height-1) || (cur_row<0)) // then out of range
+            return number;
+        else
+        {
+            atCR=grid->grid[cur_col][cur_row];
+            if (atCR==stop) // then end function
+                return number;
+            else // in range
+            {
+                if (atCR==p1) *p1i+=1;
+                if (atCR==p2) *p2i+=1;
+                ++number;
+                if (number>=istop) // then end function
+                    return number;
+            }
+        }
     }
 }
 

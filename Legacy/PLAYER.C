@@ -5,6 +5,7 @@ Module Purpose : to provide a player object
 Creation Date  : 2 March 1998
 Updated        : 12 April 1998  CREATED PlayerGroup's
                  2 MAY 1998     ADDED getmove func to player
+                 6 May 1998     CREATED PlayerCopy
 ****************************************************************/
 #include <stdlib.h>
 #include <stdarg.h>
@@ -21,6 +22,16 @@ void PlayerReset(PLAYER *player,char *name,int color,int type,int (* getmove)(vo
     player->getmove=getmove;
 }
 
+void PlayerCopy(PLAYER *dest,PLAYER *source)
+// purpose : to copy one source players attributes to dest players attributes
+// returns : void
+{
+    strcpy(dest->name,source->name);
+    dest->color=source->color;
+    dest->type=source->type;
+    dest->getmove=source->getmove;
+}
+
 PLAYER *PlayerNew(char *name,int color,int type,int (* getmove)(void *))
 // purpose : to create a new player
 // returns : the player
@@ -31,11 +42,28 @@ PLAYER *PlayerNew(char *name,int color,int type,int (* getmove)(void *))
 }
 
 int  PlayerGetColor(PLAYER *player) {return player->color;}
+// purpose : to get player's color
+// returns : player's color
+
 void PlayerSetColor(PLAYER *player,int color) {player->color=color;}
+// purpose : to set player's color
+// returns : void
+
 int  PlayerGetType(PLAYER *player) {return player->type;}
+// purpose : to get player's type
+// returns : player's type
+
 void PlayerSetType(PLAYER *player,int type) {player->type=type;}
+// purpose : to set player's type
+// returns : void
+
 char *PlayerGetName(PLAYER *player) {return player->name;}
+// purpose : to get player's name
+// returns : player's name
+
 void PlayerSetName(PLAYER *player,char *name) {strcpy(player->name,name);}
+// purpose : to set player's name
+// returns : void
 
 int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl)
 // purpose : to find the pid of player in the playergroup
