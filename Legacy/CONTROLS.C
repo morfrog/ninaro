@@ -7,7 +7,7 @@
 #include "screen.h"
 #include "controls.h"
 
-int ControlsControlListSet(CONTROLLIST *cl,...)
+int ControlsControlListSetCurrent(CONTROLLIST *cl,...)
 // if Button ...=char *
 //    Value  ...=int
 //    Color  ...=int
@@ -17,7 +17,7 @@ int ControlsControlListSet(CONTROLLIST *cl,...)
     int val,x;
     char *charp;
     va_list ap;
-    BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np;    
+    BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np; RANGE *rnp;   
     va_start(ap,cl);
     switch (cl->type)
     {
@@ -73,6 +73,12 @@ int ControlsControlListSet(CONTROLLIST *cl,...)
             }
             return FALSE;
             break;
+        case Range :
+            rnp=(RANGE *)(cl->store);
+            val=va_arg(ap,int);
+            if ((val<rnp[0].min) || (val>rnp[0].max)) return FALSE;
+            cl->current=val; return TRUE;
+            break;
         case Name :
             np=(NAME *)(cl->store);
             charp=va_arg(ap,char *);
@@ -90,22 +96,43 @@ int ControlsControlListSet(CONTROLLIST *cl,...)
     return FALSE;
 }
 
+ControlsControlListChange(CONTROLLIST *cl,...)
+// Range  ...=min,max.
+{
+    va_list ap;
+    BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np; RANGE *rnp;   
+
+    va_start(ap,cl);
+    switch (cl->type)
+    {
+        case Range :
+            rnp=(RANGE *)(cl->store);
+            rnp[0].min=va_arg(ap,int);
+            rnp[0].max=va_arg(ap,int);
+            if (cl->current>rnp[0].max) cl->current=rnp[0].max;
+            if (cl->current<rnp[0].min) cl->current=rnp[0].min;
+        break;
+    }
+    va_end(ap);
+}
+
 CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...)
 // if copy==TRUE the string values are copied else only the pointers
 // are copied.
 // Radio ...={int value,char *name}*num
 // Color ...=FALSE,{int value}*num,... or TRUE,int minimum.
 //    FALSE = non scaled, TRUE = num scaled numbers, min..(min+num-1)
-// Button...={char *name,void (* func)(void)}*num
+// Button...={char *name}*num
 // Value ...=FALSE,{int value}*num,... or TRUE,int minimum.
 //    FALSE = non scaled, TRUE = num scaled numbers, min..(min+num-1)
+// Range ...=int min. max is calculated off num
 // Name  ...={char *name}*num
 {
     va_list ap;
     int x,min;
     char *charp;
     CONTROLLIST *cl=malloc(sizeof(CONTROLLIST));
-    BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np;
+    BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np;RANGE *rnp;
     cl->type=type;
     cl->current=0;
     cl->size=num;
@@ -113,8 +140,7 @@ CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...)
     switch (type)
     {
         case Radio :
-            cl->store=malloc(num*sizeof(RADIO));
-            rp=(RADIO *)(cl->store);
+            rp=malloc(num*sizeof(RADIO));
             for (x=0;x<num;x++)
             {
                 rp[x].value=va_arg(ap,int);
@@ -125,10 +151,10 @@ CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...)
                     strcpy(rp[x].name,charp);
                 } else rp[x].name=charp;
             }
+            cl->store=rp;
             break;
         case Color :
-            cl->store=malloc(num*sizeof(COLOR));
-            cp=(COLOR *)(cl->store);
+            cp=malloc(num*sizeof(COLOR));
             if (va_arg(ap,int)==TRUE)
             {
                 min=va_arg(ap,int);
@@ -138,10 +164,10 @@ CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...)
             {
                 for (x=0;x<num;x++) cp[x].value=va_arg(ap,int);
             }
+            cl->store=cp;
             break;
         case Button :
-            cl->store=malloc(num*sizeof(BUTTON));
-            bp=(BUTTON *)(cl->store);
+            bp=malloc(num*sizeof(BUTTON));
             for (x=0;x<num;x++)
             {
                 charp=va_arg(ap,char *);
@@ -150,21 +176,27 @@ CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...)
                     bp[x].name=malloc((strlen(charp)+1)*sizeof(char));
                     strcpy(bp[x].name,charp);
                 } else bp[x].name=charp;
-                bp[x].func=va_arg(ap,void *);
             }
+            cl->store=bp;
             break;
         case Value :
-            cl->store=malloc(num*sizeof(VALUE));
-            vp=(VALUE *)(cl->store);
+            vp=malloc(num*sizeof(VALUE));
             if (va_arg(ap,int)==TRUE)
             {   min=va_arg(ap,int);
                 for (x=0;x<num;x++) vp[x].value=min+x;
             }
             else {for (x=0;x<num;x++) vp[x].value=va_arg(ap,int);}
+            cl->store=vp;
+            break;
+        case Range :
+            rnp=malloc(sizeof(RANGE));
+            rnp[0].min=va_arg(ap,int);
+            rnp[0].max=num;
+            cl->current=rnp[0].min;
+            cl->store=rnp;
             break;
         case Name :
-            cl->store=malloc(num*sizeof(NAME));
-            np=(NAME *)(cl->store);
+            np=malloc(num*sizeof(NAME));
             for (x=0;x<num;x++)
             {   charp=va_arg(ap,char *);
                 if (copy==TRUE)
@@ -173,16 +205,43 @@ CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...)
                     strcpy(np[x].name,charp);
                 } else np[x].name=charp;
             }
+            cl->store=np;
             break;
     }
     return cl;
 }
 
 int ControlsControlListNext(CONTROLLIST *cl)
-{ if (cl->current<cl->size-1) {cl->current+=1; return TRUE;} return FALSE;}
+{
+    RANGE *rnp;
+    switch (cl->type)
+    {   case Range :
+            rnp=(RANGE *)(cl->store);
+            if (cl->current<rnp[0].max) {cl->current+=1; return TRUE;}
+            return FALSE;
+        break;
+        default:        
+            if (cl->current<cl->size-1) {cl->current+=1; return TRUE;}
+            return FALSE;
+        break;
+    }
+}
 
 int ControlsControlListPrev(CONTROLLIST *cl)
-{ if (cl->current>0) {cl->current-=1; return TRUE;} return FALSE;}
+{
+    RANGE *rnp;
+    switch (cl->type)
+    {   case Range :
+            rnp=(RANGE *)(cl->store);
+            if (cl->current>rnp[0].min) {cl->current-=1; return TRUE;}
+            return FALSE;
+        break;
+        default:        
+            if (cl->current>0) {cl->current-=1; return TRUE;}
+            return FALSE;
+        break;
+    }
+}
 
 void DisplayCircleFilled(double x1,double y1,double x2,double y2,int filled)
 // displays a circle in the current color in the viewwin defined by
@@ -198,13 +257,37 @@ void DisplayCircleFilled(double x1,double y1,double x2,double y2,int filled)
     }
 }
 
-void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int chars)
+void DisplayScale(int range,int pos,int value,int chars)
+{
+    int x;
+    double width=0.8/(double)(range-1), 
+            all=0.1+0.8*(double)(pos)/(double)(range-1),
+            at=0.1;
+    char buffer[10];
+    _settextalign(_CENTER,_HALF);
+    _setcharsize_w(0.07,0.4/(double)chars);
+    _setcharspacing_w(-0.02);
+    _setcolor(CONTROLHILITE);
+    _moveto_w(all,0.5); _lineto_w(all,0.4);
+    _rectangle_w(_GBORDER,all-0.1,0.4,all+0.1,0.0);
+    _setcolor(CONTROLTEXT);
+    _moveto_w(0.1,0.9); _lineto_w(0.9,0.9); // main line;
+    sprintf(buffer,"%d",value);
+    _grtext_w(all,0.2,buffer);
+    for (x=0;x<range;x++)
+    {
+        _moveto_w(at,0.9); _lineto_w(at,0.5);
+        at+=width;                
+    }
+}
+
+void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars)
 // displays the control list in the current viewport, cols and chars,
 // if relevant, are used to display in cols columns with chars characters
 // in each column. If not relevant chars the value must be set to zero, the
 // cols must be set to one.
 {
-    int x,col=0,rows=(cl->size/cols)+(cl->size%cols?1:0);
+    int x,col=0;
     double width=1.0/(double)cols,atx=0.0;
     double height=1.0/(double)rows,aty=0.0;
     double gapx=1.0/((double)(10*cols*(cols/2)));
@@ -212,7 +295,7 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int chars)
     double text=height/2.0;
     double all;
     char buffer[10];
-    BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np;
+    BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np; RANGE *rnp;
 
     _setcolor(CONTROLBACK);
     _rectangle_w(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
@@ -222,30 +305,17 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int chars)
     {
         case Value :
             vp=(VALUE *)(cl->store);
-            _settextalign(_CENTER,_HALF);
-            _setcharsize_w(0.07,0.4*width/(double)chars);
-            _setcharspacing_w(-0.02);
-            all=0.1+0.8*(double)(cl->current)/(double)(cl->size-1);
-            _setcolor(CONTROLHILITE);
-            _moveto_w(all,0.5); _lineto_w(all,0.4);
-            _rectangle_w(_GBORDER,all-0.1,0.4,all+0.1,0.0);
-            _setcolor(CONTROLTEXT);
-            _moveto_w(0.1,0.9); _lineto_w(0.9,0.9); // main line;
-            sprintf(buffer,"%d",vp[cl->current].value);
-            _grtext_w(all,0.2,buffer);
-            width=0.8/(double)(cl->size-1);
-            atx=0.1;
-            for (x=0;x<cl->size;x++)
-            {
-                _moveto_w(atx,0.9); _lineto_w(atx,0.5);
-                atx+=width;                
-            }
+            DisplayScale(cl->size,cl->current,vp[cl->current].value,4);
+        break;
+        case Range :
+            rnp=(RANGE *)(cl->store);
+            DisplayScale(rnp[0].max-rnp[0].min+1,cl->current-rnp[0].min,cl->current,4);
         break;
         case Radio :
             rp=(RADIO *)(cl->store);
             all=width/10.0; // circle section
             _settextalign(_LEFT,_HALF);
-            _setcharsize_w(height*0.15,0.4*width/(double)chars);
+            _setcharsize_w(0.08,0.4*width/(double)chars);
             _setcharspacing_w(0.0);
             _setcolor(CONTROLTEXT);
             for (x=0;x<cl->size;x++)
@@ -279,6 +349,7 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int chars)
             all=width/2.0;  // text centered
             _settextalign(_CENTER,_HALF);
             _setcharsize_w(height*0.10,0.4*width/(double)chars);
+            _setcharspacing_w(0.0);
             _setcolor(CONTROLTEXT);
             atx=all;
             aty=text;
@@ -304,12 +375,17 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int chars)
                 }
                 _setcolor(CONTROLTEXT);
                 _rectangle_w(_GBORDER,atx+gapx,aty+gapy,atx+width-gapx,aty+height-gapy);
-                _grtext_w(atx+all,aty+text,bp[x].name);
+                _grtext_w(atx+all,aty+text,bp[x].name); 
                 if (col>=cols-1) {col=0; atx=0.0; aty+=height;}
                 else {atx+=width; ++col;}
             }
             break;
     }
+}
+
+int ControlsDialogGet(DIALOG *dl,int control)
+{
+    return dl->control[control].cl->current);
 }
 
 int ControlsDialogSet(DIALOG *dl,int control,...)
@@ -320,10 +396,10 @@ int ControlsDialogSet(DIALOG *dl,int control,...)
     switch (dl->control[control].cl->type)
     {
         case Button : case Name :
-            return ControlsControlListSet(dl->control[control].cl,va_arg(ap,char *));
+            return ControlsControlListSetCurrent(dl->control[control].cl,va_arg(ap,char *));
             break;
-        case Value : case Color : case Radio :
-            return ControlsControlListSet(dl->control[control].cl,va_arg(ap,int));
+        case Value : case Color : case Radio : case Range :
+            return ControlsControlListSetCurrent(dl->control[control].cl,va_arg(ap,int));
             break;
     }
     va_end(ap);
@@ -341,11 +417,12 @@ DIALOG *ControlsDialogNew(double fract,int controls,...)
     DIALOG *dl=malloc(sizeof(DIALOG));
     dl->controls=controls+1;
     dl->control=malloc(dl->controls*sizeof(DIALOGELEM));
-    dl->current=0;
+    dl->current=controls;
     dl->control[controls].enabled=TRUE;
     dl->control[controls].name=NULL;
-    dl->control[controls].cl=ControlsControlListNew(Button,FALSE,3,"OK",NULL,"Reset",NULL,"Cancel",NULL);
+    dl->control[controls].cl=ControlsControlListNew(Button,FALSE,3,"OK","Reset","Cancel");
     dl->control[controls].displaycols=3;
+    dl->control[controls].displayrows=1;
     dl->control[controls].displaychars=5;
     dl->control[controls].displayfract=fract;
 
@@ -354,15 +431,25 @@ DIALOG *ControlsDialogNew(double fract,int controls,...)
     {
         dl->control[x].enabled=va_arg(ap,int);
         cp=va_arg(ap,char *);
-        dl->control[x].name=malloc((strlen(cp)+1)*sizeof(char));
-        strcpy(dl->control[x].name,cp);
+        if (cp==NULL) dl->control[x].name=NULL;
+        else
+        {
+            dl->control[x].name=malloc((strlen(cp)+1)*sizeof(char));
+            strcpy(dl->control[x].name,cp);
+        }
         dl->control[x].displaycols=va_arg(ap,int);
+        dl->control[x].displayrows=va_arg(ap,int);
         dl->control[x].displaychars=va_arg(ap,int);
         dl->control[x].displayfract=va_arg(ap,double);
         dl->control[x].cl=va_arg(ap,CONTROLLIST *);
     }
     va_end(ap);
     return dl;
+}
+
+int ControlsDialogControlNext(DIALOG *dl)
+{
+    return ControlsControlListNext(dl->control[dl->current].cl);
 }
 
 int ControlsDialogNext(DIALOG *dl)
@@ -373,10 +460,17 @@ int ControlsDialogNext(DIALOG *dl)
         dl->current+=1;
         if (dl->current>=dl->controls) // out of range
             {dl->current=old; return FALSE;}
-        if (dl->control[dl->current].enabled==TRUE) // ok elem
+        if ((dl->control[dl->current].enabled==TRUE)
+            && (dl->control[dl->current].cl->type!=Name)) // name not selectable
+            // ok elem
             return TRUE;
         // else continue
     }
+}
+
+int ControlsDialogControlPrev(DIALOG *dl)
+{
+    return ControlsControlListPrev(dl->control[dl->current].cl);
 }
 
 int ControlsDialogPrev(DIALOG *dl)
@@ -387,16 +481,15 @@ int ControlsDialogPrev(DIALOG *dl)
         dl->current-=1;
         if (dl->current<0) // out of range
             {dl->current=old; return FALSE;}
-        if (dl->control[dl->current].enabled==TRUE) // ok elem
+        if ((dl->control[dl->current].enabled==TRUE)
+            && (dl->control[dl->current].cl->type!=Name)) // name not selectable
+            // ok elem
             return TRUE;
         // else continue
     }
 }
 
-void ControlsDialogReset(void) {}
-// used to reset values to original, if func== it
-
-void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,double gap)
+void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap)
 // displays the dialog in the viewport vp
 // gap is amount to leave out of each window to separate them, is vertical gap only
 {
@@ -404,26 +497,44 @@ void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,double gap)
     double fract;
     double at=0.0;
     double height=(double)(vp->y2-vp->y1);
+    int names=100;
+    int wintop,winbot;
     
     for (x=0;x<dl->controls;x++)
     {
         if (dl->control[x].enabled==TRUE)
         {
+            _setviewport(0,0,639,349);
             fract=dl->control[x].displayfract;
+            wintop=(int)(at*height);
+            winbot=(int)((at+fract)*height);
             if (x==dl->current)
             {
                 _setcolor(CONTROLHILITE);
-                _setviewport(vp->x1,(int)(at*height),vp->x2,(int)((at+fract)*height));
-                _rectangle_w(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
+                _rectangle(_GFILLINTERIOR,vp->x1,wintop,vp->x2,winbot);
             }
-            _setviewport(vp->x1+2,(int)((at+gap)*height),vp->x2-2,(int)((at+fract-gap)*height));
-            ControlsControlListDisplay(dl->control[x].cl,dl->control[x].displaycols,dl->control[x].displaychars);
+            if (dl->control[x].name==NULL)
+            {
+                _setviewport(vp->x1+gap,wintop+gap,vp->x2-2,winbot-gap);
+            }
+            else
+            {
+                _setcolor(CONTROLBACK);
+                _rectangle(_GFILLINTERIOR,vp->x1+gap,wintop+gap,vp->x1+names+gap,winbot-gap);
+                _settextalign(_LEFT,_TOP);
+                _setcharsize(15,names/6);
+                _setcharspacing(-6);
+                _setcolor(CONTROLTEXT);
+                _grtext(vp->x1+gap+1,wintop+gap,dl->control[x].name);
+                _setviewport(vp->x1+gap+names,wintop+gap,vp->x2-2,winbot-gap);
+            }
+            ControlsControlListDisplay(dl->control[x].cl,dl->control[x].displaycols,dl->control[x].displayrows,dl->control[x].displaychars);
             at+=fract;
         }
     }
 }
 
-int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,double gap)
+int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,int gap)
 // ... is int *value,int *temp
 // if OK is pressed the values are changed, else the values 
 {

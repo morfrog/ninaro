@@ -7,7 +7,7 @@
 #define CONTROLTEXT BLACK
 #define CONTROLHILITE RED
 
-enum {Radio,Color,Button,Value,Name};
+enum {Radio,Color,Button,Value,Range,Name};
 // Name does not recieve input
 
 struct radioTag
@@ -28,7 +28,6 @@ typedef struct colorTag COLOR;
 struct buttonTag
 {
     char *name;             // the name of the button
-    void (* func)(void);    // the function to run when the button is pressed
 };
 
 typedef struct buttonTag BUTTON;
@@ -39,6 +38,13 @@ struct valueTag
 };
 
 typedef struct valueTag VALUE;
+
+struct rangeTag
+{
+    int min,max;
+};
+
+typedef struct rangeTag RANGE;
 
 struct nameTag
 {
@@ -64,6 +70,7 @@ struct dialogelemTag
     CONTROLLIST *cl;
     int temp;   // saves current for reset if required
     int displaycols; // columns for display
+    int displayrows; // rows for display
     int displaychars; // max chars to display
     double displayfract; // fraction of 1.0 of viewport in which it is displayed
 };
@@ -83,13 +90,16 @@ typedef struct dialogTag DIALOG;
 CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...);
 int ControlsControlListNext(CONTROLLIST *cl);
 int ControlsControlListPrev(CONTROLLIST *cl);
-void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int chars);
-int ControlsControlListSet(CONTROLLIST *cl,...);
+void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars);
+int ControlsControlListSetCurrent(CONTROLLIST *cl,...);
 
 DIALOG *ControlsDialogNew(double fract,int controls,...);
 int ControlsDialogNext(DIALOG *dl);
+int ControlsDialogControlNext(DIALOG *dl);
 int ControlsDialogPrev(DIALOG *dl);
-void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,double gap);
-int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,double gap);
+int ControlsDialogControlPrev(DIALOG *dl);
+void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap);
+int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,int gap);
 int ControlsDialogSet(DIALOG *dl,int control,...);
+int ControlsDialogGet(DIALOG *dl,int control);
 #endif

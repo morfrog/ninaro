@@ -42,6 +42,7 @@ TXTBOX *msgbox;
 VIEWSYS *vs;
 MENU *mainmenu;
 DIALOG *playerdialog;
+DIALOG *boarddialog;
 
 void SetP1Current()
 {
@@ -316,6 +317,39 @@ void GameStatus(void)
 void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
 void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
 
+void GameSizeCustom(void)
+{
+    int cols=grid_cols,rows=grid_rows,inarow=win->tokens;
+    int min=inarow;
+
+    ControlsDialogSet(boarddialog,1,cols);
+    ControlsDialogSet(boarddialog,2,rows);
+    ControlsDialogSet(boarddialog,3,inarow);
+    for (;;)
+    {
+        _clearscreen(_GCLEARSCREEN);
+        ControlsDialogDisplay(&(vs->main),boarddialog,2);    
+        SwapPage();
+        switch(GetKey())
+        {
+            case KP4 :
+                ControlsDialogControlPrev(boarddialog);
+                switch (boarddialog->current)
+                {
+                    // case 0 : Name
+//                    case 1 : 
+                }
+                break;
+            case KP6 :
+                ControlsDialogControlNext(boarddialog);
+                break;
+            case KP8 : ControlsDialogPrev(boarddialog); break;
+            case KP2 : ControlsDialogNext(boarddialog); break;
+            case ESC : return; 
+        }
+    }
+}
+
 void PlayerDialog(PLAYER *player)
 {
     
@@ -323,12 +357,12 @@ void PlayerDialog(PLAYER *player)
 
 void P1Dialog(void)
 {
-    ControlsDialogCall(&(vs->main),playerdialog,0.01);
+    ControlsDialogCall(&(vs->main),playerdialog,2);
 }
 
 void P2Dialog(void)
 {
-    ControlsDialogCall(&(vs->main),playerdialog,0.01);
+    ControlsDialogCall(&(vs->main),playerdialog,2);
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
@@ -410,24 +444,35 @@ void ProgInit() // initialises global variables
     entrygrid=NewGrid(grid_cols,1);
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
 
-    playerdialog=ControlsDialogNew(0.2,5,
-        TRUE,"Type",     2,  10, 0.1,
+    playerdialog=ControlsDialogNew(0.2,6,
+        TRUE,NULL,        1,  1, 15,  0.1,
+            ControlsControlListNew(Name,TRUE,1,"Player Setup"),
+        TRUE,"Type",    2,  1,  10, 0.1,
             ControlsControlListNew(Radio,FALSE,2,Computer,"Computer",Human,"Human"),
-        TRUE,"Name",     2,  10, 0.3,
+        TRUE,"Name",    2,  3,  10, 0.3,
             ControlsControlListNew(Radio,TRUE,5,2,PlayerGetName(PlayerGroupPlayer(players,2)),
                                            3,PlayerGetName(PlayerGroupPlayer(players,3)),
                                            4,PlayerGetName(PlayerGroupPlayer(players,4)),
                                            5,PlayerGetName(PlayerGroupPlayer(players,5)),
                                            6,PlayerGetName(PlayerGroupPlayer(players,6))),
-        FALSE,"Name",     2,  10, 0.3,
+        FALSE,"Name",   2,  1,    10, 0.3,
             ControlsControlListNew(Radio,TRUE,2,0,PlayerGetName(PlayerGroupPlayer(players,0)),
                                                 1,PlayerGetName(PlayerGroupPlayer(players,1))),
-        TRUE,"Color",    5,  0,  0.2,
+        TRUE,"Color",   10,  1,  0,  0.1,
             ControlsControlListNew(Color,TRUE,10,TRUE,1),
-        TRUE,"Skill",    1,  6,  0.2,
-            ControlsControlListNew(Value,TRUE,10,TRUE,1));
-    
-    
+        TRUE,"Skill",   1,  1, 6,  0.2,
+            ControlsControlListNew(Range,TRUE,10,1));
+    boarddialog=ControlsDialogNew(0.2,4,
+        TRUE,NULL,        1,  1, 15,  0.2,
+            ControlsControlListNew(Name,TRUE,1,"Custom Board Size"),
+        TRUE,"Columns",   1,  1, 6,  0.2,
+            ControlsControlListNew(Range,TRUE,50,3),
+        TRUE,"Rows",   1,  1, 6,  0.2,
+            ControlsControlListNew(Range,TRUE,50,3),
+        TRUE,"Game Size",   1,  1, 6,  0.2,
+            ControlsControlListNew(Range,TRUE,50,3));
+            
+   
     mainmenu=MenuNew(5,&(vs->main),ViewSysCurrent(vs));
     MenuNewSub(mainmenu,"Game",5,
         "New",      CN, NewGame,    ItemEnabled,
@@ -438,7 +483,7 @@ void ProgInit() // initialises global variables
     MenuNewSub(mainmenu,"Board",3,
         "7x8x4",    NONE,GameSize7x8x4,      ItemEnabled,
         "12x13x6",  NONE,GameSize12x13x6,      ItemEnabled, 
-        "Custom...",NONE,NULL,      ItemEnabled);
+        "Custom...",NONE,GameSizeCustom,      ItemEnabled);
     MenuNewSub(mainmenu,"Player",2,
         "One...",   NONE,P1Dialog,      ItemDisabled,
         "Two...",   NONE,P2Dialog,      ItemEnabled);
