@@ -105,6 +105,9 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
                 vs->changed=0;
             }
             break;
+        case DisplayCurrent :
+            MemPagePut(vs->current);
+            break;
         default : return FALSE; break; // NoDisplay
     }
     return TRUE;

@@ -3,7 +3,7 @@
 #include "screen.h"
 #include "mempage.h"
 
-enum {NoDisplay=0,DisplayAll,DisplayChanged};
+enum {NoDisplay=0,DisplayAll,DisplayChanged,DisplayCurrent};
 
 struct windowTag
 {
