@@ -13,12 +13,12 @@ void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2)
     vp->x1=x1; vp->y1=y1; vp->x2=x2; vp->y2=y2;
 }
 
-void BorderedBox(double x1,double y1,double x2,double y2,int p,int s)
+void BorderedBox(int x1,int y1,int x2,int y2,int p,int s)
 {
     _setcolor(p);
-    _rectangle_w(_GFILLINTERIOR,x1,y1,x2,y2);
+    _rectangle(_GFILLINTERIOR,x1,y1,x2,y2);
     _setcolor(s);
-    _rectangle_w(_GBORDER,x1,y1,x2,y2);
+    _rectangle(_GBORDER,x1,y1,x2,y2);
 }
 
 void ScreenInit()

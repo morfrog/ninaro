@@ -7,7 +7,7 @@
 #include "screen.h"
 #include "dialog.h"
 
-void ControlDisplayReset(CONTROL *c,int display,int rows,int cols,int strwidth)
+void ControlResetDisplay(CONTROL *c,int display,int rows,int cols,int strwidth)
 // purpose : resets the display attributes of a control
 // returns : void
 {
@@ -20,10 +20,33 @@ void ControlDisplayReset(CONTROL *c,int display,int rows,int cols,int strwidth)
 int ControlReset(CONTROL *c,...)
 // purpose : resets the values of a control, only sets the list or range
 //           values, not the type,display,rows,cols,strwidth, use
-//           ControlDisplayReset for these
+//           ControlDisplayReset for these. Can't reset the size of a list.
 // returns : TRUE if successful, else FALSE
 {
-
+    va_list ap;
+    CRANGE *cr; CLIST *cl;
+    int x;
+    va_start(ap,c);
+    switch (c->controltype)
+    {
+        case Range :
+            cr=(CRANGE *)c->store;
+            cr->min=va_arg(ap,int);
+            strcpy(cr->minname,va_arg(ap,char *));
+            cr->max=va_arg(ap,int);
+            strcpy(cr->maxname,va_arg(ap,char *));
+            break;
+        case List :
+            cl=(CLIST *)c->store;
+            for (x=0;x<cl->elems;x++)
+            {
+                cl->elem[x].value=va_arg(ap,int);
+                cl->elem[x].name=va_arg(ap,char *);
+            }
+        break;
+    }
+    va_end(ap);
+    return TRUE; // could check and return FALSE but values would have changed
 }
 
 CONTROL *ControlNew(int type,int display,int rows,int cols,int strwidth,...)
@@ -32,12 +55,9 @@ CONTROL *ControlNew(int type,int display,int rows,int cols,int strwidth,...)
 {
     va_list ap;
     CONTROL *ret=malloc(sizeof(CONTROL));
-    CRANGE *rp; CLIST *cl; char *cp; int x;
+    CRANGE *rp; CLIST *cl; int x;
     ret->controltype=type;
-    ret->displaytype=display;
-    ret->rows=rows;
-    ret->cols=cols;
-    ret->strwidth=strwidth;
+    ControlResetDisplay(ret,display,rows,cols,strwidth);
 
     va_start(ap,strwidth);
     if (type==List)
@@ -52,7 +72,6 @@ CONTROL *ControlNew(int type,int display,int rows,int cols,int strwidth,...)
             cl->elem[x].name=va_arg(ap,char *);
         }
         ret->store=cl;
-//        _Break(1,"...cl->elems",cl->elems);
     }
     else // type==Range
     {
@@ -105,7 +124,7 @@ void ControlPrint(CONTROL *c)
 }
 
 int MoveTo(int min,int max,int to)
-{if ((to<=max) && (to>=min)) return TRUE; return FALSE;}
+{if ((to<min) || (to>max)) return FALSE; return TRUE;}
 
 int Move(int min,int max,int *current,int direction)
 // purpose : if direction added to current leaves current inside min..max it
@@ -121,7 +140,7 @@ int Move(int min,int max,int *current,int direction)
 }
 
 int ControlMove(CONTROL *c,int howfar)
-// purpose : moves current to the next in the control
+// purpose : moves howfar in the control
 // returns : TRUE if moves else false;
 {
     CRANGE *cr; CLIST *cl;
@@ -143,28 +162,33 @@ int ControlNext(CONTROL *c) {return ControlMove(c,1);}
 // purpose : moves current to the next in the control
 // returns : TRUE if moves else false;
 
-ControlCurrentSet(CONTROL *c,int current)
-// purpose :
-// returns :
+int ControlCurrentSet(CONTROL *c,int current)
+// purpose : sets the controls current to current
+// returns : TRUE if successful else FALSE
 {
     CLIST *cl; CRANGE *cr;
     if (c->controltype==List)
     {
         cl=(CLIST *)c->store;
         if (MoveTo(0,cl->elems-1,current))
-        cl->current=current;        
+        {
+            cl->current=current; return TRUE;
+        }
     }
     else
     {
         cr=(CRANGE *)c->store;
         if (MoveTo(cr->min,cr->max,current))
-        cl->current=current;        
+        {
+            cl->current=current; return TRUE;
+        }
     }
+    return FALSE;
 }
 
 int ControlCurrentGet(CONTROL *c)
-// purpose :
-// returns :
+// purpose : gets the controls current
+// returns : the controls current
 {
     CLIST *cl; CRANGE *cr;
     if (c->controltype==List)
@@ -173,7 +197,7 @@ int ControlCurrentGet(CONTROL *c)
     }
     else
     {
-        cr=(CRANGE *)c->store; return cl->current;
+        cr=(CRANGE *)c->store; return cr->current;
     }
 }
 
@@ -226,29 +250,28 @@ void DisplayColor(int x1,int y1,int x2,int y2,int color,int selected)
 }
 
 void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars)
-// displays the scale in the vp viewport
 {
-    int x;
-    double width=0.8/(double)(range-1), 
-            all=0.1+0.8*(double)(pos)/(double)(range-1),
-            at=0.1;
+    int width=vp->x2-vp->x1+1;
+    int height=vp->y2-vp->y1+1;
+    int edge=width/10;
+    int section=(width-edge-edge)/(range-1);
+    int x,at=vp->x1+edge;
+
+    _setcharsize(height/2,(edge+edge)/chars);
     _settextalign(_CENTER,_HALF);
-    _setcharsize(2*(vp->y2-vp->y1)/5,(vp->x2-vp->x1)/(5*chars));
-    _setcharspacing(0);
-    if (range==1) {at+=0.4; all=0.5;}
-    SetViewport(vp);
-    _setcolor(CONTROLHILITE);
-    _moveto_w(all,0.5); _lineto_w(all,0.4);
-    _rectangle_w(_GBORDER,all-0.1,0.4,all+0.1,0.0);
     _setcolor(CONTROLTEXT);
-    _moveto_w(0.1,0.9); _lineto_w(0.9,0.9); // main line;
-    _grtext_w(all,0.2,value);
+    _moveto(at,vp->y2); _lineto(vp->x2-edge,vp->y2);
+    _moveto(at,vp->y1); _lineto(vp->x2-edge,vp->y1);
     for (x=0;x<range;x++)
     {
-        _moveto_w(at,0.9); _lineto_w(at,0.5);
-        at+=width;                
+        _moveto(at,vp->y1);
+        _lineto(at,vp->y2);
+        at+=section;
     }
-    _setvieworg(0,0);
+    at=edge+((width*pos)/(range-1));
+    BorderedBox(at-edge,vp->y1+(height/4),at+edge,vp->y2-(height/4),CONTROLBACK,CONTROLHILITE);
+    _setcolor(CONTROLTEXT);
+    _grtext(at,vp->y1+height/2,value);
 }
 
 void DisplayRangeColor(CRANGE *c,VIEWPORT *vp)
@@ -265,7 +288,7 @@ void DisplayRangeColor(CRANGE *c,VIEWPORT *vp)
 
 void DisplayRange(CRANGE *r,VIEWPORT *vp,int display,int rows,int cols,int strwidth)
 {
-    int height=((rows-1)*(vp->y2-vp->y1))/rows;
+    int height=(vp->y2-vp->y1)/rows;
     VIEWPORT scale;
     int names=FALSE;
     char buffer[10];
@@ -273,19 +296,19 @@ void DisplayRange(CRANGE *r,VIEWPORT *vp,int display,int rows,int cols,int strwi
     scale.x1=vp->x1;
     scale.y1=vp->y1;
     scale.x2=vp->x2;
-    scale.y2=vp->y1+height;
-    _setvieworg(0,0);
-    _setcharsize(vp->y2-vp->y1-height,(vp->x2-vp->x1)/(4*strwidth));
+    scale.y2=vp->y2-height;
+
+    _setcharsize(height,(vp->x2-vp->x1)/(4*strwidth));
     _setcharspacing(0);
     if ((r->minname[0]!='/0') && (r->maxname[0]!='/0'))
     {
-        _settextalign(_LEFT,_TOP);  _grtext(vp->x1,vp->y1+height,r->minname);
-        _settextalign(_RIGHT,_TOP); _grtext(vp->x2,vp->y1+height,r->maxname);
+        _settextalign(_LEFT,_TOP);  _grtext(vp->x1,vp->y2-height,r->minname);
+        _settextalign(_RIGHT,_TOP); _grtext(vp->x2,vp->y2-height,r->maxname);
         names=TRUE;
     }
     else if (r->minname[0]!='/0')
     {
-        _settextalign(_CENTER,_TOP);  _grtext(vp->x1+((vp->x2-vp->x1)/2),vp->y1+height,r->minname);
+        _settextalign(_CENTER,_TOP);  _grtext(vp->x1+((vp->x2-vp->x1)/2),vp->y2-height,r->minname);
         names=TRUE;
     }
     // else display no names.
@@ -308,13 +331,10 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
     int height=(vp->y2-vp->y1+1)/rows,_3hon4=(3*height)/4,x;
     int col=1,row=0,texty=height/2,textx=width/2,elements=rows*cols;
     
-//    _Break(7,"width",width,"height",height,"atx",atx,"aty",aty,
-//            "display",display,"elements",elements,"cl->elems",cl->elems);
-
     if (cl->elems<elements) elements=cl->elems;
 
     if (display==Slider)
-        DisplayScale(vp,cl->elems,cl->current,cl->elem[cl->current].name,3);            
+        DisplayScale(vp,cl->elems,cl->current,cl->elem[cl->current].name,strwidth);
     else
     {
         switch (display)
@@ -360,11 +380,18 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
                     _grtext(atx+textx,aty+texty,cl->elem[x].name);
                 break;
                 case Color :
-                    DisplayColor(atx,aty,atx+width,
-                        aty+(cl->elem[x].name==NULL?height:_3hon4),
-                        cl->elem[x].value,x==cl->current);
-                    _setcolor(CONTROLTEXT);
-                    _grtext(atx,aty+_3hon4,cl->elem[x].name);
+                    if (cl->elem[x].name==NULL)
+                    {
+                        DisplayColor(atx,aty,atx+width,aty+height,
+                            cl->elem[x].value,x==cl->current);
+                    }
+                    else
+                    {
+                        DisplayColor(atx,aty,atx+width,aty+_3hon4,
+                            cl->elem[x].value,x==cl->current);
+                        _setcolor(CONTROLTEXT);
+                        _grtext(atx+textx,aty+_3hon4,cl->elem[x].name);
+                    }
                 break;
                 default:
                     exit(0);
@@ -411,19 +438,19 @@ DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp)
 void main()
 {
     char *a=NewString("Hellor");
-    CONTROL *c;
+    CONTROL *c1,*c2;
     VIEWPORT main={0,0,400,50};
+    VIEWPORT main2={0,60,400,110};
 
-    c=ControlNew(List,Name,1,3,10,3,1,a,2,a,3,a);
-
+    c1=ControlNew(Range,Slider,2,3,10,3,a,7,a);
+    c2=ControlNew(List,Color,1,3,10,3,1,a,2,a,3,a);
     ScreenInit();
     _setcharsize(10,5);
     _setcolor(CONTROLBACK);
-    _rectangle(_GFILLINTERIOR,main.x1,main.y1,main.x2,main.y2);
-    _setcolor(CONTROLHILITE);
-    _rectangle(_GBORDER,main.x1,main.y1,main.x2,main.y2);
+    _rectangle(_GFILLINTERIOR,0,0,400,110);
     _setcolor(CONTROLTEXT);
-    ControlDisplay(c,&main);
+    ControlDisplay(c1,&main);
+    ControlDisplay(c2,&main2);
     SwapPage();
     GetKey();
     ShutDown();

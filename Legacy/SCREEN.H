@@ -35,7 +35,7 @@ typedef struct viewportTag VIEWPORT;
 
 void SetViewport(VIEWPORT *vp);
 void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2);
-void BorderedBox(double x1,double y1,double x2,double y2,int p,int s);
+void BorderedBox(int x1,int y1,int x2,int y2,int p,int s);
 void ScreenInit();
 void DrawGrid(int x,int y);
 void DrawDisc(int col,int cols,int row,int rows,int color,double discsize);

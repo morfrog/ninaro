@@ -46,8 +46,8 @@ typedef struct ControlTag CONTROL;
 struct DialogElemTag
 {
     char *name;     // the name of the control
-    int enabled; // TRUE,FALSE
-    int selectable; // TRUE,FALSE
+    int enabled; // TRUE,FALSE(not displayed)
+    int selectable; // TRUE,FALSE(next & prev skip it)
     CONTROL *store;
 };
 typedef struct DialogElemTag DIALOGELEM;
