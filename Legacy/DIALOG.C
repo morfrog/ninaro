@@ -1,11 +1,12 @@
 #include <stdlib.h>
-
+#include <conio.h>
 #include <stdio.h>
 #include <graph.h>
 #include <stdarg.h>
 #include <string.h>
 #include "sys.h"
 #include "screen.h"
+#include "key.h"
 #include "dialog.h"
 #include "mempage.h"
 
@@ -90,6 +91,8 @@ CONTROL *ControlNew(int type,int display,int rows,int cols,int strwidth,...)
 }
 
 void ControlPrint(CONTROL *c)
+// purpose : to print the contents of the control
+// returns : void
 {
     CRANGE *cr; CLIST *cl; int x;
     switch (c->controltype)
@@ -183,7 +186,7 @@ int ControlCurrentSet(CONTROL *c,int current)
         cr=(CRANGE *)c->store;
         if (MoveTo(cr->min,cr->max,current))
         {
-            cl->current=current; return TRUE;
+            cr->current=current; return TRUE;
         }
     }
     return FALSE;
@@ -211,7 +214,7 @@ int ControlCurrentSetTo(CONTROL *c,int value)
         cr=(CRANGE *)c->store;
         if (MoveTo(cr->min,cr->max,value))
         {
-            cl->current=value; return TRUE;
+            cr->current=value; return TRUE;
         }
     }
     return FALSE;
@@ -291,15 +294,15 @@ void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars)
     _setcharsize(height/2,(edge+edge)/chars);
     _settextalign(_CENTER,_HALF);
     _setcolor(CONTROLTEXT);
-    _moveto(at,vp->y2); _lineto(vp->x2-edge,vp->y2);
-    _moveto(at,vp->y1); _lineto(vp->x2-edge,vp->y1);
+    _moveto(at,vp->y2); _lineto(vp->x1+edge+((range-1)*section),vp->y2);
+    _moveto(at,vp->y1); _lineto(vp->x1+edge+((range-1)*section),vp->y1);
     for (x=0;x<range;x++)
     {
         _moveto(at,vp->y1);
         _lineto(at,vp->y2);
         at+=section;
     }
-    at=vp->x1+edge+((width*pos)/(range-1));
+    at=vp->x1+edge+(pos*section);
     BorderedBox(at-edge,vp->y1+(height/4),at+edge,vp->y2-(height/4),CONTROLBACK,CONTROLHILITE);
     _setcolor(CONTROLTEXT);
     _grtext(at,vp->y1+height/2,value);
@@ -436,6 +439,8 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
 }
 
 void ControlDisplay(CONTROL *c,VIEWPORT *vp)
+// purpose : to graphically display the control in the viewport
+// returns : void
 {
     switch (c->controltype)
     {
@@ -451,8 +456,7 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp)
     }            
 }
 
-
-DIALOG *DialogNew(char *name,int controls,...)
+DIALOG *DialogNew(KEYGROUP *kg,char *name,int controls,...)
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
 // returns : the dialog
@@ -463,6 +467,7 @@ DIALOG *DialogNew(char *name,int controls,...)
     strcpy(ret->name,name);
     ret->elems=controls+1;
     ret->elem=malloc((controls+1)*sizeof(DIALOGELEM));
+    ret->state=malloc(ret->elems*sizeof(int));
     va_start(ap,controls);
     for (x=0;x<controls;x++)
     {
@@ -479,23 +484,31 @@ DIALOG *DialogNew(char *name,int controls,...)
                                                              1,NewString("Reset"),
                                                              2,NewString("Cancel"));
     ret->current=controls; // only one which is definately selectable;
+    ret->ks=KeySysNew(kg);
+    KeySysIFunc(ret->ks,0,DialogControlPrev); // LEFT
+    KeySysIFunc(ret->ks,1,DialogControlNext); // RIGHT
+    KeySysIFunc(ret->ks,2,DialogPrev);        // UP
+    KeySysIFunc(ret->ks,3,DialogNext);        // DOWN
+    KeySysIFunc(ret->ks,4,DialogSelect);        // SELECT
+    KeySysIFunc(ret->ks,5,DialogCancel);        // CANCEL
     return ret;
 }
 
 int DialogMove(DIALOG *d,int howfar)
+// purpose : to move the dialog's current howfar
+// returns : FALSE it cant move, else TRUE
 {
     
     int was=d->current;                       // save current
     if (MoveTo(0,d->elems-1,d->current+howfar)) // in range
     {
         d->current+=howfar;
+        if ((d->elem[d->current].selectable) && (d->elem[d->current].enabled))
+            return TRUE;
     }
     else
     {
-        if ((d->elem[d->current].selectable) && (d->elem[d->current].enabled))
-            return TRUE;
-        else
-            d->current=was;
+        d->current=was;
     }
     return FALSE;
 }
@@ -506,6 +519,14 @@ int DialogPrev(DIALOG *d) {return DialogMove(d,-1);}
 
 int DialogNext(DIALOG *d) {return DialogMove(d,1);}
 // purpose : moves current to the next in the dialog
+// returns : TRUE if successful, else FALSE
+
+int DialogControlNext(DIALOG *d) {return ControlNext(d->elem[d->current].store);}
+// purpose : moves current of the current control in the dialog next
+// returns : TRUE if successful, else FALSE
+
+int DialogControlPrev(DIALOG *d) {return ControlPrev(d->elem[d->current].store);}
+// purpose : moves current of the current control in the dialog next
 // returns : TRUE if successful, else FALSE
 
 int DialogCurrentSet(DIALOG *d,int current)
@@ -524,6 +545,20 @@ int DialogCurrentGet(DIALOG *d) {return d->current;}
 // purpose : to get the current
 // returns : the current
 
+int DialogDefaultGet(DIALOG *d)
+// purpose : gets which of the default (OK,Reset,Cancel) buttons is selected
+// returns : the number of the button
+{
+    return ControlCurrentGet(d->elem[d->elems-1].store);
+}
+
+void DialogDefaultSet(DIALOG *d,int select)
+// purpose : sets which of the default (OK,Reset,Cancel) buttons is selected
+// returns : void
+{
+    ControlCurrentSet(d->elem[d->elems-1].store,select);
+}
+
 CONTROL *DialogControlGet(DIALOG *d,int control)
 // purpose : gets the control from the dialog, for use with control functions
 //           assumes 0<=control<=d->elems-1
@@ -539,37 +574,39 @@ void DialogNameSet(DIALOG *d,char *string)
     strcpy(d->name,string);
 }
 
-int DialogStateGet(DIALOG *d,...) 
-// purpose : gets the current of each control in the dialog, ...={int *}*d->elems
+void DialogKeyGroupSet(DIALOG *d,KEYGROUP *kg)
+// purpose : sets the dialogs keygroup
+// returns : void
+{
+    KeySysGroupSet(d->ks,kg);
+}
+
+KEYGROUP *DialogKeyGroupGet(DIALOG *d)
+// purpose : gets the dialogs keygroup
+// returns : the keygroup
+{
+    return KeySysGroupGet(d->ks);
+}
+
+int DialogStateGet(DIALOG *d,int *buffer) 
+// purpose : gets the current of each control in the dialog, into the int array buffer
 // returns : TRUE if all gotten successfully, else FALSE
 {
-    va_list ap;
-    int x,*ip;
-
-    va_start(ap,d);
-    for (x=0;x<d->elems;x++)
-    {
-        ip=va_arg(ap,int *);
-        *ip=ControlCurrentGet(d->elem[x].store);
-    }
-    va_end(ap);
+    int x;
+    for (x=0;x<d->elems;x++) buffer[x]=ControlCurrentGet(d->elem[x].store);
     return TRUE;
 }
 
-int DialogStateSet(DIALOG *d,...) // ...={int}
+int DialogStateSet(DIALOG *d,int *buffer)
 // purpose : sets the current of each control in the dialog, ...{int}*d->elems
 // returns : TRUE if all successfully set, else FALSE
 {
-    va_list ap;
     int x,ok=TRUE;
-
-    va_start(ap,d);
     for (x=0;x<d->elems;x++)
     {
-        if (ControlCurrentSet(d->elem[x].store,va_arg(ap,int))==FALSE)
+        if (ControlCurrentSet(d->elem[x].store,buffer[x])==FALSE)
             ok=FALSE;
     }
-    va_end(ap);
     return ok;
 }
 
@@ -633,6 +670,8 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 }
 
 void DialogPrint(DIALOG *dl)
+// purpose : to print the contents of the dialog
+// returns : void
 {
     int x;
     printf("%s   [%d]\n",dl->name,dl->current);
@@ -646,45 +685,91 @@ void DialogPrint(DIALOG *dl)
     }
 }
 
-void DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp)
-// purpose : runs a dialog, as is.
-// returns :
+int DialogCancel(DIALOG *d)
+// purpose : sends a select signal to the dialog
+// returns : TRUE, as dialog is now finished
 {
+    DialogStateSet(d,d->state);
+    return TRUE;
+}
 
+int DialogSelect(DIALOG *d)
+// purpose : sends a select signal to the dialog
+// returns : TRUE if dialog finished, else FALSE
+{
+    switch (DialogDefaultGet(d))
+    {
+        case 0 : // OK
+            return TRUE;
+        case 1 : // Reset
+            DialogStateSet(d,d->state);
+            return FALSE;
+        case 2 : // Cancel
+            return DialogCancel(d);
+        break;
+    }
+    return TRUE; // should never happen
+}
+
+void DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,void (* change)(DIALOG *d),int namefract,int chars)
+// purpose : runs a dialog, as is, in the viewport with the mempage as
+//           background, running function change whenever a controls current
+//           changes, using chars for control names, which are in left
+//           1/namefract section of viewport
+//           kg keys are left,right,up,down,select,cancel
+// returns : void
+{
+    int index,funcret;
+    
+    DialogStateGet(d,d->state);
+    DialogDisplay(d,vp,mp,namefract,chars);
+    SwapPage();
+
+    for (;;)
+    {
+        if (KeySysKey(d->ks,GetKey(),d,&funcret,&index))
+        // key was used
+        {
+            switch (index)
+            {
+                case 0 : case 1 : // LEFT or RIGHT
+                    if (change!=NULL) change(d);
+                    break;
+                case 4 : case 5 : // SELECT or CANCEL
+                    if (funcret) return; // dialog finished
+            }
+            DialogDisplay(d,vp,mp,namefract,chars);
+            SwapPage();
+        }
+    }
 }
 
 void main()
 {
     char *a=NewString("Hellor");
-    CONTROL *c1,*c2;
     DIALOG *dl;
     VIEWPORT main={0,0,400,50};
     VIEWPORT main2={50,50,500,310};
-
-    dl=DialogNew("Player One Setup",2,
-        "Range",TRUE,TRUE,ControlNew(Range,Slider,1,3,10,3,"",7,""),
+    KEYGROUP *kg=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,ESC);
+    
+    dl=DialogNew(kg,"Player One Setup",2,
+        "Range",TRUE,TRUE,ControlNew(Range,Slider,1,3,10,3,"",27,""),
         "List",TRUE,TRUE,ControlNew(List,Color,1,3,10,3,1,a,2,a,3,a));
+    
 
-//    ShutDown();
-//    DialogPrint(dl);
-//    GetKey();
-//    exit(0);
+//    ShutDown(); DialogPrint(dl); GetKey(); exit(0);
 
     ScreenInit();
-/*
-    _setcharsize(10,5);
-    _setcolor(CONTROLBACK);
-    _rectangle(_GFILLINTERIOR,0,0,400,110);
-    _setcolor(CONTROLTEXT);
-    ControlDisplay(c1,&main);
-    ControlDisplay(c2,&main2);
-*/
-    DialogDisplay(dl,&main2,NULL,8,7);
-    SwapPage();
-    GetKey();
-    DialogNameSet(dl,"Player Two Setup");
-    DialogDisplay(dl,&main2,NULL,8,7);
-    SwapPage();
-    GetKey();
+
+//    DialogDisplay(dl,&main2,NULL,8,7);
+//    SwapPage();
+//    GetKey();
+//    DialogNameSet(dl,"Player Two Setup");
+//    DialogDisplay(dl,&main2,NULL,8,7);
+//    SwapPage();
+//    GetKey();
+
+    DialogCall(dl,&main2,NULL,NULL,8,7);
     ShutDown();
 }
+

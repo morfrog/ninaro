@@ -1,6 +1,5 @@
 #ifndef CONNECT4_H
 #define CONNECT4_H
-
 #include "grid.h"
 #include "player.h"
 

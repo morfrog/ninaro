@@ -5,89 +5,95 @@
 #include <stdarg.h>
 #include <graph.h>
 #include <conio.h>
-#include "sys.h"
+#include "defines.h"
 #include "sound.h"
 #include "screen.h"
+#include "key.h"
 #include "menu.h"
 
-enum {menuend=-2,selected,directionbad,directionok};
-
-int MenuLeft(MENUVIEW *mv)
+int MenuLeft(MENU *m)
+// purpose : sets the current menu as the one to the left of the current
+// returns : TRUE if moved else FALSE
 {
-    if (mv->current>0)
-    {
-        mv->current-=1; return directionok;
-    }
-    return directionbad;
+    if (m->current>0) {m->current-=1; return TRUE;}
+    return FALSE;
 }
 
-int MenuRight(MENUVIEW *mv)
+int MenuRight(MENU *m)
+// purpose : sets the current menu as the one to the right of the current
+// returns : TRUE if moved else FALSE
 {
-    if (mv->current<mv->submenus-1)
-    {
-        mv->current+=1; return directionok;
-    }
-    return directionbad;
+    if (m->current<m->submenus-1) {m->current+=1; return TRUE;}
+    return FALSE;
 }
 
-int MenuUp(MENUVIEW *mv)
+int MenuUp(MENU *m)
+// purpose : sets the current item of the current menu as the one above it
+// returns : TRUE if moved else FALSE
 {
-    SUBMENU *sm=&(mv->submenu[mv->current]);
+    SUBMENU *sm=&(m->submenu[m->current]);
     int old=sm->current;
     for (;;)
     {
         sm->current-=1;
-        if (sm->current<0) {sm->current=old; return directionbad;}
+        if (sm->current<0) {sm->current=old; return FALSE;}
         if ((sm->item[sm->current].name!=SEPARATOR) &&
-            (sm->item[sm->current].enabled!=ItemDisabled))
-            return directionok; // acceptable item
+            (sm->item[sm->current].enabled==TRUE))
+            return TRUE; // acceptable item
         // else keep going
     }
 }
 
-int MenuDown(MENUVIEW *mv)
+int MenuDown(MENU *m)
+// purpose : sets the current item of the current menu as the one below it
+// returns : TRUE if moved else FALSE
 {
-    SUBMENU *sm=&(mv->submenu[mv->current]);
+    SUBMENU *sm=&(m->submenu[m->current]);
     int old=sm->current;
     for (;;)
     {
         sm->current+=1;
-        if (sm->current>sm->items-1) {sm->current=old; return directionbad;}
+        if (sm->current>sm->items-1) {sm->current=old; return FALSE;}
         if ((sm->item[sm->current].name!=SEPARATOR) &&
-            (sm->item[sm->current].enabled!=ItemDisabled))
-            return directionok; // acceptable item
+            (sm->item[sm->current].enabled==TRUE))
+            return TRUE; // acceptable item
         // else keep going
     }
 }
 
-int MenuSelect(MENUVIEW *mv)
+int MenuSelect(MENU *m)
+// purpose : sends a select signal to the menu
+// returns : TRUE
 {
-    mv->submenu[mv->current].item[mv->submenu[mv->current].current].function();
-    return selected;
+    m->submenu[m->current].item[m->submenu[m->current].current].function();
+    return TRUE;
 }
 
-int MenuEnd(MENUVIEW *mv)
+int MenuCancel(MENU *m)
+// purpose : sends a cancel signal to the menu
+// returns : TRUE 
 {
-    return menuend;
+    return TRUE;
 }
 
-MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background)
-// pre : nummenus < 255
-// nummenus menus are allocated memory so keep it at the real number
+MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background,KEYGROUP *kg)
+// purpose : to create a new menu, nummenus menus are allocated memory
+//           so keep it at the real number,
+// returns : the menu
 {
     MENU *menu=malloc(sizeof(MENU));
-    menu->view=malloc(sizeof(MENUVIEW));
-    menu->view->current=0;
-    menu->view->submenus=nummenus;
-    menu->view->submenu=malloc(nummenus*sizeof(SUBMENU));
-    menu->view->vp=vp;
-    menu->view->background=background;
-    menu->key[left].func=MenuLeft;
-    menu->key[right].func=MenuRight;
-    menu->key[up].func=MenuUp;
-    menu->key[down].func=MenuDown;
-    menu->key[select].func=MenuSelect;
-    menu->key[end].func=MenuEnd;
+    menu->current=0;
+    menu->submenus=nummenus;
+    menu->submenu=malloc(nummenus*sizeof(SUBMENU));
+    menu->vp=vp;
+    menu->background=background;
+    menu->ks=KeySysNew(kg);
+    KeySysIFunc(menu->ks,0,MenuLeft);   // LEFT
+    KeySysIFunc(menu->ks,1,MenuRight);  // RIGHT
+    KeySysIFunc(menu->ks,2,MenuUp);     // UP
+    KeySysIFunc(menu->ks,3,MenuDown);   // DOWN
+    KeySysIFunc(menu->ks,4,MenuSelect); // SELECT
+    KeySysIFunc(menu->ks,5,MenuCancel); // CANCEL
     return menu;
 }
 
@@ -99,13 +105,15 @@ MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background)
 
 // possibly add shortcut string, CN's might be "CTRL-N"
 void MenuNewSub(MENU *menu,char *menuname,int items,...)
-// ... is char *Name,int Shortcut,void (* Function)(void),byte Enabled,
-// Name==SEPARATOR needs no shortcut, function or enabled
+// purpose : to initialise a submenu for menu.
+//           ... is char *Name,int Shortcut,void (* Function)(void),byte Enabled,
+//           Name==SEPARATOR needs no shortcut, function or enabled
+// returns : void
 {
     va_list ap;
     int n;
     char *name;
-    SUBMENU *sm=&(menu->view->submenu[menu->view->current]);
+    SUBMENU *sm=&(menu->submenu[menu->current]);
     sm->name=malloc((strlen(menuname)+1)*sizeof(char));
     strcpy(sm->name,menuname);
     sm->items=items;
@@ -125,117 +133,199 @@ void MenuNewSub(MENU *menu,char *menuname,int items,...)
             sm->item[n].shortcut=va_arg(ap,int);
             sm->item[n].function=va_arg(ap,void *);
             sm->item[n].enabled=va_arg(ap,byte);
-            if (sm->item[n].enabled==ItemEnabled) sm->current=n;
+            if (sm->item[n].enabled==TRUE) sm->current=n;
             // ensures the current is a proper item
         }
     }
     va_end(ap);
-    ++(menu->view->current);
+    ++(menu->current);
 }
 
-void MenuKeysSet(MENU *menu,int l,int r,int u,int d,int s,int e)
-{
-    menu->key[left].key=l;
-    menu->key[right].key=r;
-    menu->key[up].key=u;
-    menu->key[down].key=d;
-    menu->key[select].key=s;
-    menu->key[end].key=e;
-}
+KEYGROUP *MenuKeyGroupGet(MENU *menu) {return KeySysGroupGet(menu->ks);}
+// purpose : gets the menus keygroup
+// returns : the keygroup
 
-int MenuSub(MENU *menu) {return menu->view->current;}
-int MenuSubs(MENU *menu) {return menu->view->submenus;}
-int MenuSubItem(MENU *menu) {return menu->view->submenu[menu->view->current].current;}
-int MenuSubItems(MENU *menu) {return menu->view->submenu[menu->view->current].items;}
+void MenuKeyGroupSet(MENU *menu,KEYGROUP *kg) {KeySysGroupSet(menu->ks,kg);}
+// purpose : sets the dialogs keygroup
+// returns : void
 
-void MenuDisplayBar(MENU *menu,int dropped)
-// displays the menu bar in the current viewport
-// if dropped the menu name is not hilited
+int MenuSub(MENU *menu) {return menu->current;}
+// purpose : to get the index of the current submenu
+// returns : the index 
+
+int MenuSubs(MENU *menu) {return menu->submenus;}
+// purpose : to get the number of submenus in the menu
+// returns : the number 
+
+int MenuSubItem(MENU *menu) {return menu->submenu[menu->current].current;}
+// purpose : to get the index of the current item in the current submenu
+// returns : the index 
+
+int MenuSubItems(MENU *menu) {return menu->submenu[menu->current].items;}
+// purpose : to get the number of items in the current submenu
+// returns : the number
+
+void MenuDisplayBar(MENU *menu,VIEWPORT *vp,int dropped)
+// purpose : displays the menu bar in the current viewport
+//           if dropped the menu name is not hilited
+// returns : void
 {
-    int x;
-    double pos=0.0;
-    double menuwidth=(1.0/(double)MenuSubs(menu));
+    int x,pos=vp->x1;
+    int width=vp->x2-vp->x1+1,height=vp->y2-vp->y1+1;
+    int menuwidth=width/MenuSubs(menu);
 // the menu bar
-    BorderedBox(0.0,0.0,1.0,1.0,MENUBACK,MENUHILITE);
+    BorderedBox(vp->x1,vp->y1,vp->x2,vp->y2,MENUBACK,MENUHILITE);
 // hilite selected
-        _rectangle_w(dropped?_GBORDER:_GFILLINTERIOR,
-            (double)MenuSub(menu)*menuwidth,0.0,
-            (double)(MenuSub(menu)+1)*menuwidth,1.0);
+    _rectangle(dropped?_GBORDER:_GFILLINTERIOR,
+        vp->x1+(MenuSub(menu)*menuwidth),vp->y1,
+        vp->x1+((MenuSub(menu)+1)*menuwidth),vp->y2);
+    _settextalign(_LEFT,_TOP);
+    _setcharsize(height-4,menuwidth/12);
 // write text
     _setcolor(MENUTEXT);
     for (x=0;x<MenuSubs(menu);x++)
     {
-        _grtext_w(pos,0.5,menu->view->submenu[x].name);
+        _grtext(pos,vp->y1+1,menu->submenu[x].name);
         pos+=menuwidth;
     }
 }
 
-void MenuDisplaySub(SUBMENU *sub)
+void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp)
+// purpose : displays the submenu in the viewport
+// returns : void
 {
-    int x;
-    double itemheight=1.0/(double)sub->items;
-    double pos=itemheight/2.0;
+    int x,pos=vp->y1;
+    int width=vp->x2-vp->x1+1,height=vp->y2-vp->y1+1;
+    int itemheight=height/sub->items;
 // the submenu
-    BorderedBox(0.0,0.0,1.0,1.0,MENUBACK,MENUHILITE);
+    BorderedBox(vp->x1,vp->y1,vp->x2,vp->y2,MENUBACK,MENUHILITE);
 // hilite item
-    BorderedBox(0.0,itemheight*((double)sub->current),
-                1.0,itemheight*((double)(sub->current+1)),
-                MENUHILITE,MENUHILITE);
-
+    _settextalign(_LEFT,_TOP);
+    _rectangle(_GFILLINTERIOR,
+                vp->x1,vp->y1+(itemheight*sub->current),
+                vp->x2,vp->y1+(itemheight*(sub->current+1)));
+                
     for (x=0;x<sub->items;x++)
     {
         if (sub->item[x].name==SEPARATOR)
         {
             _setcolor(MENUHILITE);
-            _moveto_w(0.0,pos);
-            _lineto_w(1.0,pos);
+            _moveto(vp->x1,pos);
+            _lineto(vp->x2,pos);
         }
         else
         {
-            if (sub->item[x].enabled==ItemDisabled)
-                _setcolor(MENUHILITE);
-            else
-                _setcolor(MENUTEXT);
-            _grtext_w(0.0,pos,sub->item[x].name);
+            if (sub->item[x].enabled==FALSE) _setcolor(MENUHILITE);
+            else                                    _setcolor(MENUTEXT);
+            _grtext(vp->x1+2,pos,sub->item[x].name);
         }
         pos+=itemheight;
     }   
-
 }
 
 void MenuDisplay(MENU *menu)
-// displays the menu in its current state
+// purpose : displays the menu in its current state
+// returns : void
 {
-    int width=menu->view->vp->x2-menu->view->vp->x1+1;
-    MENUVIEW *mv=menu->view;
+    int width=menu->vp->x2-menu->vp->x1+1;
+    VIEWPORT vp;
 
-    _setcharspacing_w(-0.01);
-    _settextalign(_LEFT,_HALF);
-    _setcharsize_w(0.05,0.03);
-    MemPagePut(mv->background);
+//    MemPagePut(menu->background); 666
+
 // menu bar
-    _setviewport(menu->view->vp->x1,menu->view->vp->y1,
-                 menu->view->vp->x2,menu->view->vp->y1+30);
-    MenuDisplayBar(menu,TRUE);
+    ResetViewport(&vp,menu->vp->x1,menu->vp->y1,
+                      menu->vp->x2,menu->vp->y1+30);
+    MenuDisplayBar(menu,&vp,TRUE);
 // submenu
-    _setviewport(menu->view->vp->x1+(width*MenuSub(menu)/MenuSubs(menu)),
-                 menu->view->vp->y1+31,
-                 menu->view->vp->x1+(width*(MenuSub(menu)+1)/MenuSubs(menu)),
-                 menu->view->vp->y1+31+(MenuSubItems(menu)*30));
-    MenuDisplaySub(&(menu->view->submenu[MenuSub(menu)]));
+    ResetViewport(&vp,
+        menu->vp->x1+(width*MenuSub(menu)/MenuSubs(menu)),menu->vp->y1+31,
+        menu->vp->x1+(width*(MenuSub(menu)+1)/MenuSubs(menu)),
+        menu->vp->y1+31+(MenuSubItems(menu)*30));
+    MenuDisplaySub(&(menu->submenu[MenuSub(menu)]),&vp);
 }
 
 int MenuCall(MENU *menu)
-// calls the menu
+// purpose : calls the menu
+// returns : void
 {
-    int key,n;
+    int funcret,index;
 
-    if (menu->view->current>=menu->view->submenus) menu->view->current=0;
+    if (menu->current>=menu->submenus) menu->current=0;
     MenuDisplay(menu);
     SwapPage();
 
     for (;;)
     {
+        if (KeySysKey(menu->ks,GetKey(),menu,&funcret,&index))
+        // key was used
+        {
+            switch (index)
+            {
+                case 4 : case 5 : // SELECT or CANCEL
+                    if (funcret) return; // menu finished
+            }
+            if (funcret)
+            {
+                MenuDisplay(menu);
+                SwapPage();
+            }
+        }
+    }
+}
+
+void MenuFree(MENU *menu)
+// purpose : to free the memory allocated to the menu
+// returns : void
+{
+    int submenu,item;
+    for (submenu=0;submenu<menu->submenus;submenu++)
+    {
+        free(menu->submenu[submenu].name);
+        for (item=0;item<menu->submenu[submenu].items;item++)
+            if (menu->submenu[submenu].item[item].name!=SEPARATOR)
+                free(menu->submenu[submenu].item[item].name);
+        free(menu->submenu[submenu].item);
+    }
+    free(menu->submenu);
+    KeySysFree(menu->ks);
+    free(menu);
+}
+
+void main()
+{
+    VIEWPORT main;
+    MENU *mainmenu;
+    KEYGROUP *kg=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,ESC);
+    KEYGROUP *kg2=KeyGroupNew(6,'a','d','w','s','e','q');
+    ResetViewport(&main,0,0,639,349);
+    mainmenu=MenuNew(4,&main,NULL,kg);
+    MenuNewSub(mainmenu,"Game",7,
+        "New",      CN, NULL,    TRUE,
+        "End",      CE, NULL,    TRUE,
+        "Status",   CS, NULL,    TRUE,
+        "High Scores",NONE,NULL, TRUE,
+        "Suggest Move",NONE,NULL,TRUE,
+        "Sound",    NONE,NULL,   TRUE,
+        "Exit",     CX, NULL,    TRUE);
+    MenuNewSub(mainmenu,"Board",3,
+        "7x8x4",    NONE,NULL,   TRUE,
+        "12x13x6",  NONE,NULL,   TRUE,
+        "Custom...",NONE,NULL,   TRUE);
+    MenuNewSub(mainmenu,"Player",3,
+        "One...",   NONE,NULL,   TRUE,
+        "Two...",   NONE,NULL,   TRUE,
+        "Options",  NONE,NULL,   TRUE);
+    MenuNewSub(mainmenu,"Help",2,
+        "Contents", NONE,NULL,   TRUE,
+        "About",    NONE,NULL,   TRUE);
+    ScreenInit();
+    MenuCall(mainmenu);
+    MenuKeyGroupSet(mainmenu,kg2);
+    MenuCall(mainmenu);
+    ShutDown();
+}
+
+/*
         if (kbhit())
         {
             key=GetKey();
@@ -251,22 +341,5 @@ int MenuCall(MENU *menu)
                             break;
                     }
         }
-    }
-}
-
-void MenuFree(MENU *menu)
-{
-    int submenu,item;
-    for (submenu=0;submenu<menu->view->submenus;submenu++)
-    {
-        free(menu->view->submenu[submenu].name);
-        for (item=0;item<menu->view->submenu[submenu].items;item++)
-            if (menu->view->submenu[submenu].item[item].name!=SEPARATOR)
-                free(menu->view->submenu[submenu].item[item].name);
-        free(menu->view->submenu[submenu].item);
-    }
-    free(menu->view->submenu);
-    free(menu);
-}
-
+*/
 

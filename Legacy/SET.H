@@ -13,21 +13,23 @@ struct setTag
 
 typedef struct setTag SET;
 
-SET *SetNew(int size);           
-/* empty & create set */
-
-void SetAdd(SET *set,int n);      
-/* add n to set */
-
-void SetDel(SET *set,int n);      
-/* remove n from set */
-
-int SetMember(SET *set,int n);      
-/* test if n is in set */
-
+SET *SetNew(int size);
+// purpose : to create a new set of size elements
+// returns : the set
+void SetAdd(SET *set,int n);
+// purpose : set element n of the set to TRUE
+// returns : void
+void SetDel(SET *set,int n);
+// purpose : set element n of the set to FALSE
+// returns : void
+int SetMember(SET *set,int n);
+// purpose : to find if element n of the set is TRUE
+// returns : TRUE if n is member else FALSE
 void SetPrint(SET *set);
-/* prints the set, using 1's and 0's */
-
+// purpose : to print the contents of the set
+// returns : void
 void SetFree(SET *set);
+// purpose : to free memory allocated to the set
+// returns : void
 
 #endif

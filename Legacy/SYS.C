@@ -88,16 +88,6 @@ char mygetch()
     return getch();
 }
 
-int GetKey() // uses enum keys
-{
-    int ch=getch();
-    if (ch==0)
-    {
-        return (256+getch());
-    }
-    else return ch;
-}
-
 void IntToByteString(int in,char *array)
 {
     int mask=255; // 11111111

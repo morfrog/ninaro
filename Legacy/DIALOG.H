@@ -1,6 +1,7 @@
 #ifndef DIALOG_H
 #define DIALOG_H
 #include "screen.h"
+#include "mempage.h"
 
 enum {Button=0,Radio,Color,Name,Slider,Dial}; // Display Type
 
@@ -54,12 +55,127 @@ typedef struct DialogElemTag DIALOGELEM;
 
 struct DialogTag
 {
-    char name[20];
-    int current;
-    int elems;
-    DIALOGELEM *elem;
-//    MEMPAGE *background;
+    char name[20];      // the name of the dialog
+    int current;        // the current control of the dialog
+    int elems;          // the number of controls in the dialog
+    int *state;         // the state of the dialog, used to save state
+    DIALOGELEM *elem;   // array of controls in the dialog
+//  MEMPAGE *background;// the background image
+    KEYSYS *ks;         // the key system of the dialog
 };
 typedef struct DialogTag DIALOG;
+
+/*---------------------------CONTROL-----------------------------------*/
+void ControlResetDisplay(CONTROL *c,int display,int rows,int cols,int strwidth);
+// purpose : resets the display attributes of a control
+// returns : void
+int ControlReset(CONTROL *c,...);
+// purpose : resets the values of a control, only sets the list or range
+//           values, not the type,display,rows,cols,strwidth, use
+//           ControlDisplayReset for these. Can't reset the size of a list.
+// returns : TRUE if successful, else FALSE
+CONTROL *ControlNew(int type,int display,int rows,int cols,int strwidth,...);
+// list ... is elems,{int value,char *name}*elems           name=name;
+// range... is int min,char *minname,int max,int maxname    name=NewString(name);
+void ControlPrint(CONTROL *c);
+// purpose : to print the contents of the control
+// returns : void
+int ControlMove(CONTROL *c,int howfar);
+// purpose : moves howfar in the control
+// returns : TRUE if moves else false;
+int ControlPrev(CONTROL *c);
+// purpose : moves current to the prev in the control
+// returns : TRUE if moves else false;
+int ControlNext(CONTROL *c);
+// purpose : moves current to the next in the control
+// returns : TRUE if moves else false;
+int ControlCurrentSet(CONTROL *c,int current);
+// purpose : sets the controls current to current
+// returns : TRUE if successful else FALSE
+int ControlCurrentSetTo(CONTROL *c,int value);
+// purpose : sets the controls current to the first in the control which has value
+// returns : TRUE if successful else FALSE
+int ControlCurrentGet(CONTROL *c);
+// purpose : gets the controls current
+// returns : the controls current
+ControlElemSet(CONTROL *c,int elem,int value,char *name);
+// if range then if value==min strcpy(minname,name)
+//               if value==max strcpy(maxname,name)
+// if list then list[elem]=value,name.
+void ControlDisplay(CONTROL *c,VIEWPORT *vp);
+// purpose : to graphically display the control in the viewport
+// returns : void
+
+/*---------------------------DIALOG-----------------------------------*/
+DIALOG *DialogNew(KEYGROUP *kg,char *name,int controls,...);
+// purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
+//           dialogs have a default control of buttons, 'OK,Reset,Cancel'
+// returns : the dialog
+int DialogMove(DIALOG *d,int howfar);
+// purpose : to move the dialog's current howfar
+// returns : FALSE it cant move, else TRUE
+int DialogPrev(DIALOG *d);
+// purpose : moves current to the prev in the dialog
+// returns : TRUE if successful, else FALSE
+int DialogNext(DIALOG *d);
+// purpose : moves current to the next in the dialog
+// returns : TRUE if successful, else FALSE
+int DialogControlNext(DIALOG *d);
+// purpose : moves current of the current control in the dialog next
+// returns : TRUE if successful, else FALSE
+int DialogControlPrev(DIALOG *d);
+// purpose : moves current of the current control in the dialog next
+// returns : TRUE if successful, else FALSE
+int DialogCurrentSet(DIALOG *d,int current);
+// purpose : sets the dialog current to current
+// returns : TRUE if successful, else FALSE
+int DialogCurrentGet(DIALOG *d);
+// purpose : to get the current
+// returns : the current
+int DialogDefaultGet(DIALOG *d);
+// purpose : gets which of the default (OK,Reset,Cancel) buttons is selected
+// returns : the number of the button
+void DialogDefaultSet(DIALOG *d,int select);
+// purpose : sets which of the default (OK,Reset,Cancel) buttons is selected
+// returns : void
+CONTROL *DialogControlGet(DIALOG *d,int control);
+// purpose : gets the control from the dialog, for use with control functions
+//           assumes 0<=control<=d->elems-1
+// returns : the control 
+void DialogNameSet(DIALOG *d,char *string);
+// purpose : sets the name of the dialog
+// returns : void
+void DialogKeyGroupSet(DIALOG *d,KEYGROUP *kg);
+// purpose : sets the dialogs keygroup
+// returns : void
+KEYGROUP *DialogKeyGroupGet(DIALOG *d);
+// purpose : gets the dialogs keygroup
+// returns : the keygroup
+int DialogStateGet(DIALOG *d,int *buffer);
+// purpose : gets the current of each control in the dialog, into the int array buffer
+// returns : TRUE if all gotten successfully, else FALSE
+int DialogStateSet(DIALOG *d,int *buffer);
+// purpose : sets the current of each control in the dialog, ...{int}*d->elems
+// returns : TRUE if all successfully set, else FALSE
+void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars);
+// purpose : displays the dialog in the viewport with the mempage background
+//           1/namefract is the name of each control, where up to chars characters are displayed
+// returns : void
+void DialogPrint(DIALOG *dl);
+// purpose : to print the contents of the dialog
+// returns : void
+int DialogCancel(DIALOG *d);
+// purpose : sends a select signal to the dialog
+// returns : TRUE, as dialog is now finished
+int DialogSelect(DIALOG *d);
+// purpose : sends a select signal to the dialog
+// returns : TRUE if dialog finished, else FALSE
+void DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,void (* change)(DIALOG *d),int namefract,int chars);
+// purpose : runs a dialog, as is, in the viewport with the mempage as
+//           background, running function change whenever a controls current
+//           changes, using chars for control names, which are in left
+//           1/namefract section of viewport
+//           kg keys are left,right,up,down,select,cancel
+// returns : void
 
 #endif

@@ -11,6 +11,7 @@
 #include <i86.h>
 #include "sys.h"
 #include "sound.h"
+#include "key.h"
 #include "txtbox.h"
 #include "viewsys.h"
 #include "menu.h"
