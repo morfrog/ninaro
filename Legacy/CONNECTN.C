@@ -12,10 +12,14 @@
 #include "grid.h"
 #include "player.h"
 
-// Rodney Rule      
+#define ColAdd 3
+// secondary color = primary color + ColAdd
+
+// Rodney Rule
 // Ronda Random
 // Peter Prune
 // Nathan Neuro
+// Minny Maxx
 
 struct TokenTag
 {
@@ -34,11 +38,26 @@ struct winTag
 typedef struct winTag WIN;
 
 int numplayers;
+int win_occured;
+WIN *win;
+int grid_cols;
+int grid_rows;
 GRID *playgrid;
 GRID *entrygrid;
-PLAYER *players; // array of player
+PLAYER **players; // array of player *
+PLAYER *player_one;
+PLAYER *player_two;
+PLAYER *player_current;
 TXTBOX *msgbox;
-VIEWSYSTEM *vs;
+VIEWSYS *vs;
+
+void NextPlayer()
+{
+    if (player_current==player_one)
+        player_current=player_two;
+    else
+        player_current=player_one;
+}
 
 void Exit_Failure(char *message)
 {
@@ -46,22 +65,27 @@ void Exit_Failure(char *message)
     printf("\n%s\n",message);
 }
 
-void DrawHuman()
+void DrawHuman(int primary,int secondary)
 // draws a human in the current viewport
 {
-    _ellipse_w(_GFILLINTERIOR,0.2,0.0,0.8,0.2);  //head
-    _moveto_w(0.5,0.2); _lineto_w(0.5,0.8);     // body
-    _moveto_w(0.5,0.8); _lineto_w(0.8,1.0);     // right leg
-    _moveto_w(0.5,0.8); _lineto_w(0.2,1.0);     // left leg
-    _moveto_w(0.0,0.4); _lineto_w(1.0,0.4);     // arms
+    _setcolor(primary);
+    _ellipse_w(_GFILLINTERIOR,0.2,0.1,0.8,0.25);  //head
+    _moveto_w(0.5,0.25); _lineto_w(0.5,0.7);     // body
+    _setcolor(secondary);
+    _moveto_w(0.5,0.7); _lineto_w(0.8,0.9);     // right leg
+    _moveto_w(0.5,0.7); _lineto_w(0.2,0.9);     // left leg
+    _moveto_w(0.1,0.4); _lineto_w(0.9,0.4);     // arms
 }
 
-void DrawComputer()
+void DrawComputer(int primary,int secondary)
 // draws a computer in the current viewport
 {
-    _rectangle_w(_GBORDER,0.0,0.0,1.0,0.65);
-    _rectangle_w(_GBORDER,0.45,0.65,0.55,0.7);
-    _rectangle_w(_GBORDER,0.0,0.7,1.0,1.0);
+    _setcolor(primary);
+    _rectangle_w(_GBORDER,0.1,0.1,0.9,0.65);
+    _rectangle_w(_GBORDER,0.45,0.65,0.55,0.75);
+    _rectangle_w(_GBORDER,0.1,0.75,0.9,0.9);
+    _setcolor(secondary);
+    _rectangle_w(_GFILLINTERIOR,0.2,0.2,0.8,0.55);
 }
 
 int Continuance(GRID *grid,int size)
@@ -89,48 +113,43 @@ int InsertTokenTarget(GRID *grid,int col)
     return (grid->height)-(grid->numincol[col])-1;
 }
 
-int InsertToken(GRID *grid,int col,int player)
+int InsertToken(GRID *grid,int col,PLAYER *player)
 // returns if token was successfully inserted
 {
     return InsertTokenAtCR(grid,col,InsertTokenTarget(grid,col),player);
 }
 
-void ShowPlayer(PLAYER *player)
-// shows the player in the current viewport
+void DisplayPlayerColor(PLAYER *player)
 {
-    char buffer[20];
-    double tmp;
-    //                             start // player level
-    ViewSysSubLevel(vs,0.0,0.0,0.1,1.0); // color section
-    _setcolor(GetPlayerColor(player));
+    int pc=PlayerGetColor(player);
+    _setcolor(pc+ColAdd);
     _rectangle_w(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
-    _setcolor(GREEN);
-    _rectangle_w(_GBORDER,0.0,0.0,1.0,1.0);
-    ViewSysUpLevel(vs);                 // player level
+    _setcolor(pc);
+    _rectangle_w(_GFILLINTERIOR,0.15,0.15,0.85,0.85);
+}
 
-    tmp=ViewSysPixelsW(vs,2);
-    ViewSysSubLevel(vs,0.1+tmp,0.2,0.2-tmp,0.8); // icon section
-    _setcolor(GetPlayerColor(player));
-    if (IsHuman(player))
-        DrawHuman();
-    else
-        DrawComputer();
-    ViewSysUpLevel(vs);                         // player level
+void DisplayPlayerType(PLAYER *player)
+{
+    int pc=PlayerGetColor(player);
+    if (PlayerIsHuman(player)) DrawHuman(pc,pc+ColAdd);
+    else                       DrawComputer(pc,pc+ColAdd);
+}
 
-    ViewSysSubLevel(vs,0.2,0.0,0.85,1.0);        // player name level
+void DisplayPlayerName(PLAYER *player)
+{
     _setcolor(GREEN);
     _settextalign(_LEFT,_BOTTOM);
     _setcharspacing_w(-0.01);
     _setcharsize_w(0.04,0.03);
-    _grtext_w(0.0,1.0,GetPlayerName(player));
+    _grtext_w(0.0,1.0,PlayerGetName(player));
+}
 
-    ViewSysUpLevel(vs);                         // player level
-    ViewSysSubLevel(vs,0.85+ViewSysPixelsW(vs,2),0.0,1.0,1.0);        // score level
-    sprintf(buffer,"%d",GetPlayerScore(player));
+void DisplayPlayerScore(PLAYER *player)
+{
+    char buffer[10];
+    _setcolor(GREEN);
+    sprintf(buffer,"%d",PlayerGetScore(player));
     _grtext_w(0.0,1.0,buffer);
-
-    ViewSysUpLevel(vs);                         // player level
- 
 }
 
 void Debug(char *string)
@@ -143,9 +162,9 @@ void Debug(char *string)
 int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win)
 {
     int left,right,start_col,start_row,x;
-    left=NumInDirection(grid,col,row,col_dir,row_dir);
+    left=NumInDirection(grid,col,row,col_dir,row_dir,grid->grid[col][row]);
     if (left>=size) left=size-1;    // ensures token is a part of the win
-    right=NumInDirection(grid,col,row,-col_dir,-row_dir);
+    right=NumInDirection(grid,col,row,-col_dir,-row_dir,grid->grid[col][row]);
     if (right>=size) right=size-1;  // ensures token is a part of the win
 
     if ((left+right+1)>=size)                   // A win has been found
@@ -153,15 +172,14 @@ int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *
         start_col=col+(col_dir*left);
         start_row=row+(row_dir*left);
 
-        win->tokens=size;
         for (x=0;x<size;x++)
         {
             win->win[x].col=start_col+(x*-col_dir);
             win->win[x].row=start_row+(x*-row_dir);
         }
-        return 1;
+        return TRUE;
     }
-    else return 0;
+    else return FALSE;
 }
 
 int CheckForWin(GRID *grid,int size,int col,int row,WIN *win)
@@ -170,40 +188,38 @@ int CheckForWin(GRID *grid,int size,int col,int row,WIN *win)
 // 1 is returned and the tokens which are the win are in the WIN *
 {
     // check vertical    0  -1
-    if (CheckAngle(grid,size,col,row,0,-1,win)) return 1;
+    if (CheckAngle(grid,size,col,row,0,-1,win)) return TRUE;
     // check horizontal -1   0
-    else if (CheckAngle(grid,size,col,row,-1,0,win)) return 1;
+    else if (CheckAngle(grid,size,col,row,-1,0,win)) return TRUE;
     // check /          +1  -1
-    else if (CheckAngle(grid,size,col,row,1,-1,win)) return 1;
+    else if (CheckAngle(grid,size,col,row,1,-1,win)) return TRUE;
     // check \          -1  -1
-    else if (CheckAngle(grid,size,col,row,1,1,win)) return 1;
-    else return 0;
+    else if (CheckAngle(grid,size,col,row,1,1,win)) return TRUE;
+    else return FALSE;
 }
 
-void RefreshScreen()
+void DisplayEntryGrid(void) {_setcolor(YELLOW);DisplayGrid(entrygrid);}
+
+void DisplayPlayGrid(void)
 {
-    _clearscreen(_GCLEARSCREEN); // start with cleared screen
-    ViewSysHome(vs);
-    ViewSysSubLevel(vs,0.0,0.0,0.6,1.0);    // left side of screen
-    _setcolor(GREEN);
-    _rectangle(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
-
-    ViewSysSubLevel(vs,0.0,0.0,1.0,0.1);    // entry grid
-    _setcolor(YELLOW);
-    DisplayGrid(entrygrid);
-
-    ViewSysUpLevel(vs);                     // left side of screen
-    ViewSysSubLevel(vs,0.0,0.1+ViewSysPixelsH(vs,2),1.0,1.0); // play grid
+    int x;
+    int col,row;
     _setcolor(GREEN);
     DisplayGrid(playgrid);
 
-    ViewSysHome(vs);
-    ViewSysSubLevel(vs,0.6+ViewSysPixelsW(vs,2),0.0,1.0,1.0); // right side of screen    
-    
-    ViewSysSubLevel(vs,0.0,0.0,1.0,0.1);    // ninaro name window
+    for (x=0;x<win->tokens;x++)
+    {
+        col=win->win[x].col;
+        row=win->win[x].row;
+        DrawDisc(col,playgrid->width,row,playgrid->height,PlayerGetColor(playgrid->grid[col][row]),0.9);
+    }
+}
+
+void DisplayGameName(void)
+{
     _setcharspacing(-0.3);
     _settextalign(_LEFT,_BASE);
-    _setcolor(BLUE);
+    _setcolor(LTBLUE);
     _setcharsize_w(0.1,0.04);
     _grtext_w(0.0,0.7,"Ninaro");
     _grtext_w(0.01,0.7,"Ninaro");
@@ -211,79 +227,88 @@ void RefreshScreen()
     _grtext_w(0.65,0.25,"By the author");
     _grtext_w(0.65,0.55,"");
     _grtext_w(0.65,0.85,"   1998  ");
-
-
-    ViewSysAcrossLevel(vs,0.0,0.1,1.0,0.5);
-    TextBoxShow(msgbox);
-
-    ViewSysAcrossLevel(vs,0.0,0.5,1.0,0.55);
-    ShowPlayer(&(players[0]));
-    ViewSysAcrossLevel(vs,0.0,0.55,1.0,0.6);
-    ShowPlayer(&(players[1]));
-    ViewSysHome(vs);
 }
 
-void ShowWin(GRID *grid,WIN *win)
-{
-    int x;
-    int col,row;
-    int active=_getactivepage();
-    _setactivepage(_getvisualpage());
-    ViewSysHome(vs);
-    ViewSysSubLevel(vs,0.0,0.0,0.6,1.0);    // left
-    ViewSysSubLevel(vs,0.0,0.1+ViewSysPixelsH(vs,2),1.0,1.0);   // playgrid
+void DisplayMsgBox(void) {TextBoxShow(msgbox);}
 
-    for (x=0;x<win->tokens;x++)
-    {
-        col=win->win[x].col;
-        row=win->win[x].row;
-        DrawDisc(col,grid->width,row,grid->height,grid->player[grid->grid[col][row]-1],0.90);
-        delay(300);
-    }
-    _setactivepage(active);
+void DisplayP1Color(void) {DisplayPlayerColor(player_one);}
+void DisplayP1Type(void) {DisplayPlayerType(player_one);}
+void DisplayP1Name(void) {DisplayPlayerName(player_one);}
+void DisplayP1Score(void) {DisplayPlayerScore(player_one);}
+void DisplayP2Color(void) {DisplayPlayerColor(player_two);}
+void DisplayP2Type(void) {DisplayPlayerType(player_two);}
+void DisplayP2Name(void) {DisplayPlayerName(player_two);}
+void DisplayP2Score(void) {DisplayPlayerScore(player_two);}
+
+VIEWSYS *ViewSysInit(int maxwindows,int maxkeys,int x1,int y1,int x2,int y2)
+{
+    VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys);
+    ViewSysNewWindow(vs,0.0,0.0,0.6,0.09,ACTIVE,
+        DisplayEntryGrid,NULL,NULL,"Enter Your Token Here");
+    ViewSysNewWindow(vs,0.0,0.1,0.6,1.0,ACTIVE,
+        DisplayPlayGrid,NULL,NULL,"Enter Your Token Here");
+    ViewSysNewWindow(vs,0.61,0.0,1.0,0.1,ACTIVE,
+        DisplayGameName,NULL,NULL,"Ninaro - By the author 1998");
+    ViewSysNewWindow(vs,0.61,0.1,1.0,0.4,ACTIVE,
+        DisplayMsgBox,NULL,NULL,"Messages appear here");
+    ViewSysNewWindow(vs,0.61,0.4,0.65,0.448,ACTIVE,
+        DisplayP1Color,NULL,NULL,"Player One's Color");
+    ViewSysNewWindow(vs,0.65,0.4,0.70,0.448,ACTIVE,
+        DisplayP1Type,NULL,NULL,"Player One's Type");
+    ViewSysNewWindow(vs,0.7,0.4,0.96,0.448,ACTIVE,
+        DisplayP1Name,NULL,NULL,"Player One's Name");
+    ViewSysNewWindow(vs,0.96,0.4,1.0,0.448,ACTIVE,
+        DisplayP1Score,NULL,NULL,"Player One's Score");
+    ViewSysNewWindow(vs,0.61,0.452,0.65,0.5,ACTIVE,
+        DisplayP2Color,NULL,NULL,"Player Two's Color");
+    ViewSysNewWindow(vs,0.65,0.452,0.7,0.5,ACTIVE,
+        DisplayP2Type,NULL,NULL,"Player Two's Type");
+    ViewSysNewWindow(vs,0.7,0.452,0.96,0.5,ACTIVE,
+        DisplayP2Name,NULL,NULL,"Player Two's Name");
+    ViewSysNewWindow(vs,0.96,0.452,1.0,0.5,ACTIVE,
+        DisplayP2Score,NULL,NULL,"Player Two's Score");
+    return vs;
 }
 
 void main()
 {
-    int ever=1,keypos=0,cur_player=1,keyrow;
-    int size=4;
-    int grid_width=7;
-    int grid_height=8;
+    int ever=1,keypos=0,keyrow;
     
-    WIN *win=malloc(sizeof(WIN));
-    win->win=malloc(size*sizeof(TOKEN));
-    
-    numplayers=5;
+    win=malloc(sizeof(WIN));
+    win->tokens=4;
+    win->win=malloc(win->tokens*sizeof(TOKEN));
+    numplayers=7;
+    win_occured=FALSE;  
+    grid_rows=8;
+    grid_cols=7;
 
-    vs=ViewSysInit(10,0,0,639,349);
 
-    msgbox=TextBoxNew(6,RED,WHITE,40);
+    vs=ViewSysInit(20,20,0,0,639,349);
 
-    players=malloc(numplayers*sizeof(PLAYER));
+    msgbox=TextBoxNew(5,RED,WHITE,40);
 
-    ResetPlayer(&(players[0]),"Player1",YELLOW,1);
+    players=malloc(numplayers*sizeof(PLAYER *));
+    players[0]=PlayerNew("Player1",YELLOW,Human,Low);
+    players[1]=PlayerNew("Player2",RED,Human,Low);
+    players[2]=PlayerNew("Ronda Random",LTBLUE,Computer,Low);
+    players[3]=PlayerNew("Alfa B Prune",GREEN,Computer,Medium);
+    players[4]=PlayerNew("Nathan Neuro",BLUE,Computer,High);
+    players[5]=PlayerNew("Rodney Rule",ORANGE,Computer,Medium);
+    players[6]=PlayerNew("Minny Maxx",PURPLE,Computer,Medium);
+    player_one=players[0];
+    player_two=players[2];
+    player_current=player_one;
+
     TextBoxAddLine(msgbox,"Player1 Arrives",ATEND);
-
-    ResetPlayer(&(players[1]),"Ronda Random",RED,0);
     TextBoxAddLine(msgbox,"Ronda Random Arrives",ATEND);
-    
-    ResetPlayer(&(players[2]),"Pam Prune",GREEN,0);
-    ResetPlayer(&(players[2]),"Nathan Neuro",BLUE,0);
-    ResetPlayer(&(players[2]),"Rodney Rule",ORANGE,0);
-    
     TextBoxAddLine(msgbox,"Let The Game Begin",ATEND);
     TextBoxAddLine(msgbox,"This is the first line",ATSTART);
     TextBoxScrollEnd(msgbox);
                 
-    playgrid=NewGrid(grid_width,grid_height,numplayers);
-    entrygrid=NewGrid(grid_width,1,numplayers);
+    playgrid=NewGrid(grid_cols,grid_rows);
+    entrygrid=NewGrid(grid_cols,1);
 
-    SetPlayerColor(playgrid,1,players[0].color);
-    SetPlayerColor(playgrid,2,players[1].color);
-    SetPlayerColor(entrygrid,1,players[0].color);
-    SetPlayerColor(entrygrid,2,players[1].color);
-
-    InsertTokenAtCR(entrygrid,keypos,0,cur_player);
+    InsertTokenAtCR(entrygrid,keypos,0,player_current);
 
     ScreenInit();
     _setcolor(RED);
@@ -293,57 +318,59 @@ void main()
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
     
-    RefreshScreen();
-    SwapPage();    
+    ViewSysDisplay(vs,DisplayAll);
+    SwapPage();
+    ViewSysDisplay(vs,DisplayAll);
+    SwapPage();
 
     for (;ever;)
     {
-
         if (kbhit())
         {
-            switch (getch())
+            switch (GetKey())
             {
-                case 27 : ever=0; break;
-                case ' ':
-                case 13 :
-                           keyrow=InsertTokenTarget(playgrid,keypos);
-                           if (InsertToken(playgrid,keypos,cur_player))
-                           {
-                               if (cur_player==1)
-                                cur_player=2;
-                               else
-                                cur_player=1;
-                               RemoveTokenAtCR(entrygrid,keypos,0);
-                               InsertTokenAtCR(entrygrid,keypos,0,cur_player);
-                               RefreshScreen();
-                               SwapPage();
+                case ESC   : ever=0; break;
+                case SPACE :
+                case ENTER :
+                case KP2 :
+                    keyrow=InsertTokenTarget(playgrid,keypos);
+                    if (InsertToken(playgrid,keypos,player_current))
+                    {
+                        RemoveTokenAtCR(entrygrid,keypos,0);
+                        NextPlayer();
+                        InsertTokenAtCR(entrygrid,keypos,0,player_current);
+                        ViewSysDisplay(vs,DisplayAll);
+                        SwapPage();
 
-                               if (CheckForWin(playgrid,size,keypos,keyrow,win))
-                               {
-                                    PlayTune(4,100,50,300,50,500,100,400,5);
-                                    ShowWin(playgrid,win);
-                               }
-                            }
-                            else // already full so entry not possible
-                            {
-                                Buzz(200,400,20,100);
-                            }
-                           break;
-                case 0  : switch(getch())
-                            {
-                                case 75 : if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT)) --keypos; break;
-                                case 77 : if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT)) ++keypos; break;
-                            }
-                            RefreshScreen();
+                        if (CheckForWin(playgrid,win->tokens,keypos,keyrow,win))
+                        {
+                            PlayTune(4,100,50,300,50,500,100,400,5);
+                            win_occured=TRUE;
+                            ViewSysDisplay(vs,DisplayAll);
                             SwapPage();
-
-                            break;
-                case 'c' : Continuance(playgrid,size);
-                            RefreshScreen();
-                            SwapPage();
-                            break;
-            }
-        }
-    }
+                        }
+                    }
+                    else // already full so entry not possible
+                    {
+                        Buzz(200,400,20,100);
+                    }
+                    break;
+                case KP4 :
+                    if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT)) --keypos;
+                    ViewSysDisplay(vs,DisplayAll);
+                    SwapPage();
+                    break;
+                case KP6 :
+                    if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT)) ++keypos;
+                    ViewSysDisplay(vs,DisplayAll);
+                    SwapPage();
+                    break;
+                case 'c' : Continuance(playgrid,win->tokens);
+                    ViewSysDisplay(vs,DisplayAll);
+                    SwapPage();
+                    break;
+            } // switch (GetKey)
+        } // if kbhit
+    } // for (;ever;)
     ShutDown();
 }

@@ -1,111 +1,140 @@
-#include <stdlib.h>
-#include <graph.h>
-#include "viewsys.h"
-/*
-    The view system is one where a new viewport can be set using window
-    ordinates of the current viewport. This can be done down to a number of
-    levels, with the facility to jump back to the level above at will.
-*/
+// made for the one top-size window, can't change it, new windows oords
+// are calculated at creation time only
+// window->active : only active windows receive mouse,key and display signals
 
-void ViewSysSetViewport(VIEWPORT *vp)
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <graph.h>
+#include "sys.h"
+#include "viewsys.h"
+
+VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
+// creates a new view system and returns it
+{
+    VIEWSYS *viewsys=malloc(sizeof(VIEWSYS));
+    viewsys->main.x1=x1;
+    viewsys->main.y1=y1;
+    viewsys->main.x2=x2;
+    viewsys->main.y2=y2;
+    viewsys->maxwindows=maxwindows;
+    viewsys->windows=0;
+    viewsys->maxkeys=maxkeys;
+    viewsys->keys=0;
+    viewsys->window=malloc(maxwindows*sizeof(WINDOW));
+    viewsys->key=malloc(maxkeys*sizeof(KEYIN));
+    return viewsys;
+}
+
+void ViewportFromViewport(VIEWPORT *new,VIEWWIN *vw,VIEWPORT *vp)
+{
+    int width=(vp->x2)-(vp->x1), height=(vp->y2)-(vp->y1);
+    new->x1=vp->x1+(int)(vw->x1*(double)width);
+    new->y1=vp->y1+(int)(vw->y1*(double)height);
+    new->x2=vp->x1+(int)(vw->x2*(double)width);
+    new->y2=vp->y1+(int)(vw->y2*(double)height);
+}
+
+void ViewSysNewWindow(VIEWSYS *vs,double x1,double y1,double x2,double y2,
+                int active,int (* display)(void),void (* lmb)(int,int),
+                void (* rmb)(int,int),char *help)
+// adds a window to the view system
+{
+    VIEWWIN vw;
+    if (vs->windows>=vs->maxwindows-1) {printf("Exceeded Max Windows!!"); exit(0);}
+
+    vs->window[vs->windows].active=active;
+    vw.x1=x1; vw.y1=y1; vw.x2=x2; vw.y2=y2;
+    ViewportFromViewport(&(vs->window[vs->windows].vp),&vw,&(vs->main));
+    vs->window[vs->windows].display=display;
+    vs->window[vs->windows].lmb=lmb;
+    vs->window[vs->windows].rmb=rmb;
+    vs->window[vs->windows].changed=0;
+    strcpy(vs->window[vs->windows].help,help);
+    ++(vs->windows);
+}
+
+void ViewSysAddKey(VIEWSYS *vs,char key,char extend,int window,int lmb)
+// adds a key to the view system
+{
+    if (vs->keys==vs->maxkeys-1) {printf("Exceeded Max Keys!!"); exit(0);}
+    else
+    {
+        vs->key[vs->keys].key=key;
+        vs->key[vs->keys].extend=extend;
+        vs->key[vs->keys].window=window;
+        vs->key[vs->keys].lmb=lmb;
+        ++vs->keys;
+    }
+}
+
+void SetViewport(VIEWPORT *vp)
 {
     _setviewport(vp->x1,vp->y1,vp->x2,vp->y2);
 }
 
-void ViewSysHome(VIEWSYSTEM *vs)
+void ViewSysDisplay(VIEWSYS *vs,int mode)
+// mode==DisplayAll displays all active windows
+// mode==DisplayChanged displays only windows which have changed
 {
-    vs->at=0;        
-    ViewSysSetViewport(&(vs->views[0]));
+    int n;
+    _clearscreen(_GCLEARSCREEN);
+    for (n=0;n<vs->windows;n++)
+        if ((vs->window[n].active) && (mode==DisplayAll?1:(vs->window[n].changed)))
+            if (vs->window[n].display!=NULL)
+            {
+                SetViewport(&(vs->window[n].vp));
+                vs->window[n].display();
+            }
+            // else nothing to display
+        // else inactive/hasn't changed, so don't display
 }
 
-VIEWSYSTEM *ViewSysInit(int size,int x1,int y1,int x2,int y2)
-// Creates a new viewsystem with the top window described by
-// x1,y1 - x2,y2, with allowance for size levels only
+int MatchKeys(char key,char extend,char key2,char extend2)
 {
-    VIEWSYSTEM *vs=malloc(sizeof(VIEWSYSTEM));
-    vs->size=size;
-    vs->views=malloc(size*sizeof(VIEWPORT));
-    vs->views[0].x1=x1;
-    vs->views[0].x2=x2;
-    vs->views[0].y1=y1;
-    vs->views[0].y2=y2;
-    ViewSysHome(vs);
-    return vs;
+    if (key!=key2) return FALSE;
+    if (extend!=extend2) return FALSE;
+    return TRUE;
 }
 
-void ViewSysFree(VIEWSYSTEM *vs)
+int ViewSysKey(VIEWSYS *vs,char key,char extend)
+// returns TRUE if the key was used else FALSE is returned
 {
-    free(vs->views);
-    free(vs);
+    int n;
+    int used=FALSE;
+    int window;
+    for (n=0;n<vs->keys;n++)
+        if (MatchKeys(key,extend,vs->key[n].key,vs->key[n].extend)) // key matches
+        {
+            window=(vs->key[n].window);
+            if (vs->window[window].active) // active so can receive key
+                if (vs->key[n].lmb)
+                {
+                    if (vs->window[window].lmb!=NULL)
+                    {
+                        vs->window[window].lmb(Key,Key);
+                        used=TRUE;
+                    }
+                }
+                else
+                {
+                    if (vs->window[window].rmb!=NULL)
+                    {
+                        vs->window[window].rmb(Key,Key);
+                        used=TRUE;
+                    }
+                }
+        }
+        // else keys not the same
+        return used;
 }
 
-int ViewSysSubLevel(VIEWSYSTEM *vs,double x1,double y1,double x2,double y2)
-// Sets the new window as the window inside the current window described by
-// x1,y1 - x2,y2, returns 1 on success else 0 if vs full
+void ViewSysActivate(VIEWSYS *vs,int window,int activity)
 {
-    int t,l,r,b,width,height;
-    if (vs->at==(vs->size)-1) // already full
-        return 0;
-    else
-    {
-        t=vs->views[vs->at].y1;
-        l=vs->views[vs->at].x1;
-        b=vs->views[vs->at].y2;
-        r=vs->views[vs->at].x2;
-        width=r-l;
-        height=b-t;
-
-        (vs->at)++;
-        vs->views[vs->at].x1=l+(x1*width);
-        vs->views[vs->at].y1=t+(y1*height);
-        vs->views[vs->at].x2=l+(x2*width);
-        vs->views[vs->at].y2=t+(y2*height);
-    }   
-    ViewSysSetViewport(&(vs->views[vs->at]));
-    return 1;
+    vs->window[window].active=activity;
 }
 
-int ViewSysUpLevel(VIEWSYSTEM *vs)
-// Sets the new window as the one above the current level
+char *ViewSysHelp(VIEWSYS *vs,int window)
 {
-    if (vs->at==0) // then no change
-        return 0;
-    else
-        (vs->at)--;
-    ViewSysSetViewport(&(vs->views[vs->at]));
-    return 1;
-}
-
-int ViewSysAcrossLevel(VIEWSYSTEM *vs,double x1,double y1,double x2,double y2)
-{
-    if (ViewSysUpLevel(vs))
-    {
-        ViewSysSubLevel(vs,x1,y1,x2,y2);
-        return 1;
-    }
-    else
-        return 0;
-
-}
-
-double ViewSysPixelsH(VIEWSYSTEM *vs,int num)
-// returns the height of num pixels in the current level
-{
-    VIEWPORT *vp=&(vs->views[vs->at]);
-    int height=vp->y2-vp->y1+1;
-    return ((double)num/(double)height);
-}
-
-double ViewSysPixelsW(VIEWSYSTEM *vs,int num)
-// returns the width of num pixels in the current level
-{
-    VIEWPORT *vp=&(vs->views[vs->at]);
-    int width=vp->x2-vp->x1+1;
-    return ((double)num/(double)width);
-}
-
-void ViewSysSetCurrent(VIEWSYSTEM *vs)
-// sets the current viewport as the current one in vs.
-{
-    ViewSysSetViewport(&(vs->views[vs->at]));
+    return vs->window[window].help;
 }

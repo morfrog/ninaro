@@ -1,24 +1,32 @@
 #ifndef PLAYER_H
+#define PLAYER_H
+
+enum {Computer,Human}; // Player type
+
+enum {Low,Medium,High}; // Skill Levels
+// Humans are 'rated' with a skill level too
 
 struct playerTag
 {
-        char name[18];
+        char name[20];
         int color;
         int score;
         int human;
+        int skill;
 };
 
 typedef struct playerTag PLAYER;
 
-PLAYER *NewPlayer(char *name,int color,int human);
-void IncPlayerScore(PLAYER *player);
-void DecPlayerScore(PLAYER *player);
-void ChangePlayerScore(PLAYER *player,int amount);
-void ResetPlayer(PLAYER *player,char *name,int color,int human);
-void ChangePlayerColor(PLAYER *player,int color);
-int GetPlayerColor(PLAYER *player);
-int GetPlayerScore(PLAYER *player);
-char *GetPlayerName(PLAYER *player);
-int IsHuman(PLAYER *player);
+PLAYER *PlayerNew(char *name,int color,int human,int skill);
+void PlayerIncScore(PLAYER *player);
+void PlayerDecScore(PLAYER *player);
+void PlayerChangeScore(PLAYER *player,int amount);
+void PlayerReset(PLAYER *player,char *name,int color,int human,int skill);
+void PlayerChangeColor(PLAYER *player,int color);
+int PlayerGetColor(PLAYER *player);
+int PlayerGetScore(PLAYER *player);
+char *PlayerGetName(PLAYER *player);
+int PlayerGetSkill(PLAYER *player);
+int PlayerIsHuman(PLAYER *player);
 
 #endif

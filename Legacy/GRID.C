@@ -3,33 +3,26 @@
 #include "screen.h"
 #include "grid.h"
 
-GRID *NewGrid(int width,int height,int players)
+    
+
+GRID *NewGrid(int width,int height)
 {
     int x,y;
     GRID *ret=malloc(sizeof(GRID));
 
     ret->width=width;
     ret->height=height;
-    ret->players=players;
-    ret->player=malloc(players*sizeof(int));
-    ret->grid=allocate_N_by_N_array(width,height,sizeof(int),"Grid");
+    ret->grid=malloc(width*sizeof(PLAYER **));
+    for (x=0;x<width;x++) ret->grid[x]=malloc(height*sizeof(PLAYER *));
     ret->numincol=malloc(width*sizeof(int));
     ret->numinrow=malloc(height*sizeof(int));
     for (x=0;x<width;x++)
         for (y=0;y<height;y++)
-            ret->grid[x][y]=0;
+            ret->grid[x][y]=NULL;
 
     for (x=0;x<width;x++)  ret->numincol[x]=0;
     for (y=0;y<height;y++) ret->numinrow[y]=0;
     return ret;
-}
-
-int SetPlayerColor(GRID *grid,int playernum,int color)
-// if can set player sets and returns 1 else returns 0
-{
-    if (playernum>(grid->players)) return 0;
-    grid->player[playernum-1]=color;
-    return 1;
 }
 
 void DisplayGrid(GRID *grid)
@@ -39,14 +32,14 @@ void DisplayGrid(GRID *grid)
     for (x=0;x<grid->width;x++)
         for (y=0;y<grid->height;y++)
         {
-            if (grid->grid[x][y]!=0) // not empty
-                DrawDisc(x,grid->width,y,grid->height,grid->player[grid->grid[x][y]-1],0.60);
+            if (grid->grid[x][y]!=NULL) // not empty
+                DrawDisc(x,grid->width,y,grid->height,PlayerGetColor(grid->grid[x][y]),0.60);
         }
 }
 
-int InsertTokenAtCR(GRID *grid,int col,int row,int player)
+int InsertTokenAtCR(GRID *grid,int col,int row,PLAYER *player)
 {
-    if (grid->grid[col][row]==0)
+    if (grid->grid[col][row]==NULL)
     {
         grid->grid[col][row]=player;
         grid->numincol[col]+=1;
@@ -57,14 +50,14 @@ int InsertTokenAtCR(GRID *grid,int col,int row,int player)
         return 0;
 }
 
-int RemoveTokenAtCR(GRID *grid,int col,int row)
+PLAYER *RemoveTokenAtCR(GRID *grid,int col,int row)
 // removes the token at RC and returns the player number who was there,
 // a zero return means the position was already empty.
 {
-    int ret=grid->grid[col][row];
+    PLAYER *ret=grid->grid[col][row];
     if (ret!=0) // is a token there;
     {
-        grid->grid[col][row]=0;
+        grid->grid[col][row]=NULL;
         grid->numincol[col]-=1;
         grid->numinrow[row]-=1;
     }
@@ -84,12 +77,12 @@ int MoveTokenAtCR(GRID *grid,int col,int row,int direction)
     }
     if ((targetrow<0) || (targetrow>grid->height-1) ||
         (targetcol<0) || (targetcol>grid->width-1)) // out of grid
-        return 0;
-    if (grid->grid[targetcol][targetrow]!=0)
-        return 0; // token already there
+        return FALSE;
+    if (grid->grid[targetcol][targetrow]!=NULL)
+        return FALSE; // token already there
 
     grid->grid[targetcol][targetrow]=grid->grid[col][row];
-    grid->grid[col][row]=0;
+    grid->grid[col][row]=NULL;
 
     switch (direction)
     {
@@ -99,14 +92,12 @@ int MoveTokenAtCR(GRID *grid,int col,int row,int direction)
         case T_RIGHT: grid->numincol[col]--; grid->numincol[targetcol]++; break;
     }
 
-    return 1;
+    return TRUE;
 }
 
-int StatusOfRC(GRID *grid,int row,int col)
-// returns the value of the token at rc, 0 = empty else = player number 
-{
-    return grid->grid[col][row];
-}
+//PLAYER *StatusOfCR(GRID *grid,int col,int row)
+// returns the value of the token at rc, NULL = empty else = player * 
+//{return grid->grid[col][row];}
 
 int TokensInGrid(GRID *grid)
 {
@@ -117,14 +108,14 @@ int TokensInGrid(GRID *grid)
     return ret;
 }
 
-int NumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod)
+int NumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
+                    PLAYER *player)
 // starting at row,col in grid, modifies current position by
 // col_mod and row_mod till token of same type not found then returns
 // the number of such tokens found 
 {
     int cur_col=col;
     int cur_row=row;
-    int player=grid->grid[cur_col][cur_row];
     int number=0;
 
 //    if (col_mod==row_mod==0) return 0;
@@ -145,13 +136,16 @@ int NumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod)
 void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap)
 // moves all tokens in the grid across col_dir and down row_dir
 // if moving a token in this way causes it to fall off the grid,
-// wrap determines if it cycles to the other side or is lost entirely
+// wrap determines if it cycles to the other side(TRUE) or is
+// lost entirely(FALSE)
 {
     int x,y,t_col,t_row,outside;
-    int **copygrid=allocate_N_by_N_array(grid->width,grid->height,sizeof(int),"GridCopy");
+    PLAYER ***copygrid=malloc(grid->width*sizeof(PLAYER **));
+    for (x=0;x<grid->width;x++) copygrid[x]=malloc(grid->height*sizeof(PLAYER *));
+
     for (x=0;x<grid->width;x++)
         for (y=0;y<grid->height;y++)
-            copygrid[x][y]=0;
+            copygrid[x][y]=NULL;
     for (x=0;x<grid->width;x++)
         for (y=0;y<grid->height;y++)
         {   
@@ -168,15 +162,13 @@ void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap)
     for (x=0;x<grid->width;x++)
         for (y=0;y<grid->height;y++)
             grid->grid[x][y]=copygrid[x][y];
-            
-    
     
     for (x=0;x<grid->width;x++) grid->numincol[x]=0;
     for (y=0;y<grid->height;y++) grid->numinrow[y]=0;
 
     for (x=0;x<grid->width;x++) 
         for (y=0;y<grid->height;y++)
-            if (grid->grid[x][y]!=0)
+            if (grid->grid[x][y]!=NULL)
             {
                 grid->numincol[x]+=1;
                 grid->numinrow[y]+=1;

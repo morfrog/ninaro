@@ -84,6 +84,17 @@ char mygetch()
     return getch();
 }
 
+int GetKey() // uses enum keys
+{
+    int ch=getch();
+    if (ch==0)
+    {
+        return (256+getch());
+    }
+    else return ch;
+}   
+
+
 void StartRandom()
 {
     struct dostime_t time;
@@ -197,4 +208,5 @@ int PlusFactorial(int num)
         count+=x;
     return count;        
 }
+
 

@@ -2,57 +2,63 @@
 #include <string.h>
 #include "player.h"
 
-void ResetPlayer(PLAYER *player,char *name,int color,int human)
+void PlayerReset(PLAYER *player,char *name,int color,int human,int skill)
 {
     player->color=color;
     player->score=0;
     player->human=human;
+    player->skill=skill;
     strcpy(player->name,name);
 }
 
-PLAYER *NewPlayer(char *name,int color,int human)
+PLAYER *PlayerNew(char *name,int color,int human,int skill)
 {
     PLAYER *ret=malloc(sizeof(PLAYER));
-    ResetPlayer(ret,name,color,human);
+    PlayerReset(ret,name,color,human,skill);
     return ret;
 }
 
-void IncPlayerScore(PLAYER *player)
+void PlayerIncScore(PLAYER *player)
 {
     (player->score)++;
 }
 
-void DecPlayerScore(PLAYER *player)
+void PlayerDecScore(PLAYER *player)
 {
     (player->score)++;
 }
 
-void ChangePlayerScore(PLAYER *player,int amount)
+void PlayerChangeScore(PLAYER *player,int amount)
 {
     player->score+=amount;    
 }
 
-void ChangePlayerColor(PLAYER *player,int color)
+void PlayerChangeColor(PLAYER *player,int color)
 {
     player->color=color;
 }
 
-int GetPlayerColor(PLAYER *player)
+int PlayerGetColor(PLAYER *player)
 {
     return (player->color);
 }
 
-int GetPlayerScore(PLAYER *player)
+int PlayerGetScore(PLAYER *player)
 {
     return (player->score);
 }
 
-int IsHuman(PLAYER *player)
+int PlayerIsHuman(PLAYER *player)
 {
     return (player->human);
 }
 
-char *GetPlayerName(PLAYER *player)
+char *PlayerGetName(PLAYER *player)
 {
     return (player->name);
+}
+
+int PlayerGetSkill(PLAYER *player)
+{
+    return (player->skill);
 }

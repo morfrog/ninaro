@@ -168,7 +168,7 @@ void TextBoxShow(TXTBOX *tb)
     _setcolor(tb->textcol);
     for (x=0;x<tb->lines;x++)
     {
-        _grtext_w(0.0,(x+1)*(1.0/((double)tb->lines)),look->string);
+        _grtext_w(0.0,((x+1)*(1.0/((double)tb->lines)))-0.02,look->string);
         if (look->next==tb->head) // at end
             x=tb->lines;
         else
