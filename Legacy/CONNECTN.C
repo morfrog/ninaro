@@ -40,6 +40,12 @@ PLAYER *players; // array of player
 TXTBOX *msgbox;
 VIEWSYSTEM *vs;
 
+void Exit_Failure(char *message)
+{
+    ShutDown();
+    printf("\n%s\n",message);
+}
+
 void DrawHuman()
 // draws a human in the current viewport
 {
@@ -62,7 +68,7 @@ int Continuance(GRID *grid,int size)
 // removes bottom layers of grid such that size-1 high minimum remains
 // ( size-1 because all tokens below this are irrelevant )
 // and slides the tokens down to the bottom
-// returns 1 if a continuance was made else 0 if not.
+// returns TRUE if a continuance was made else FALSE if not.
 {
     int x;
     int minimum=grid->numincol[0];
@@ -71,10 +77,10 @@ int Continuance(GRID *grid,int size)
     {
         if (grid->numincol[x]<minimum) minimum=grid->numincol[x];
     }
-    if (minimum<=size-1) return 0;
+    if (minimum<=size-1) return FALSE;
     shift=minimum-size+1;
     MoveAll(grid,0,shift,0);
-    return 1;
+    return TRUE;
 }
 
 int InsertTokenTarget(GRID *grid,int col)
