@@ -1547,6 +1547,15 @@ void main()
             }
         } // while (ingame)
         ExtraFunctionality(GetKey());
+        if (mouseusage==2)
+        {
+            if (GetMouseInput(&mx,&my)==RMB)
+            {
+                KeyUp(NULL); // menu call
+                ViewSysDisplay(vs,DisplayAll); SwapPage();
+            }
+        }
+
     }
 }
 
