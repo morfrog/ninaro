@@ -1,0 +1,51 @@
+Ninaro - HELP - Ninaro - HELP - Ninaro - HELP - Ninaro -
+
+~Ninaro
+Ninaro stands for N-in-a-row, which means that the connect
+four game has been extended to connect any number on any
+sized grid. Logically however a minimum of 3x3x3 applies.
+
+~Player's Keys
+Each player has a set of keys, consisting of Left,Right,Up,
+Down,Select and Cancel. The table below shows these keys.
+
+~Table of Player Keys
+        Player One      Player Two
+Left        A           Keypad 4
+Right       D           Keypad 6
+Up          W           Keypad 8
+Down        S           Keypad 2
+Select      E           Enter
+Cancel      Q           Backspace
+
+The keypad keys can be used as either the grey arrow keys
+or the numbered keys on the numerical keypad.
+
+~What The Keys Do.
+Depending on where you are in the program, the keys do
+different things, though they are quite similar. The
+table below shows the functionality of the keys at each
+location on the program
+
+~Table of Key Functionality
+        Playing A Game      Using Menu      Using Dialogs
+Left    moves your token    moves to the    moves to the 
+        left one place      previous menu   previous item
+Right   moves your token    moves to the    moves to the
+        right one place     next menu       next item
+Up      Calls the menu      moves to the    moves to the
+                            previous item   previous
+Down
+Select
+Cancel
+
+~The Menus.
+The menus are the key way in Ninaro if changing things. The
+menu is accessable at almost anytime by pressing ESC, 'm'
+for menu, or your appropriate player key.
+
+~The Dialogs
+Dialogs help you choose from a group of options. In the
+dialogs C cancels, R resets and O ok's. Pressing Select
+at any time while in the dialog results on the hilited
+button (OK,Reset,Cancel) being used.

@@ -2,6 +2,7 @@
 #define TXTBOX_H
 
 #include "defines.h"
+#include "screen.h"
 
 // lines are addressed as 1..tb->lines, thus enabling the use of ATSTART
 // which has a value of 0
@@ -68,7 +69,7 @@ int TextBoxEmpty(TXTBOX *tb);
 void TextBoxPrint(TXTBOX *tb);
 // purpose : to print the contents of the text box
 // returns : void
-void TextBoxShow(TXTBOX *tb);
+void TextBoxShow(TXTBOX *tb,VIEWPORT *vp);
 // purpose : draws the contents of the textbox in the current viewport,
 //           drawing a border if required by the textbox
 // returns : void
@@ -81,7 +82,7 @@ int TextBoxScroll(TXTBOX *tb,int amount);
 // purpose : scrolls the textbox by amount. amount can be positive (scroll
 //           down) or negative (scroll up). can scroll only to top or
 //           bottom of box, not outside, amount==0 = scroll to top
-// returns : TRUE if scrolled normally else FALSE if tried to scroll too far
+// returns : TRUE if scrolled, else FALSE
 int TextBoxAtTop(TXTBOX *tb);
 // purpose : is the textbox at the top
 // returns : TRUE if the first displayable line is the first in the box

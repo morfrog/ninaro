@@ -20,6 +20,7 @@ struct viewportTag
 typedef struct viewportTag VIEWPORT;
 
 void SetViewport(VIEWPORT *vp);
+VIEWPORT *CurrentViewport();
 void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2);
 void BorderedBox(int x1,int y1,int x2,int y2,int p,int s);
 void ScreenInit();

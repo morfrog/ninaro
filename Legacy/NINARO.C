@@ -95,6 +95,20 @@ void NextPlayer()
     else                            SetP1Current();
 }
 
+
+void PlayerSwap(void) // not in use
+{
+    int tmp=player_one;
+    player_one=player_two;
+    player_two=tmp;
+    tmp=player_one_score;
+    player_one_score=player_two_score;
+    player_two_score=player_one_score;
+    NextPlayer();
+    ResetTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));        
+    
+}
+
 int MinOf(int a,int b) {if (a<b) return a; else return b;}
 int MaxOf(int a,int b) {if (a>b) return a; else return b;}
 
@@ -266,7 +280,11 @@ void DisplayGameName(void)
 
 }
 
-void DisplayMsgBox(void) {TextBoxShow(msgbox);}
+void DisplayMsgBox(void)
+{
+    _setvieworg(0,0);
+    TextBoxShow(msgbox,CurrentViewport());
+}
 
 void DisplayP1Color(void) {DisplayPlayerColor(PlayerGroupPlayer(players,player_one));}
 void DisplayP1Type(void) {DisplayPlayerType(PlayerGroupPlayer(players,player_one));}
@@ -476,6 +494,12 @@ void P2Dialog(void)
     }
 }
 
+void PlayerOptions(void)
+{
+    VIEWPORT vp={50,50,590,300};
+    DialogCall(optionsdialog,&vp,vs->current,5,11);
+}
+
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
 {
     VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys,ViewSysClear);
@@ -530,7 +554,7 @@ void ProgInit() // initialises global variables
 
     vs=ViewSysInit(0,0,639,349,20,20);
     
-    msgbox=TextBoxNew(8,RED,WHITE,GREEN,40);
+    msgbox=TextBoxNew(8,RED,WHITE,GREEN,25);
 
     players=PlayerGroupNew(7, // allows for only two humans
         PlayerNew("Player One",YELLOW,Human),
@@ -573,8 +597,23 @@ void ProgInit() // initialises global variables
                         3,"",50,""),
         "Size",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
-
-              
+    optionsdialog=DialogNew(pkeys,NULL,"Player Options",1,
+        "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
+                        0,"Successive",
+                        1,"Player One",
+                        2,"Player Two",
+                        3,"Winner",
+                        4,"Loser",
+                        5,"Random"));
+/*
+        "Best Of",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
+                        0,"Infinity",
+                        3,"Three",
+                        5,"Five",
+                        11,"Eleven",
+                        25,"Twenty-Five",
+                        51,"Fifty-One"));
+*/            
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
     MenuNewSub(mainmenu,"Game",6,
         "New",      CN, NewGame,    TRUE,
@@ -587,11 +626,11 @@ void ProgInit() // initialises global variables
         "7x8x4",    NONE,GameSize7x8x4,      TRUE,
         "12x13x6",  NONE,GameSize12x13x6,     TRUE, 
         "Custom...",NONE,GameSizeCustom,      TRUE);
-    MenuNewSub(mainmenu,"Player",4,
+    MenuNewSub(mainmenu,"Player",3,
         "One...",   NONE,P1Dialog,      FALSE,
         "Two...",   NONE,P2Dialog,      TRUE,
-        "Options...",NONE,NULL,       TRUE,
-        "Swap",     NONE,NULL,        TRUE);
+        "Options...",NONE,PlayerOptions,       TRUE);
+//        "Swap",     NONE,PlayerSwap,  TRUE);
     MenuNewSub(mainmenu,"Help",2,
         "Contents", NONE,HelpContents,TRUE,
         "About",    NONE,HelpAbout, TRUE);
@@ -606,7 +645,7 @@ void ProgInit() // initialises global variables
     SetP1Current();
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
 
-    help=HelpNew("NINARO.HLP",pkeys,40,RED,WHITE,GREEN,80);
+    help=HelpNew("NINARO.HLP",pkeys,20,RED,WHITE,GREEN,60);
 }
 
 void ProgFree() // frees global variables

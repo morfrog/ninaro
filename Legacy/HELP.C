@@ -8,15 +8,20 @@
 #include "key.h"
 #include "help.h"
 
+// #define DEBUG_HELP
+
 HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int textcol,int boldcol,int maxwidth)
 // purpose : to create a new help box
 // returns : the help box
 {
     char buffer[80]; // can read up to 80 characters
     int left,got,x;
-    BINFILE *bf=BinFileReadFull(filename,0);
     HELP *help=malloc(sizeof(HELP));
-    help->tb=TextBoxNew(lines,bordercol,textcol,boldcol,maxwidth);
+    BINFILE *bf=BinFileReadFull(filename,0);
+#ifdef DEBUG_HELP
+    BinFilePrint(bf);
+#endif
+
     help->ks=KeySysNew(kg);
     KeySysIFunc(help->ks,1,HelpPageUp);
     KeySysIFunc(help->ks,2,HelpPageDown);
@@ -25,14 +30,34 @@ HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int textcol,in
     KeySysIFunc(help->ks,4,HelpCancel);
     KeySysIFunc(help->ks,5,HelpCancel);
 
-    left=30;
+    help->tb=TextBoxNew(lines,bordercol,textcol,boldcol,maxwidth);
+    left=BinFileRemain(bf);
+#ifdef DEBUG_HELP
+    TextBoxAddLine(help->tb,"This is the top of it",ATEND);
+    printf("Start=%d",left);
+    GetKey();
+#endif
     while (left>0)
     {
-        got=BinFileGetTill(bf,80,buffer,(char)ENTER);
-        buffer[got]='/0';   // terminate string
-        TextBoxAddLine(help->tb,buffer,ATEND);
-        left-=got;
+        got=BinFileGetTill(bf,79,buffer,13);
+        if (got==0) // finished
+        {
+            left=0;
+        }
+        else
+        {
+            buffer[got]='\0';   // terminate string
+            left-=got;
+#ifdef DEBUG_HELP
+            printf("Left=%d_%s\n",left,buffer); GetKey();
+#endif
+            TextBoxAddLine(help->tb,buffer,ATEND);
+        }
+        BinFileGet(bf,1,buffer); // get the line feed character
     }
+#ifdef DEBUG_HELP
+    TextBoxAddLine(help->tb,"This is the bottom of it",ATEND);
+#endif
     return help;
 }
 
@@ -48,9 +73,9 @@ void HelpDisplay(HELP *help,VIEWPORT *vp)
 // purpose : to display the help box in the viewport
 // returns : void
 {
-    SetViewport(vp);
-    _clearscreen(_GVIEWPORT);
-    TextBoxShow(help->tb);
+    _setcolor(BLACK);
+    _rectangle(_GFILLINTERIOR,vp->x1,vp->y1,vp->x2,vp->y2);
+    TextBoxShow(help->tb,vp);
 }
 
 void HelpCall(HELP *help,VIEWPORT *vp,MEMPAGE *mp)
@@ -59,7 +84,7 @@ void HelpCall(HELP *help,VIEWPORT *vp,MEMPAGE *mp)
 // returns : void
 {
     int key,used,funcret,index;
-    TextBoxScrollHome(help->tb);
+//    TextBoxScrollHome(help->tb);
     MemPagePut(mp);
     SwapPage();
     MemPagePut(mp);
@@ -141,3 +166,21 @@ void HelpEnd(HELP *help)
 {
     TextBoxScrollEnd(help->tb);
 }
+
+#ifdef DEBUG_HELP            
+void main()
+{
+    VIEWPORT vp={50,50,600,300};
+    KEYGROUP *pkeys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
+    HELP *help=HelpNew("NINARO.HLP",pkeys,10,RED,WHITE,GREEN,60);
+    printf("--------------------------\n");
+    TextBoxPrint(help->tb);
+    GetKey();
+    ScreenInit();
+    TextBoxShow(help->tb,&vp);
+    SwapPage();
+    GetKey();
+    ShutDown();
+
+}
+#endif

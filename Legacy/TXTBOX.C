@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <graph.h>
 #include <string.h>
+#include "screen.h"
 #include "txtbox.h"
 
 TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int boldcol,int maxwidth)
@@ -36,6 +37,7 @@ int TextBoxAddLine(TXTBOX *tb,char *string,int afterline)
     NODE *new=malloc(sizeof(NODE));
     new->string=malloc((tb->width)*sizeof(char));
     strcpy(new->string,string);
+    new->string[tb->width-1]='\0'; // terminate string
     if (tb->size==0) // the box is empty
     {
         new->next=new; new->prev=new;
@@ -150,6 +152,38 @@ void TextBoxPrint(TXTBOX *tb)
     }
 }
 
+void TextBoxShow(TXTBOX *tb,VIEWPORT *vp)
+{
+    int x;
+    NODE *look=tb->start;
+    char *cp;
+    int width=vp->x2-vp->x1+1,height=vp->y2-vp->y1+1,cheight=height/tb->lines;
+    int at=vp->y1;
+    _setcharspacing(0);
+    _settextalign(_LEFT,_TOP);
+    _setcharsize(cheight,width/tb->width);
+
+    for (x=0;x<tb->lines;x++)
+    {
+        if (look->string[0]=='~') {_setcolor(tb->boldcol); cp=look->string+1;}
+        else                      {_setcolor(tb->textcol); cp=look->string;}
+        _grtext(vp->x1,at,cp);
+        if (look->next==tb->head) // at end
+            x=tb->lines;
+        else
+            look=look->next;
+        at+=cheight;
+    }
+
+    if (tb->bordercol!=NOBORDER) // border is displayed last
+    {
+        _setcolor(tb->bordercol);
+        _rectangle(_GBORDER,vp->x1,vp->y1,vp->x2,vp->y2);
+    }
+
+}
+
+/*
 void TextBoxShow(TXTBOX *tb)
 // purpose : draws the contents of the textbox in the current viewport,
 //           drawing a border if required by the textbox
@@ -184,6 +218,7 @@ void TextBoxShow(TXTBOX *tb)
         _rectangle_w(_GBORDER,0.0,0.0,1.0,1.0);
     }
 }
+*/
 
 void TextBoxScrollHome(TXTBOX *tb)
 // purpose : scrolls textbox so that TextBoxShow shows lines from the top
@@ -210,25 +245,25 @@ int TextBoxScroll(TXTBOX *tb,int amount)
 // purpose : scrolls the textbox by amount. amount can be positive (scroll
 //           down) or negative (scroll up). can scroll only to top or
 //           bottom of box, not outside, amount==0 = scroll to top
-// returns : TRUE if scrolled normally else FALSE if tried to scroll too far
+// returns : TRUE if scrolled, else FALSE
 {
     int left=amount<0?amount*-1:amount; // a positive number
     if (amount==0)
     {
         tb->start=tb->head;
-        return TRUE;
+        return FALSE;
     }
-    if (amount<0)
+    if (amount<0)   // scroll up
         do
         {
-            if (tb->start==tb->head) return FALSE;
+            if (tb->start==tb->head) return FALSE; 
             tb->start=tb->start->prev;
             --left;
         } while (left>0);
-    else // amount > 0
+    else // amount > 0  // scroll down
         do
         {
-            if (tb->start==tb->head->prev) return FALSE;
+            if (tb->start==tb->head->prev) return FALSE; // cant scroll down
             tb->start=tb->start->next;
             --left;
         } while (left>0);
@@ -255,7 +290,7 @@ int TextBoxLines(TXTBOX *tb)
 // purpose : to get the number of lines in the textbox
 // returns : the number
 {
-    return tb->size;
+    return tb->lines;
 }
 
 int TextBoxBorderCol(TXTBOX *tb)

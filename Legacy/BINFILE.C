@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "binfile.h"
 
+// #define DEBUG_BINFILE
+
 BINFILE *BinFileNew(int bytes)
 // purpose : creates a new bin file of size bytes
 // returns : the binfile
@@ -33,7 +35,7 @@ BINFILE *BinFileReadFull(char *filename,int extras)
     FILE *file=fopen(filename,"rb");
     BINFILE *bf;
     if (file==NULL) return NULL;
-    bf=BinFileRead(file,(int)FileSize(".",filename),extras);
+    bf=BinFileRead(file,(int)(FileSize(".",filename)),extras);
     fclose(file);
     return bf;
 }
@@ -93,18 +95,20 @@ int BinFilePutBinfile(BINFILE *target,BINFILE *source)
 }
 
 int     BinFileGet(BINFILE *bf,int bytes,char *element)
-// purpose : get bytes from the binfile
-// returns : TRUE if successful else FALSE
+// purpose : gets up to bytes from the binfile, if cant get bytes
+//           it gets as many as it can
+// returns : the number of bytes gotten
 {
-    int x;
-    if (BinFileRemain(bf)<bytes) return FALSE;
-    printf("Getting %d Bytes.",bytes);
-    for (x=0;x<bytes;x++)
+    int x,remain=BinFileRemain(bf),get=remain<bytes?remain:bytes;
+#ifdef DEBUG_BINFILE
+    printf("Getting %d Bytes.",get);
+#endif
+    for (x=0;x<get;x++)
     {
         element[x]=bf->store[bf->bytes];
         bf->bytes+=1;
     }
-    return TRUE;
+    return x;
 }
 
 int     BinFileGetTill(BINFILE *bf,int bytes,char *element,char till)
@@ -112,15 +116,14 @@ int     BinFileGetTill(BINFILE *bf,int bytes,char *element,char till)
 //           or bytes bytes are read.
 // returns : 0 if no bytes read, else the number of bytes read
 {
-    int x;
-    if (BinFileRemain(bf)<bytes) return 0;
-    for (x=0;x<bytes;x++)
+    int x,remain=BinFileRemain(bf),get=remain<bytes?remain:bytes;
+    for (x=0;x<get;x++)
     {
         element[x]=bf->store[bf->bytes];
         bf->bytes+=1;
         if (element[x]==till) return x+1;
     }
-    return bytes;
+    return x;
 }
 
 int     BinFilePutInt(BINFILE *bf,int element)

@@ -3,9 +3,18 @@
 #include <graph.h>
 #include "screen.h"
 
+VIEWPORT *currentvp; // for external use until viewsys properly reworked
+                   // to allow display functions to have a VIEWPORT param
+
 void SetViewport(VIEWPORT *vp)
 {
     _setviewport(vp->x1,vp->y1,vp->x2,vp->y2);
+    currentvp=vp;
+}
+
+VIEWPORT *CurrentViewport()
+{
+    return currentvp;
 }
 
 void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2)
