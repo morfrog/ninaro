@@ -31,7 +31,7 @@ int TextBoxFixedAddLine(TXTBOX *tb,char *string)
 {
     char *top=tb->head->string;
     if (tb->size<tb->lines) return TextBoxAddLine(tb,string,ATEND);
-    strncpy(tb->head->string,string,tb->width-1);
+    strncpy(tb->head->string,string,tb->width+1);
     tb->head=tb->head->next;
     tb->start=tb->start->next;
     return TRUE;
@@ -48,9 +48,9 @@ int TextBoxAddLine(TXTBOX *tb,char *string,int afterline)
     int outside=(afterline>tb->size?TRUE:FALSE),x;
     NODE *look;
     NODE *new=malloc(sizeof(NODE));
-    new->string=malloc((tb->width)*sizeof(char));
-    strncpy(new->string,string,tb->width-1);
-    new->string[tb->width-1]='\0'; // terminate string
+    new->string=malloc((tb->width+1)*sizeof(char)); // +1 for '\0'
+    strncpy(new->string,string,tb->width+1);
+    new->string[tb->width]='\0'; // terminate string
     if (tb->size==0) // the box is empty
     {
         new->next=new; new->prev=new;
@@ -233,25 +233,30 @@ void TextBoxShow(TXTBOX *tb)
 }
 */
 
-void TextBoxScrollHome(TXTBOX *tb)
+int TextBoxScrollHome(TXTBOX *tb)
 // purpose : scrolls textbox so that TextBoxShow shows lines from the top
-// returns : void
+// returns : TRUE if scrolled, else FALSE
 {
-    tb->start=tb->head;    
+    if (tb->start==tb->head) return FALSE;
+    tb->start=tb->head;
+    return TRUE;
 }
 
-void TextBoxScrollEnd(TXTBOX *tb)
+int TextBoxScrollEnd(TXTBOX *tb)
 // purpose : scrolls textbox so that TextBoxShow shows last tb->lines lines
 //           of textbox
-// returns : void
+// returns : TRUE if scrolled, else FALSE
 {
+    NODE *look=tb->start;
     int x;
     tb->start=tb->head->prev; //last;
     for (x=1;x<tb->lines;x++)
         if (tb->start==tb->head)    
-            return;
+            x=tb->lines;
         else
-            tb->start=tb->start->prev;            
+            tb->start=tb->start->prev;
+    if (tb->start==look) return FALSE;
+    else return TRUE;
 }
 
 int TextBoxScroll(TXTBOX *tb,int amount)

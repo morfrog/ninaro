@@ -1,5 +1,25 @@
 Ninaro - HELP - Ninaro - HELP - Ninaro - HELP - Ninaro -
 
+~How To Use Help
+Press ESC or F1 to exit help. If you used the menu to get
+help, the keys you used in the menu work here. Otherwise
+you used F1 to get help, and the arrow keys work here.
+Please ensure that NumLock is off (by pressing the NumLock
+key on the numerical keypad to the right of your keyboard
+until the NumLock light is off). The table below shows what
+these keys do.
+
+~Table of Help Keys
+Key         Function
+Left        Scrolls UP a page
+Right       Scrolls DOWN a page
+Up          Scrolls UP a line
+Down        Scrolls DOWN a line
+PageUp      Scrolls UP a page
+PageDown    Scrolls DOWN a page
+Home        Scrolls to the top of help
+End         Scrolls to the end of help
+
 ~Ninaro
 Ninaro stands for N-in-a-row, which means that the connect
 four game has been extended to connect any number on any
@@ -34,7 +54,7 @@ Left    Token Left          Left a Menu     Left an item
 Right   Token Right         Right a Menu    Right an item
 Up      Calls the menu      Up an item      Up a group
 Down    Drops Token         Down an item    Down a group
-Select  Drops Token         Select Item     Select Button-
+Select  Drops Token         Select item     Select Button-
                                             OK,Reset,Cancel
 Cancel  Calls the menu      Cancel Menu     Cancels Dialog
 
@@ -60,11 +80,10 @@ Save    - saves the game
 End     - ends the current game, when no game is on all
           options are accessable (e.g. player one and two)
           dialogs.
-Status  - displays the rows, columns and connect status of
-          the game in the message box
 Suggest - suggests a move to make. The move is suggested by
 Move      the best AI.
-Sound   - toggles the sound On and Off
+Toggle  - toggles the sound On and Off
+Sound
 Exit    - exits the game
 
 ~The Board Menu

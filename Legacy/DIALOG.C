@@ -140,7 +140,7 @@ int ControlValueGet(CONTROL *c,int pos,int *value)
     {
         case List :
             cl=(CLIST *)c->store;
-            if ((pos<0) || pos > (cl->elems-1)) return FALSE;
+            if ((pos<0) || (pos>cl->elems-1)) return FALSE;
             *value=cl->elem[pos].value;
             return TRUE;
         case Range :
@@ -535,7 +535,7 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp)
     }            
 }
 
-DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *d),char *name,int controls,...)
+DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int controls,...)
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
 // returns : the dialog
@@ -732,7 +732,8 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         aty+=(d->elem[x].store->rows*rowheight);
     }
 
-    control.x2=vp->x2;
+    control.x1=vp->x1+1;
+    control.x2=vp->x2-1;
     aty=vp->y1+(rowheight);
     for (x=0;x<d->elems;x++)
     {
@@ -740,16 +741,17 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         control.y2=aty+(d->elem[x].store->rows*rowheight)-1;
         if (x==d->current)
         {
-            _setlinestyle(0xeeee);      // 7 in 8 dots remove 
             _setcolor(CONTROLHILITE);
+            _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
+            _rectangle(_GBORDER,vp->x1+1,control.y1-1,vp->x2-1,control.y2+1);                        
         }
         else
         {
             _setlinestyle(0x1111);      // 7 in 8 dots remove 
             _setcolor(CONTROLTEXT);
+            _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
+            _setlinestyle(0xffff);            
         }
-        _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
-        _setlinestyle(0xffff);            
         if (d->elem[x].name[0]=='\0') control.x1=vp->x1;
         else                          control.x1=vp->x1+names;
         control.y1+=1;
@@ -787,13 +789,14 @@ int DialogSelect(DIALOG *d)
 // purpose : sends a select signal to the dialog
 // returns : TRUE if OK, FALSE if cancel, UNKNOWN if reset
 {
-    switch (DialogDefaultGet(d))
+    int at=DialogDefaultGet(d);
+    switch (at)
     {
         case 0 : // OK
             return TRUE;
         case 1 : // Reset
             DialogStateSet(d,d->state);
-            if (d->change!=NULL) d->change(d);
+            if (d->change!=NULL) d->change(d,at);
             return UNKNOWN;
         case 2 : // Cancel
             return DialogCancel(d);
@@ -845,7 +848,7 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
             switch (index)
             {
                 case 0 : case 1 : // LEFT or RIGHT
-                    if (d->change!=NULL) d->change(d);
+                    if (d->change!=NULL) d->change(d,index);
                     break;
                 case 4 : // SELECT
                     if (funcret==TRUE) // dialog finished via ok

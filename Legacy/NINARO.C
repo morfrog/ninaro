@@ -38,6 +38,8 @@
 #include "dialog.h"
 #include "connectn.h"
 
+enum {GFOne=0,GFTwo,GFLoser,GFWinner,GFSuccessive,GFRandom}; // goes first
+
 #define ColAdd 2 // 3 is red/green
 // secondary color = primary color + ColAdd
 
@@ -58,11 +60,13 @@ GRID *entrygrid;
 PLAYERGROUP *players;
 int player_one,player_two,player_current;
 int player_one_score,player_two_score;
+int player_winner;
 int dialogplayer;
 KEYGROUP *pkeys;
 KEYGROUP *p1keys;
 KEYGROUP *p2keys;
 TXTBOX *msgbox;
+TXTBOX *statusbox;
 VIEWSYS *vs;
 MENU *mainmenu;
 DIALOG *playerdialog;
@@ -72,6 +76,8 @@ HELP *help;
 HELP *aboutgame;
 MEMPAGE *aboutmp;
 KEYSYS *ks;
+int ingame;
+int goesfirst;
 
 void SetP1(int player)
 {
@@ -117,6 +123,7 @@ void ResetScores(void)
 {
     player_one_score=0;
     player_two_score=0;
+    player_winner=-1;
 }
 
 void PlayerSwap(void) // not in use
@@ -138,7 +145,7 @@ int MaxOf(int a,int b) {if (a>b) return a; else return b;}
 void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
 void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
 
-void GameSizeFit(DIALOG *d)
+void GameSizeFit(DIALOG *d,int last)
 // only to be used with the boarddialog dialog
 {
     int rows=ControlCurrentGet(DialogControlGet(boarddialog,0)),
@@ -183,20 +190,46 @@ void SetupPlayer(int player_index)
     ControlCurrentSetTo(DialogControlGet(playerdialog,1),pcol); // set color
 }
 
-void ModifyPlayer(DIALOG *d)
+void ModifyPlayer(DIALOG *d,int last)
 // only to be used with the playerdialog dialog
 {
     CONTROL *c;
     int p;
-    if (DialogCurrentGet(d)==0) // changing names
+    int notcolor,thiscolor;
+
+    switch (DialogCurrentGet(d))
     {
-        c=DialogControlGet(d,0);
-        ControlValueGet(c,ControlCurrentGet(c),&p); // which player
-        ControlCurrentSetTo(DialogControlGet(d,1),
-            PlayerGetColor(PlayerGroupPlayer(players,p))); // set color
+        case 0 :  // changing names
+            c=DialogControlGet(d,0);
+            ControlValueGet(c,ControlCurrentGet(c),&p); // which player
+            ControlCurrentSetTo(DialogControlGet(d,1),
+                PlayerGetColor(PlayerGroupPlayer(players,p))); // set color
+        break;
+        case 1 : // changing colors
+
+            c=DialogControlGet(d,0); // name
+            ControlValueGet(c,0,&p); // which player
+            if (p==0) // is player one dialog
+                notcolor=PlayerGetColor(PlayerGroupPlayer(players,player_two));
+            else      // is player two dialog
+                notcolor=PlayerGetColor(PlayerGroupPlayer(players,player_one));
+
+            c=DialogControlGet(d,1); // color control
+            thiscolor=ControlCurrentGet(c);  // color control current
+
+            if (thiscolor==notcolor)
+            {
+                
+                switch (last)
+                {
+                    case 0 : // LEFT
+                        if (!(ControlPrev(c))) ControlNext(c); break;
+                    case 1 : // RIGHT
+                        if (!(ControlNext(c))) ControlPrev(c); break;
+                }
+            }
+        break;
     }
-    // else changing colors - who cares, might at this stage want to stop
-    // player having same color as opponent.
 }
 
 void DisplayHuman(int primary,int secondary)
@@ -308,6 +341,12 @@ void DisplayMsgBox(void)
     TextBoxShow(msgbox,CurrentViewport());
 }
 
+void DisplayStatusBox(void)
+{
+    _setvieworg(0,0);
+    TextBoxShow(statusbox,CurrentViewport());
+}
+
 void DisplayP1Color(void) {DisplayPlayerColor(PlayerGroupPlayer(players,player_one));}
 void DisplayP1Type(void) {DisplayPlayerType(PlayerGroupPlayer(players,player_one));}
 void DisplayP1Name(void) {DisplayPlayerName(PlayerGroupPlayer(players,player_one));}
@@ -341,13 +380,20 @@ void HelpContents(void)
     HelpCall(help,&vp,ViewSysCurrent(vs));
 }
 
+void HelpContentsFunc(void)
+{
+    HelpHome(help);
+    HelpContents();
+}
+
+
 void HelpAbout(void)
 {
-    VIEWPORT vp={210,181,429,259};
+    VIEWPORT vp={190,181,449,259}; // help viewport
     MemPagePut(ViewSysCurrent(vs));
-    BorderedBox(200,100,439,269,GREY,LTBLUE);
-    BorderedBox(210,110,429,179,BLACK,LTBLUE);
-    _setviewport(210,110,429,179);
+    BorderedBox(180,100,459,269,GREY,LTBLUE);
+    BorderedBox(190,110,449,179,BLACK,LTBLUE); // game name
+    _setviewport(190,110,449,179);
     DisplayGameName();
     MemPageGet(ViewSysCurrent(vs));
     SwapPage();
@@ -422,14 +468,13 @@ int KeyDown(void *vp)
             PlayTune(4,100,50,300,50,500,100,400,5);
             win_occured=TRUE;
             sprintf(buffer,"%s Wins",PlayerGetName(PlayerGroupPlayer(players,player_current)));
-            if (player_current==player_one) ++player_one_score;
-            else                            ++player_two_score;
+            if (player_current==player_one)
+                {++player_one_score; player_winner=player_one;}
+            else
+                {++player_two_score; player_winner=player_two;}
             TextBoxFixedAddLine(msgbox,buffer);
-            TextBoxScrollEnd(msgbox);
+            TextBoxFixedAddLine(msgbox,"~Press the ESC Key To Continue");
             RemoveTokenAtCR(entrygrid,keypos,0);
-            NextPlayer(); // should be removed from proper system, though
-                          // could be used for loser goes first
-            InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
             return DisplayAll;
             break;
         case Failure :
@@ -444,19 +489,64 @@ int KeyDown(void *vp)
 int KeySelect(void *vp) {return KeyDown(vp);}
 int KeyCancel(void *vp) {return KeyUp(vp);}
 
-void MsgGameN(void)
-{
-    char nbuf[40];
-    sprintf(nbuf,"Playing %d in a row.",win->tokens);
-    TextBoxFixedAddLine(msgbox,nbuf);
-    TextBoxScrollEnd(msgbox);
-}
-
 void NewGame(void)
 {
+    switch (goesfirst)
+    {
+        case GFOne : SetP1Current();
+            TextBoxFixedAddLine(msgbox,"Player One Goes First");
+        break;
+        case GFTwo : SetP2Current();
+            TextBoxFixedAddLine(msgbox,"Player Two Goes First");
+        break;
+        case GFLoser :
+            if (player_winner==player_one) SetP2Current();
+            else if (player_winner==player_two) SetP1Current();
+            else if (Random(2)==0) SetP1Current();
+            else SetP2Current;
+            TextBoxFixedAddLine(msgbox,"Loser Goes First");
+            break;
+        case GFWinner :
+            if (player_winner==player_one) SetP1Current();
+            else if (player_winner==player_two) SetP2Current();
+            else if (Random(2)==0) SetP1Current();
+            else SetP2Current();
+            TextBoxFixedAddLine(msgbox,"Winner Goes First");
+            break;
+        case GFSuccessive :
+            NextPlayer();
+            TextBoxFixedAddLine(msgbox,"Successive Player Goes First");
+            break;
+        case GFRandom :
+            if (Random(2)==0) SetP1Current(); else SetP2Current();
+            TextBoxFixedAddLine(msgbox,"Random Player Goes First");
+            break;
+    }
     GridEmpty(playgrid); GridEmpty(entrygrid);
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
-    win_occured=FALSE; MsgGameN();
+    win_occured=FALSE; 
+    KeySysIEnable(ks,0,TRUE); // LEFT
+    KeySysIEnable(ks,1,TRUE); // RIGHT
+    KeySysIEnable(ks,3,TRUE); // DOWN
+    KeySysIEnable(ks,4,TRUE); // SELECT
+    MenuItemEnable(mainmenu,0,3,TRUE); // enable end game
+    MenuItemEnable(mainmenu,0,0,FALSE); // disable new game
+    MenuSubCurrentSet(mainmenu,0,1);
+    ingame=1;
+}
+
+void EndGame(void)
+{
+    KeySysIEnable(ks,0,FALSE); // LEFT
+    KeySysIEnable(ks,1,FALSE); // RIGHT
+    KeySysIEnable(ks,3,FALSE); // DOWN
+    KeySysIEnable(ks,4,FALSE); // SELECT
+    MenuItemEnable(mainmenu,2,0,TRUE); // enable players one and two
+    MenuItemEnable(mainmenu,2,1,TRUE);
+    MenuItemEnable(mainmenu,0,3,FALSE); // disable end game
+    MenuItemEnable(mainmenu,0,0,TRUE); // enable new game
+    MenuSubCurrentSet(mainmenu,0,0);
+    ingame=0;
 }
 
 int PlayersInGrid(GRID *grid,int *p1,int *p2)
@@ -501,11 +591,10 @@ void LoadGame(void)
         SetP2(p2);
         player_current=current;
         TextBoxFixedAddLine(msgbox,"Game Loaded");
-        win_occured=FALSE; MsgGameN();
+        win_occured=FALSE; 
         RemoveTokenAtCR(entrygrid,keypos,0);
         InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
     }
-    TextBoxScrollEnd(msgbox);
 }
 
 void SaveGame(void)
@@ -518,27 +607,17 @@ void SaveGame(void)
     {
         TextBoxFixedAddLine(msgbox,"~Save Error!");
     }
-    TextBoxScrollEnd(msgbox);
 }
 
-void EndGame(void) {NewGame();}
 void ExitGame(void) {ProgFree(); ShutDown(); exit(0);}
 
 void GameStatus(void)
 {
-
     char gbuf[50];
-    sprintf(gbuf,"~-----Game Status-----");
-    TextBoxFixedAddLine(msgbox,gbuf);
-    sprintf(gbuf,"%d Columns x %d Rows",grid_cols,grid_rows);
-    TextBoxFixedAddLine(msgbox,gbuf);
-    sprintf(gbuf,"Connect %d",win->tokens);
-    TextBoxFixedAddLine(msgbox,gbuf);
-    sprintf(gbuf,"Player One is %s",PlayerGetName(PlayerGroupPlayer(players,player_one)));
-    TextBoxFixedAddLine(msgbox,gbuf);
-    sprintf(gbuf,"Player Two is %s",PlayerGetName(PlayerGroupPlayer(players,player_two)));
-    TextBoxFixedAddLine(msgbox,gbuf);
-    TextBoxScrollEnd(msgbox);
+    TextBoxSetLine(statusbox,1,"Columns  Rows  Connect  Sound");
+    sprintf(gbuf,"~%5d  %4d  %6d      %s",grid_cols,grid_rows,win->tokens,IsMute()?"Off":"On");
+    TextBoxSetLine(statusbox,2,gbuf);
+    TextBoxSetLine(statusbox,3,"Type    Player         Score");
 }
 
 void GameSizeCustom(void)
@@ -550,7 +629,7 @@ void GameSizeCustom(void)
     cbuf[2]=win->tokens;
     cbuf[3]=0; // OK
     DialogStateSet(boarddialog,cbuf);
-    GameSizeFit(boarddialog);
+    GameSizeFit(boarddialog,6);
     if (DialogCall(boarddialog,&vp,vs->current,5,8,HelpBoardDialog))
     {
         DialogStateGet(boarddialog,cbuf);
@@ -567,11 +646,14 @@ int PlayerDialog(int pnum)
     CONTROL *c2=DialogControlGet(playerdialog,1);// colors
     int p;
     SetupPlayer(pnum);
-    DialogCall(playerdialog,&vp,vs->current,5,8,HelpPlayerDialog);
-    ControlValueGet(c,ControlCurrentGet(c),&p); // which player
-    PlayerSetColor(PlayerGroupPlayer(players,p),ControlCurrentGet(c2));
-    if (p==pnum) return -1;
-    return p;
+    if (DialogCall(playerdialog,&vp,vs->current,5,8,HelpPlayerDialog))
+    {
+        ControlValueGet(c,ControlCurrentGet(c),&p); // which player
+        PlayerSetColor(PlayerGroupPlayer(players,p),ControlCurrentGet(c2));
+        if (p==pnum) return -1;
+        return p;
+    }
+    else return -1;
 }
 
 void P1Dialog(void)
@@ -607,7 +689,11 @@ void P2Dialog(void)
 void PlayerOptions(void)
 {
     VIEWPORT vp={50,50,590,300};
-    DialogCall(optionsdialog,&vp,vs->current,5,11,HelpOptionsDialog);
+    ControlCurrentSetTo(DialogControlGet(optionsdialog,0),goesfirst); // set player    
+    if (DialogCall(optionsdialog,&vp,vs->current,5,11,HelpOptionsDialog))
+    {
+        goesfirst=ControlCurrentGet(DialogControlGet(optionsdialog,0));
+    }
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
@@ -619,19 +705,21 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
         DisplayPlayGrid,NULL,"Enter Your Token Here");       // playgrid is 1
     ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,TRUE,
         DisplayGameName,NULL,"Ninaro - By the author 1998");
-    ViewSysWindowNew(vs,0.61,0.1,1.0,0.6,TRUE,
-        DisplayMsgBox,NULL,"Messages appear here");          // msg box is 3
-    ViewSysWindowNew(vs,0.61,0.6,0.65,0.648,TRUE,
+    ViewSysWindowNew(vs,0.61,0.52,1.0,1.0,TRUE,
+        DisplayMsgBox,NULL,"Messages appear here");
+    ViewSysWindowNew(vs,0.61,0.1,1.0,0.37,TRUE,
+        DisplayStatusBox,NULL,"The Game Status");
+    ViewSysWindowNew(vs,0.61,0.4,0.65,0.448,TRUE,
         DisplayP1Type,NULL,"Player One's Type");
-    ViewSysWindowNew(vs,0.66,0.6,0.90,0.648,TRUE,
+    ViewSysWindowNew(vs,0.66,0.4,0.90,0.448,TRUE,
         DisplayP1Name,NULL,"Player One's Name");
-    ViewSysWindowNew(vs,0.91,0.6,1.0,0.648,TRUE,
+    ViewSysWindowNew(vs,0.91,0.4,1.0,0.448,TRUE,
         DisplayP1Score,NULL,"Player One's Score");
-    ViewSysWindowNew(vs,0.61,0.652,0.65,0.7,TRUE,
+    ViewSysWindowNew(vs,0.61,0.452,0.65,0.5,TRUE,
         DisplayP2Type,NULL,"Player Two's Type");
-    ViewSysWindowNew(vs,0.66,0.652,0.90,0.7,TRUE,
+    ViewSysWindowNew(vs,0.66,0.452,0.90,0.5,TRUE,
         DisplayP2Name,NULL,"Player Two's Name");
-    ViewSysWindowNew(vs,0.91,0.652,1.0,0.7,TRUE,
+    ViewSysWindowNew(vs,0.91,0.452,1.0,0.5,TRUE,
         DisplayP2Score,NULL,"Player Two's Score");
     return vs;
 }
@@ -643,10 +731,8 @@ void Test(void)
 
 void ToggleSound(void)
 {
-    char buffer[20];
-    sprintf(buffer,"Sound is now %s",ToggleMute()?"Off":"On");
-    TextBoxFixedAddLine(msgbox,buffer);
-    TextBoxScrollEnd(msgbox);
+    ToggleMute();
+    GameStatus();
 }
 
 void ProgInit() // initialises global variables
@@ -659,31 +745,35 @@ void ProgInit() // initialises global variables
     grid_cols=7;
 
     vs=ViewSysInit(0,0,639,349,20);
-    
-    msgbox=TextBoxNew(8,RED,WHITE,GREEN,30);
-    
+        
     players=PlayerGroupNew(7, // allows for only two humans
         PlayerNew("Player One",YELLOW,Human),
         PlayerNew("Player Two",RED,Human),
-        PlayerNew("Ronda Random",ORANGE,Computer),
-        PlayerNew("Alfa B Prune",GREEN,Computer),
-        PlayerNew("Tammy Tree",BLUE,Computer),
-        PlayerNew("Rodney Rule",YELLOW,Computer),
-        PlayerNew("Minny Maxx",PURPLE,Computer));
+        PlayerNew("AI Random",ORANGE,Computer),
+        PlayerNew("AI Novice",GREEN,Computer),
+        PlayerNew("AI Normal",BLUE,Computer),
+        PlayerNew("AI Expert",YELLOW,Computer),
+        PlayerNew("AI Genius",PURPLE,Computer));
     pkeys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
     p1keys=KeyGroupNew(6,'a','d','w','s','e','q');
     p2keys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
     player_one=0;
     player_two=1;
-    player_one_score=0;
-    player_two_score=0;
+    ResetScores();
 
-    TextBoxFixedAddLine(msgbox,"~This is the first line");
-    TextBoxFixedAddLine(msgbox,"Player1 Arrives");
-    TextBoxFixedAddLine(msgbox,"Ronda Random Arrives");
-    TextBoxFixedAddLine(msgbox,"~Let The Game Begin");
-    TextBoxScrollEnd(msgbox);
-                    
+    msgbox=TextBoxNew(7,RED,WHITE,GREEN,30);
+    TextBoxFixedAddLine(msgbox,"Press F1 for HELP");
+    TextBoxFixedAddLine(msgbox,"Press Esc for MENU");
+    TextBoxFixedAddLine(msgbox,"Which uses arrow keys");
+    TextBoxFixedAddLine(msgbox,"Press F10 to QUIT");
+    TextBoxFixedAddLine(msgbox,"~Or begin playing...");
+    
+    statusbox=TextBoxNew(3,NOBORDER,WHITE,GREEN,30);
+    TextBoxAddLine(statusbox," ",ATEND);
+    TextBoxAddLine(statusbox," ",ATEND);
+    TextBoxAddLine(statusbox," ",ATEND);
+    GameStatus();
+    
     playgrid=GridNew(grid_cols,grid_rows);
     entrygrid=GridNew(grid_cols,1);
     playerdialog=DialogNew(pkeys,ModifyPlayer,"Player One",2,
@@ -703,22 +793,18 @@ void ProgInit() // initialises global variables
                         3,"",50,""),
         "Size",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
-    optionsdialog=DialogNew(pkeys,NULL,"Player Options",3,
+    optionsdialog=DialogNew(pkeys,NULL,"Player Options",2,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
-                        0,"Successive",
-                        1,"Player One",
-                        2,"Player Two",
+                        0,"Player One",
+                        1,"Player Two",
+                        2,"Loser",
                         3,"Winner",
-                        4,"Loser",
+                        4,"Successive",
                         5,"Random"),
-        "AI Skill",TRUE,TRUE,ControlNew(List,Slider,2,1,7,3,
-                        0,"Low",
-                        1,"Medium",
-                        2,"High"),
-        "AI Speed",TRUE,TRUE,ControlNew(List,Slider,2,1,7,5,                        
+        "AI Speed",TRUE,TRUE,ControlNew(List,Slider,1,1,7,5,                        
                         4,"Slowest",
                         3,"Slow",
-                        2,"Cruise",
+                        2,"Normal",
                         1,"Fast",
                         0,"Fastest"));
                         
@@ -732,14 +818,13 @@ void ProgInit() // initialises global variables
                         51,"Fifty-One"));
 */            
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
-    MenuNewSub(mainmenu,"Game",8,
-        "New",      CN, NewGame,    TRUE,
+    MenuNewSub(mainmenu,"Game",7,
+        "New",      CN, NewGame,    FALSE,
         "Load",   NONE, LoadGame,   TRUE,
         "Save",   NONE, SaveGame,   TRUE,
-        "End",      CE, EndGame,    FALSE,
-        "Status",   CS, GameStatus, TRUE,
+        "End",      CE, EndGame,    TRUE,
         "Suggest Move",NONE,NULL,   TRUE,
-        "Sound",    NONE,ToggleSound,TRUE,
+        "Toggle Sound",NONE,ToggleSound,TRUE,
         "Exit",     CX, ExitGame,   TRUE);
     MenuNewSub(mainmenu,"Board",3,
         "7x8x4",    NONE,GameSize7x8x4,      TRUE,
@@ -752,7 +837,7 @@ void ProgInit() // initialises global variables
         "Reset Scores",NONE,ResetScores,TRUE);
 //        "Swap",     NONE,PlayerSwap,  TRUE);
     MenuNewSub(mainmenu,"Help",2,
-        "Contents", NONE,HelpContents,TRUE,
+        "Contents", NONE,HelpContentsFunc,TRUE,
         "About",    NONE,HelpAbout, TRUE);
 
     ks=KeySysNew(pkeys);
@@ -767,15 +852,17 @@ void ProgInit() // initialises global variables
 
     help=HelpNew("NINARO.HLP",pkeys,20,RED,WHITE,GREEN,60);
 
-    aboutgame=HelpNew(NULL,pkeys,3,LTBLUE,WHITE,GREEN,30);
+    aboutgame=HelpNew(NULL,pkeys,3,LTBLUE,WHITE,GREEN,29);
+    HelpAddLine(aboutgame,"~Scroll Up/Down, Any Key OK's");
     HelpAddLine(aboutgame,"Project");
     HelpAddLine(aboutgame,"By the author");
     HelpAddLine(aboutgame,"");
+    HelpAddLine(aboutgame,"      Semester One 1998");
     HelpAddLine(aboutgame,"");
-    HelpAddLine(aboutgame,"Semester One 1998");
-    HelpAddLine(aboutgame,"");
-    HelpAddLine(aboutgame,"Copyright 1998");
+    HelpAddLine(aboutgame,"       Copyright 1998");
 
+    ingame=1;
+    goesfirst=GFSuccessive;
 }
 
 void ProgFree() // frees global variables
@@ -834,6 +921,7 @@ void TitleMove(GRID *grid,int *col,int *row)
 void TitleScreen(void)
 // uses global variables
 {
+    VIEWPORT vp;
     PLAYER *pl;
     GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
     int x;
@@ -844,35 +932,41 @@ void TitleScreen(void)
     long bottom=0x010000L;
     long top=bottom+0x030303L;
 
+    vp.x1=vs->main.x1;
+    vp.y1=vs->main.y1;
+    vp.x2=vs->main.x2;
+    vp.y2=vs->main.y2-30;
     if (filegrid==NULL) return;
     tokens=MaxTokensInGrid(filegrid);
    _remappalette(YELLOW,0x020202L);
    _remappalette(GREEN,0x040404L);
     StartRandom();
     ResetGameSize(GridCols(filegrid),GridRows(filegrid),4);
-    SetViewport(&(vs->main));
+    _setcolor(WHITE);
+    _setcharsize(20,10);
+    _setcharspacing(0);
+    _settextalign(_CENTER,_TOP);
+    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
+    SwapPage();
+    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
+    SwapPage();
+    SetViewport(&(vp));
     _setcolor(GREEN);
     DisplayGrid(playgrid,0.95);
-    SwapPage();
-
-    for (x=0;x<tokens;x++)
-    {
-        TitleMove(filegrid,&scol,&srow);
-        pl=RemoveTokenAtCR(filegrid,scol,srow);
-        InsertTokenInCol(playgrid,scol,pl,win);
-        _setcolor(GREEN);
-        DisplayGrid(playgrid,0.95);
-        SwapPage();
-        if (kbhit()) x=tokens;
-    }
-    // display "hit any key to continue"
-    Buzz(200,400,20,100);
-    _setcolor(GREEN);
-    DisplayGrid(playgrid,0.95);
-    SwapPage();
     sety=bottom;
+    x=0;
     do
     {
+        if (x<tokens)
+        {
+            TitleMove(filegrid,&scol,&srow);
+            pl=RemoveTokenAtCR(filegrid,scol,srow);
+            InsertTokenInCol(playgrid,scol,pl,win);
+            _setcolor(GREEN);
+            DisplayGrid(playgrid,0.95);
+            SwapPage();
+            x++;
+        }
         if (up)
         {
             sety+=adds[add]; if (add==2) add=0; else ++add;
@@ -886,6 +980,9 @@ void TitleScreen(void)
         _remappalette(YELLOW,sety);
     }
     while (!kbhit());
+      _setcolor(GREEN);
+    DisplayGrid(playgrid,0.95);
+    SwapPage();
     GetKey();
     GridFree(filegrid);
     ResetGameSize(7,8,4);
@@ -939,7 +1036,7 @@ void main()
                 case F1  :
                     KeyGroupCopy(pkeys,p2keys);
                     // F1 to help defaults to numeric keys
-                    HelpContents();
+                    HelpContentsFunc();
                     ViewSysDisplay(vs,DisplayAll);
                     SwapPage();
                     if (player_current==player_one)
@@ -955,13 +1052,20 @@ void main()
                     ViewSysDisplay(vs,DisplayAll);
                     SwapPage();
                     if (player_current==player_one)
-                        SetP1Current();
+                        if (ingame) SetP1Current();
                     else
-                        SetP2Current();
+                        if (ingame) SetP2Current();
                     break;
                 case AF4 : case CX : case CQ :
                 case F10 : ExitGame(); break;
-            }              
+            }
+        }
+        if (win_occured)
+        {
+            do {} while (GetKey()!=ESC);
+            NewGame();
+            ViewSysDisplay(vs,DisplayAll);
+            SwapPage();
         }
     }
 }

@@ -8,6 +8,11 @@ void Mute(int mute)
     _mute=mute;
 }
 
+int IsMute()
+{
+    return _mute;
+}
+
 int ToggleMute(void)
 // returns true if now mute, else FALSE;
 {

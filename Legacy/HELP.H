@@ -40,10 +40,10 @@ int HelpPageUp(HELP *help);
 int HelpPageDown(HELP *help);
 // purpose : scrolls the help box down one page
 // returns : TRUE if scrolled else FALSE
-void HelpHome(HELP *help);
+int HelpHome(HELP *help);
 // purpose : scrolls the help box to the top
 // returns : void
-void HelpEnd(HELP *help);
+int HelpEnd(HELP *help);
 // purpose : scrolls the help box to the end
 // returns : void
 int HelpScrollString(HELP *help,char *string);

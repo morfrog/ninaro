@@ -59,7 +59,7 @@ struct DialogTag
     int current;        // the current control of the dialog
     int elems;          // the number of controls in the dialog
     int *state;         // the state of the dialog, used to save state
-    void (* change)(void *d); // func to run when controls change value
+    void (* change)(void *,int); // func to run when controls change value
     DIALOGELEM *elem;   // array of controls in the dialog
 //  MEMPAGE *background;// the background image
     KEYSYS *ks;         // the key system of the dialog
@@ -118,7 +118,7 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp);
 // returns : void
 
 /*---------------------------DIALOG-----------------------------------*/
-DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *d),char *name,int controls,...);
+DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int controls,...);
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
 // returns : the dialog

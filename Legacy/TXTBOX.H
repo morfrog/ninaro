@@ -77,8 +77,10 @@ void TextBoxShow(TXTBOX *tb,VIEWPORT *vp);
 // purpose : draws the contents of the textbox in the current viewport,
 //           drawing a border if required by the textbox
 // returns : void
-void TextBoxScrollHome(TXTBOX *tb);
-void TextBoxScrollEnd(TXTBOX *tb);
+int TextBoxScrollHome(TXTBOX *tb);
+// purpose : scrolls textbox so that TextBoxShow shows lines from the top
+// returns : TRUE if scrolled, else FALSE
+int TextBoxScrollEnd(TXTBOX *tb);
 // purpose : scrolls textbox so that TextBoxShow shows last tb->lines lines
 //           of textbox
 // returns : void

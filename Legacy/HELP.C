@@ -109,6 +109,16 @@ void HelpCall(HELP *help,VIEWPORT *vp,MEMPAGE *mp)
             {
                 case ESC :
                 case F1 : index=4; used=KeySysIKey(help->ks,index,help,&funcret);
+                break;
+                case KP7 : HelpHome(help); used=TRUE; index=6; funcret=TRUE;
+                break;
+                case KP1 : HelpEnd(help); used=TRUE; index=6; funcret=TRUE;
+                break;
+                case KP9 : index=0; used=KeySysIKey(help->ks,index,help,&funcret);
+                break;
+                case KP3 : index=1; used=KeySysIKey(help->ks,index,help,&funcret);
+                break;
+                
             }
         }
         if (used)
@@ -162,18 +172,18 @@ int HelpPageDown(HELP *help)
     return TextBoxScroll(help->tb,TextBoxLines(help->tb));
 }
 
-void HelpHome(HELP *help)
+int HelpHome(HELP *help)
 // purpose : scrolls the help box to the top
-// returns : void
+// returns : TRUE if scrolled else FALSE
 {
-    TextBoxScrollHome(help->tb);
+    return TextBoxScrollHome(help->tb);
 }
 
-void HelpEnd(HELP *help)
+int HelpEnd(HELP *help)
 // purpose : scrolls the help box to the end
-// returns : void
+// returns : TRUE if scrolled else FALSE
 {
-    TextBoxScrollEnd(help->tb);
+    return TextBoxScrollEnd(help->tb);
 }
 
 int HelpScrollString(HELP *help,char *string)
