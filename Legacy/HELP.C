@@ -22,7 +22,7 @@ HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int *textcol,i
 // returns : the help box
 {
     char buffer[80]; // can read up to 80 characters
-    int left,got,x;
+    int left,got;
     HELP *help=malloc(sizeof(HELP));
     BINFILE *bf;
 

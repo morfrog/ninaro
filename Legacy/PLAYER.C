@@ -91,7 +91,7 @@ int PlayerGroupWho(PLAYERGROUP *pg,char *name)
 {
     int x;
     for (x=0;x<pg->players;x++)
-       if (strcmp(pg->player[x],name)==0) return x; // found
+       if (strcmp(PlayerGetName(pg->player[x]),name)==0) return x; // found
     return -1; // not found
 }
 

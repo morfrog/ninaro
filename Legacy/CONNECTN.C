@@ -145,8 +145,8 @@ int UnBlockableWin(GRID *grid,int size,int col,PLAYER *player)
 //           in bottom row).
 // returns : TRUE if they do, else FALSE
 {
-    int row=InsertTokenTarget(grid,col);
-    int left,right;
+//    int row=InsertTokenTarget(grid,col);
+//    int left,right;
 // vertical not a possibility.
 
 //    left=FuncNumInDirection(grid,col,row,col_dir,row_dir,player,FuncNotEqual);

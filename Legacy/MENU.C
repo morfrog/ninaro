@@ -207,7 +207,7 @@ void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp,int hilite)
 // returns : void
 {
     int x,pos=vp->y1;
-    int width=vp->x2-vp->x1+1,height=vp->y2-vp->y1+1;
+    int height=vp->y2-vp->y1+1;
     int itemheight=height/sub->items;
 // the submenu
     BorderedBox(vp->x1,vp->y1,vp->x2,vp->y2,MENUBACK,hilite);
@@ -312,7 +312,6 @@ void MenuCall(MENU *menu,void (* help)(void),int usemouse)
 // returns : void
 {
     int funcret,index,key,used,mx,my,btn,newmenu,newitem;
-    int width=menu->vp->x2-menu->vp->x1+1;
     
     if (menu->current>=menu->submenus) menu->current=0;
 

@@ -10,7 +10,10 @@ Updated        : 1 May 1998         BinFileGetTill      CREATED
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "sys.h"
+
+#ifndef byte
+#define byte unsigned char
+#endif
 
 struct binfileTag
 {

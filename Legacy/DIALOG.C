@@ -482,7 +482,7 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
 {
     int atx=vp->x1,aty=vp->y1,width=(vp->x2-vp->x1+1)/cols;
     int height=(vp->y2-vp->y1+1)/rows,_3hon4=(3*height)/4,x;
-    int col=1,row=0,texty=height/2,textx=width/2,elements=rows*cols;
+    int col=1,texty=height/2,textx=width/2,elements=rows*cols;
     
     if (cl->elems<elements) elements=cl->elems;
 
@@ -764,7 +764,7 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
     int x,totalrows=1;
     int height=vp->y2-vp->y1+1,width=vp->x2-vp->x1+1;
     int rowheight,names=width/namefract;
-    int aty,atx=vp->x1+names;
+    int aty;
     VIEWPORT control;
 
     for (x=0;x<d->elems;x++)
@@ -892,7 +892,7 @@ void DialogCurrentItemSet(DIALOG *d,int item)
 // returns : void
 {
     CONTROL *c=DialogControlGet(d,d->current);
-    CLIST *cl; CRANGE *cr;
+    CRANGE *cr;
     if (c->controltype==Range)
     {
         cr=(CRANGE *)c->store;
@@ -923,7 +923,7 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
 // returns : FALSE if cancelled, TRUE if OK'd. if exit state is same as entry
 //           state, cancel is assumed and FALSE is returned
 {
-    int index,funcret,changed=FALSE,key,used,newcontrol,newitem,btn,mx,my;
+    int index,funcret,key,used,newcontrol,newitem,btn,mx,my;
     int *newstate,same;
     CONTROL *c;
         

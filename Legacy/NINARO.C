@@ -13,7 +13,7 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 //        getting a computer move cannot be interrupted, interrupt between
 //        turns
 //        player_swap could swap keys only???
-//        possible mouse inclusion, though is perhaps too late.
+//  DONE  possible mouse inclusion, though is perhaps too late.
 //          mouse in main,dialog,menu.
 //  DONE  options dialog must do something.
 //  DONE  options dialog could use computer speed, so that computers could
@@ -26,7 +26,7 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 //        if score too big - too many characters squash char width to fit.
 //  DONE  ERROR found - load saved game and cant drop tokens!!!
 //        hoping proper save/load will fix the error
-//        save game config at exit and restore when program initialised
+//  DONE  save game config at exit and restore when program initialised
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
@@ -171,11 +171,6 @@ void PlayerSwap(void) // not in use
 
 int MinOf(int a,int b) {if (a<b) return a; else return b;}
 int MaxOf(int a,int b) {if (a>b) return a; else return b;}
-
-void ModifyGameOptions(DIALOG *d,int last)
-{
-
-}
 
 void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
 void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
@@ -709,8 +704,7 @@ int SaveCfg()
 
 int LoadCfg()
 {
-    int ret,x,col;
-    CONTROL *c1=DialogControlGet(gameoptionsdialog,0); // background
+    int x,col;
     PLAYER *pl;
     BINFILE *bf=BinFileReadFull("NINARO.CFG",0);
     if (bf==NULL) return FALSE;
@@ -930,7 +924,6 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
 // level is how many rules to invoke
 // returns column, -1 if could not make a move
 {
-    char tmp[40];
     int cols=GridCols(grid),rows=GridRows(grid);
     int *col=malloc(sizeof(int)*cols),x;
     int atlevel,canuse=FALSE,ret;
@@ -1414,7 +1407,7 @@ void ProgInit() // initialises global variables
         "Connect",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
 
-    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",&hilite,4,
+    gameoptionsdialog=DialogNew(pkeys,NULL,"Game Options",&hilite,4,
         "Background",TRUE,TRUE,ControlNew(List,Color,1,2,15,2,
                         BLACK,"",WHITE,""),
         "Hilite",TRUE,TRUE,ControlNew(List,Color,1,5,11,5,
@@ -1529,8 +1522,7 @@ void ProgFree() // frees global variables
 void main()
 {
     PLAYER *pl;
-    int waitesc,col,ccols,crows,csize,mb,mx,my;
-    CONTROL *mousebad;
+    int waitesc,col,ccols,crows,csize,mx,my;
 
     ScreenInit();
     mouseinstalled=InitMouse();
