@@ -331,13 +331,13 @@ void DisplayRange(CRANGE *r,VIEWPORT *vp,int display,int rows,int cols,int strwi
 
     _setcharsize(height,(vp->x2-vp->x1)/(4*strwidth));
     _setcharspacing(0);
-    if ((r->minname[0]!='/0') && (r->maxname[0]!='/0'))
+    if ((r->minname[0]!='\0') && (r->maxname[0]!='\0'))
     {
         _settextalign(_LEFT,_TOP);  _grtext(vp->x1,vp->y2-height,r->minname);
         _settextalign(_RIGHT,_TOP); _grtext(vp->x2,vp->y2-height,r->maxname);
         names=TRUE;
     }
-    else if (r->minname[0]!='/0')
+    else if (r->minname[0]!='\0')
     {
         _settextalign(_CENTER,_TOP);  _grtext(vp->x1+((vp->x2-vp->x1)/2),vp->y2-height,r->minname);
         names=TRUE;
@@ -370,17 +370,18 @@ void DisplayList(CLIST *cl,VIEWPORT *vp,int display,int rows,int cols,int strwid
     {
         switch (display)
         {
-            case Button : case Name :
+            case Button :
+            case Name :
                 _settextalign(_CENTER,_HALF);
-                _setcharsize(height/2,width/strwidth);
+                _setcharsize(height/2,width/(strwidth+1));
             break;
             case Color :
                 _settextalign(_CENTER,_TOP);
-                _setcharsize(height/5,width/strwidth);
+                _setcharsize(height/5,width/(strwidth+1));
             break;
             case Radio :
                 _settextalign(_LEFT,_HALF);
-                _setcharsize(height/2,(7*width)/(8*strwidth));
+                _setcharsize(height/2,(7*width)/(8*(strwidth+1)));
             break;
         }
 
@@ -524,10 +525,18 @@ int DialogCurrentGet(DIALOG *d) {return d->current;}
 // returns : the current
 
 CONTROL *DialogControlGet(DIALOG *d,int control)
-// purpose :
-// returns :
+// purpose : gets the control from the dialog, for use with control functions
+//           assumes 0<=control<=d->elems-1
+// returns : the control 
 {
     return d->elem[control].store;
+}
+
+void DialogNameSet(DIALOG *d,char *string)
+// purpose : sets the name of the dialog
+// returns : void
+{
+    strcpy(d->name,string);
 }
 
 int DialogStateGet(DIALOG *d,...) 
@@ -569,10 +578,10 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 //           1/namefract is the name of each control, where up to chars characters are displayed
 // returns : void
 {
-    int x,totalrows=2; // dialog name is two high
+    int x,totalrows=1;
     int height=vp->y2-vp->y1+1,width=vp->x2-vp->x1+1;
     int rowheight,names=width/namefract;
-    int aty=vp->y1,atx=vp->x1+names;
+    int aty,atx=vp->x1+names;
     VIEWPORT control;
 
     for (x=0;x<d->elems;x++) totalrows+=d->elem[x].store->rows;
@@ -580,35 +589,44 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
     
     _setcolor(CONTROLBACK);               // the back of the dialog
     _rectangle(_GFILLINTERIOR,vp->x1,vp->y1,vp->x2,vp->y2);
-    _setcharsize(rowheight,width/30);
+    _setcharsize(4*rowheight/5,width/20);
     _settextalign(_CENTER,_HALF);         // the name of the dialog
     _setcolor(CONTROLTEXT);
-    _grtext(vp->x1+(width/2),vp->y1+rowheight,d->name);
-
+    _grtext(vp->x1+(width/2),vp->y1+(rowheight/2),d->name);
+    _grtext(vp->x1+(width/2)+1,vp->y1+(rowheight/2),d->name);
     _setcharsize(rowheight/2,names/chars);
     _settextalign(_LEFT,_TOP);
-    aty+=rowheight*2;
+    aty=vp->y1+(rowheight);
     for (x=0;x<d->elems;x++) // control names
     {
-        _grtext(vp->x1,aty,d->elem[x].name);
-        aty+=rowheight+d->elem[x].store->rows;
+        _grtext(vp->x1+2,aty+2,d->elem[x].name);
+        aty+=(d->elem[x].store->rows*rowheight);
     }
 
     control.x2=vp->x2;
-    aty=rowheight*3;
+    aty=vp->y1+(rowheight);
     for (x=0;x<d->elems;x++)
     {
-        control.y1=aty;
-        control.y2=aty+(d->elem[x].store->rows*rowheight);
+        control.y1=aty+1;
+        control.y2=aty+(d->elem[x].store->rows*rowheight)-1;
         if (x==d->current)
         {
             _setcolor(CONTROLHILITE);
-            _setlinestyle(0xff00);
+            _setlinestyle(0xff00);        // dashed line
             _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
             _setlinestyle(0xffff);
         }
-        if (d->elem[x].name[0]=='/0') control.x1=vp->x1;
+        else
+        {
+            _setlinestyle(0x5555);      // dotted line
+            _setcolor(CONTROLTEXT);
+            _rectangle(_GBORDER,vp->x1+1,control.y1,vp->x2,control.y2);
+            _setlinestyle(0xffff);            
+        }
+        if (d->elem[x].name[0]=='\0') control.x1=vp->x1;
         else                          control.x1=vp->x1+names;
+        control.y1+=1;
+        control.y2-=1;
         ControlDisplay(d->elem[x].store,&control);
         aty+=(d->elem[x].store->rows)*rowheight;
     }
@@ -620,7 +638,10 @@ void DialogPrint(DIALOG *dl)
     printf("%s   [%d]\n",dl->name,dl->current);
     for (x=0;x<dl->elems;x++)
     {
-        printf("%s [%s] [%s]\n",dl->elem[x].name,(dl->elem[x].enabled)?"Enabled":"Disabled",(dl->elem[x].selectable)?"Selectable":"UnSelectable");
+        printf("%s [%s] [%s]\n",
+             dl->elem[x].name[0]=='\0'?"No Name":dl->elem[x].name,
+            (dl->elem[x].enabled)?"Enabled":"Disabled",
+            (dl->elem[x].selectable)?"Selectable":"UnSelectable");
         ControlPrint(dl->elem[x].store);
     }
 }
@@ -638,15 +659,15 @@ void main()
     CONTROL *c1,*c2;
     DIALOG *dl;
     VIEWPORT main={0,0,400,50};
-    VIEWPORT main2={50,50,400,310};
+    VIEWPORT main2={50,50,500,310};
 
-    dl=DialogNew("Testy Setup",2,
-        "Range",TRUE,TRUE,ControlNew(Range,Slider,2,3,10,3,a,7,a),
+    dl=DialogNew("Player One Setup",2,
+        "Range",TRUE,TRUE,ControlNew(Range,Slider,1,3,10,3,"",7,""),
         "List",TRUE,TRUE,ControlNew(List,Color,1,3,10,3,1,a,2,a,3,a));
 
+//    ShutDown();
 //    DialogPrint(dl);
 //    GetKey();
-//    ShutDown();
 //    exit(0);
 
     ScreenInit();
@@ -658,7 +679,11 @@ void main()
     ControlDisplay(c1,&main);
     ControlDisplay(c2,&main2);
 */
-    DialogDisplay(dl,&main2,NULL,5,7);
+    DialogDisplay(dl,&main2,NULL,8,7);
+    SwapPage();
+    GetKey();
+    DialogNameSet(dl,"Player Two Setup");
+    DialogDisplay(dl,&main2,NULL,8,7);
     SwapPage();
     GetKey();
     ShutDown();
