@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include <stdio.h>
 #include <graph.h>
 #include <stdarg.h>
@@ -6,6 +7,7 @@
 #include "sys.h"
 #include "screen.h"
 #include "dialog.h"
+#include "mempage.h"
 
 void ControlResetDisplay(CONTROL *c,int display,int rows,int cols,int strwidth)
 // purpose : resets the display attributes of a control
@@ -109,15 +111,16 @@ void ControlPrint(CONTROL *c)
     {
         case List :
             cl=(CLIST *)c->store;
-            printf("[%d]\n",cl->current);
+            printf("[%d] ",cl->current);
             for (x=0;x<cl->elems;x++)
             {
-                printf("<%d.%s>\n",cl->elem[x].value,cl->elem[x].name);
+                printf("<%d.%s>",cl->elem[x].value,cl->elem[x].name);
             }
+            printf("\n");
         break;
         case Range :
             cr=(CRANGE *)c->store;
-            printf("[%d]\n",cr->current);
+            printf("[%d] ",cr->current);
             printf("Min <%d.%s> Max <%d.%s>\n",cr->min,cr->minname,cr->max,cr->maxname);
         break;
     }
@@ -126,14 +129,14 @@ void ControlPrint(CONTROL *c)
 int MoveTo(int min,int max,int to)
 {if ((to<min) || (to>max)) return FALSE; return TRUE;}
 
-int Move(int min,int max,int *current,int direction)
+int Move(int min,int max,int *current,int howfar)
 // purpose : if direction added to current leaves current inside min..max it
 // is moved
 // returns : TRUE if moved, else FALSE
 {
-    if (MoveTo(min,max,*current+direction))
+    if (MoveTo(min,max,*current+howfar))
     {
-        *current+=direction;
+        *current+=howfar;
         return TRUE;
     }
     return FALSE;
@@ -181,6 +184,34 @@ int ControlCurrentSet(CONTROL *c,int current)
         if (MoveTo(cr->min,cr->max,current))
         {
             cl->current=current; return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+int ControlCurrentSetTo(CONTROL *c,int value)
+// purpose : sets the controls current to the first in the control which has value
+// returns : TRUE if successful else FALSE
+{
+    CLIST *cl; CRANGE *cr;
+    int x;
+    if (c->controltype==List)
+    {
+        cl=(CLIST *)c->store;
+        for (x=0;x<cl->elems;x++)
+            if (cl->elem[x].value==value)
+            {
+                cl->current=x;
+                return TRUE;                
+            }
+        return FALSE; // not found
+    }
+    else
+    {
+        cr=(CRANGE *)c->store;
+        if (MoveTo(cr->min,cr->max,value))
+        {
+            cl->current=value; return TRUE;
         }
     }
     return FALSE;
@@ -268,7 +299,7 @@ void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars)
         _lineto(at,vp->y2);
         at+=section;
     }
-    at=edge+((width*pos)/(range-1));
+    at=vp->x1+edge+((width*pos)/(range-1));
     BorderedBox(at-edge,vp->y1+(height/4),at+edge,vp->y2-(height/4),CONTROLBACK,CONTROLHILITE);
     _setcolor(CONTROLTEXT);
     _grtext(at,vp->y1+height/2,value);
@@ -419,38 +450,215 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp)
     }            
 }
 
-/*
-DIALOG *DialogNew(char *name,int controls,...= {name,enabled,selectable,CONTROL *}
-DialogPrev(DIALOG *d)
-DialogNext(DIALOG *d)
-DialogCurrentSet(DIALOG *d,int current)
-int DialogCurrentGet(DIALOG *d)
-CONTROL *DialogControlGet(DIALOG *d,int control)
-DialogControlSet(DIALOG *d,CONTROL *c)
-DialogStateGet(DIALOG *d,...) // ...={int *}
-DialogStateSet(DIALOG *d,...) // ...={int}
-DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp)
-DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp)
 
+DIALOG *DialogNew(char *name,int controls,...)
+// purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
+//           dialogs have a default control of buttons, 'OK,Reset,Cancel'
+// returns : the dialog
+{
+    va_list ap;
+    DIALOG *ret=malloc(sizeof(DIALOG));
+    int x;
+    strcpy(ret->name,name);
+    ret->elems=controls+1;
+    ret->elem=malloc((controls+1)*sizeof(DIALOGELEM));
+    va_start(ap,controls);
+    for (x=0;x<controls;x++)
+    {
+        strcpy(ret->elem[x].name,va_arg(ap,char *));
+        ret->elem[x].enabled=va_arg(ap,int);
+        ret->elem[x].selectable=va_arg(ap,int);
+        ret->elem[x].store=va_arg(ap,CONTROL *);
+    }
+    va_end(ap);
+    ret->elem[controls].name[0]='\0'; // no name
+    ret->elem[controls].enabled=TRUE;
+    ret->elem[controls].selectable=TRUE;
+    ret->elem[controls].store=ControlNew(List,Button,1,3,6,3,0,NewString("OK"),
+                                                             1,NewString("Reset"),
+                                                             2,NewString("Cancel"));
+    ret->current=controls; // only one which is definately selectable;
+    return ret;
+}
+
+int DialogMove(DIALOG *d,int howfar)
+{
+    
+    int was=d->current;                       // save current
+    if (MoveTo(0,d->elems-1,d->current+howfar)) // in range
+    {
+        d->current+=howfar;
+    }
+    else
+    {
+        if ((d->elem[d->current].selectable) && (d->elem[d->current].enabled))
+            return TRUE;
+        else
+            d->current=was;
+    }
+    return FALSE;
+}
+
+int DialogPrev(DIALOG *d) {return DialogMove(d,-1);}
+// purpose : moves current to the prev in the dialog
+// returns : TRUE if successful, else FALSE
+
+int DialogNext(DIALOG *d) {return DialogMove(d,1);}
+// purpose : moves current to the next in the dialog
+// returns : TRUE if successful, else FALSE
+
+int DialogCurrentSet(DIALOG *d,int current)
+// purpose : sets the dialog current to current
+// returns : TRUE if successful, else FALSE
+{
+    if (MoveTo(0,d->elems-1,current)) // in range
+    {
+        if ((d->elem[current].selectable) && (d->elem[current].enabled))
+            d->current=current; return TRUE;
+    }
+    return FALSE;
+}
+
+int DialogCurrentGet(DIALOG *d) {return d->current;}
+// purpose : to get the current
+// returns : the current
+
+CONTROL *DialogControlGet(DIALOG *d,int control)
 // purpose :
 // returns :
-*/
+{
+    return d->elem[control].store;
+}
+
+int DialogStateGet(DIALOG *d,...) 
+// purpose : gets the current of each control in the dialog, ...={int *}*d->elems
+// returns : TRUE if all gotten successfully, else FALSE
+{
+    va_list ap;
+    int x,*ip;
+
+    va_start(ap,d);
+    for (x=0;x<d->elems;x++)
+    {
+        ip=va_arg(ap,int *);
+        *ip=ControlCurrentGet(d->elem[x].store);
+    }
+    va_end(ap);
+    return TRUE;
+}
+
+int DialogStateSet(DIALOG *d,...) // ...={int}
+// purpose : sets the current of each control in the dialog, ...{int}*d->elems
+// returns : TRUE if all successfully set, else FALSE
+{
+    va_list ap;
+    int x,ok=TRUE;
+
+    va_start(ap,d);
+    for (x=0;x<d->elems;x++)
+    {
+        if (ControlCurrentSet(d->elem[x].store,va_arg(ap,int))==FALSE)
+            ok=FALSE;
+    }
+    va_end(ap);
+    return ok;
+}
+
+void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
+// purpose : displays the dialog in the viewport with the mempage background
+//           1/namefract is the name of each control, where up to chars characters are displayed
+// returns : void
+{
+    int x,totalrows=2; // dialog name is two high
+    int height=vp->y2-vp->y1+1,width=vp->x2-vp->x1+1;
+    int rowheight,names=width/namefract;
+    int aty=vp->y1,atx=vp->x1+names;
+    VIEWPORT control;
+
+    for (x=0;x<d->elems;x++) totalrows+=d->elem[x].store->rows;
+    rowheight=height/totalrows;
+    
+    _setcolor(CONTROLBACK);               // the back of the dialog
+    _rectangle(_GFILLINTERIOR,vp->x1,vp->y1,vp->x2,vp->y2);
+    _setcharsize(rowheight,width/30);
+    _settextalign(_CENTER,_HALF);         // the name of the dialog
+    _setcolor(CONTROLTEXT);
+    _grtext(vp->x1+(width/2),vp->y1+rowheight,d->name);
+
+    _setcharsize(rowheight/2,names/chars);
+    _settextalign(_LEFT,_TOP);
+    aty+=rowheight*2;
+    for (x=0;x<d->elems;x++) // control names
+    {
+        _grtext(vp->x1,aty,d->elem[x].name);
+        aty+=rowheight+d->elem[x].store->rows;
+    }
+
+    control.x2=vp->x2;
+    aty=rowheight*3;
+    for (x=0;x<d->elems;x++)
+    {
+        control.y1=aty;
+        control.y2=aty+(d->elem[x].store->rows*rowheight);
+        if (x==d->current)
+        {
+            _setcolor(CONTROLHILITE);
+            _setlinestyle(0xff00);
+            _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
+            _setlinestyle(0xffff);
+        }
+        if (d->elem[x].name[0]=='/0') control.x1=vp->x1;
+        else                          control.x1=vp->x1+names;
+        ControlDisplay(d->elem[x].store,&control);
+        aty+=(d->elem[x].store->rows)*rowheight;
+    }
+}
+
+void DialogPrint(DIALOG *dl)
+{
+    int x;
+    printf("%s   [%d]\n",dl->name,dl->current);
+    for (x=0;x<dl->elems;x++)
+    {
+        printf("%s [%s] [%s]\n",dl->elem[x].name,(dl->elem[x].enabled)?"Enabled":"Disabled",(dl->elem[x].selectable)?"Selectable":"UnSelectable");
+        ControlPrint(dl->elem[x].store);
+    }
+}
+
+void DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp)
+// purpose : runs a dialog, as is.
+// returns :
+{
+
+}
+
 void main()
 {
     char *a=NewString("Hellor");
     CONTROL *c1,*c2;
+    DIALOG *dl;
     VIEWPORT main={0,0,400,50};
-    VIEWPORT main2={0,60,400,110};
+    VIEWPORT main2={50,50,400,310};
 
-    c1=ControlNew(Range,Slider,2,3,10,3,a,7,a);
-    c2=ControlNew(List,Color,1,3,10,3,1,a,2,a,3,a);
+    dl=DialogNew("Testy Setup",2,
+        "Range",TRUE,TRUE,ControlNew(Range,Slider,2,3,10,3,a,7,a),
+        "List",TRUE,TRUE,ControlNew(List,Color,1,3,10,3,1,a,2,a,3,a));
+
+//    DialogPrint(dl);
+//    GetKey();
+//    ShutDown();
+//    exit(0);
+
     ScreenInit();
+/*
     _setcharsize(10,5);
     _setcolor(CONTROLBACK);
     _rectangle(_GFILLINTERIOR,0,0,400,110);
     _setcolor(CONTROLTEXT);
     ControlDisplay(c1,&main);
     ControlDisplay(c2,&main2);
+*/
+    DialogDisplay(dl,&main2,NULL,5,7);
     SwapPage();
     GetKey();
     ShutDown();
