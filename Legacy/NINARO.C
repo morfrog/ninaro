@@ -32,7 +32,6 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 #include <conio.h>
 #include <graph.h>
 #include <i86.h>
-#include "sys.h"
 #include "mouse.h"
 #include "mousein.h"
 #include "binfile.h"
@@ -650,6 +649,7 @@ void DemoMode(int type)
     else
     {
         SetP1_2(0,1);
+        TextBoxFixedAddLine(msgbox,"~Human vs Human");
     }
     NewGame();
     ResetScores();
@@ -1240,10 +1240,12 @@ int ExtraFunctionality(int key)
         case F7 : DemoMode(Human); break;
         case F8 : ToggleSound(); ViewSysWindowChanged(vs,4,TRUE);
             ViewSysDisplay(vs,DisplayChanged); SwapPage(); break;
-        case F9 : if (remove("NINARO.CFG")==0)
-                       TextBoxFixedAddLine(msgbox,"Config Removed...");
-                   else
-                       TextBoxFixedAddLine(msgbox,"Config Already Removed...");
+        case F9 : mouseconfig=FALSE;
+                  TextBoxFixedAddLine(msgbox,"Mouse Config Reset...");
+                  ViewSysWindowChanged(vs,3,TRUE);
+                  ViewSysDisplay(vs,DisplayChanged); SwapPage(); break;
+        case CF9 : remove("NINARO.CFG");
+                   TextBoxFixedAddLine(msgbox,"Config Removed...");
                    savecfg=FALSE;
                    ViewSysWindowChanged(vs,3,TRUE);
                    ViewSysDisplay(vs,DisplayChanged); SwapPage(); break;

@@ -13,7 +13,6 @@ Updated        : 1 May 1998         MODIFIED so that MenuCall has help func
 #include <graph.h>
 #include <conio.h>
 #include "defines.h"
-#include "sound.h"
 #include "mouse.h"
 #include "mousein.h"
 #include "screen.h"

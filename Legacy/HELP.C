@@ -7,7 +7,6 @@ Updated        : 24 April 1998  CREATED PageUp,PageDown,End,Home
 ****************************************************************/
 #include <stdlib.h>
 #include <graph.h>
-#include "sys.h"
 #include "screen.h"
 #include "binfile.h"
 #include "mempage.h"

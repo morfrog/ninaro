@@ -9,9 +9,9 @@ Updated        : 24 April 1998      CREATED Save and Load Functions
 ****************************************************************/
 #include <stdlib.h>
 #include "defines.h"
-#include "sys.h"
 #include "screen.h"
 #include "binfile.h"
+#include "player.h"
 #include "grid.h"
 
 void GridEmpty(GRID *grid)
