@@ -6,7 +6,7 @@ enum {NMB=0,LMB,RMB};
 // #define YADJUST 9371648
 // #define XADJUST 37683200
 
-void InitMouse(void);
+int InitMouse(void);
 int GetMouseInput(int *x,int *y);
 // purpose : to get mouse input, *button==LMB or RMB
 // returns : RMB if right button input found, LMB if left, NMB if none

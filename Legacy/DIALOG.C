@@ -626,16 +626,19 @@ int DialogMove(DIALOG *d,int howfar)
 {
     
     int was=d->current;                       // save current
+    if (howfar==0) return FALSE;
     if (MoveTo(0,d->elems-1,d->current+howfar)) // in range
     {
         d->current+=howfar;
         if ((d->elem[d->current].selectable) && (d->elem[d->current].enabled))
             return TRUE;
+        else
+        {
+            d->current=was;
+            return DialogMove(d,howfar>0?howfar+1:howfar-1);
+        }
     }
-    else
-    {
-        d->current=was;
-    }
+    d->current=was;
     return FALSE;
 }
 
@@ -746,6 +749,13 @@ int DialogStateSet(DIALOG *d,int *buffer)
     return ok;
 }
 
+void DialogControlEnable(DIALOG *d,int control,int enable)
+// purpose : to set the enabled state of a control in the dialog
+// returns : void
+{
+    d->elem[control].enabled=enable;
+}
+
 void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 // purpose : displays the dialog in the viewport with the mempage background
 //           1/namefract is the name of each control, where up to chars characters are displayed
@@ -757,7 +767,8 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
     int aty,atx=vp->x1+names;
     VIEWPORT control;
 
-    for (x=0;x<d->elems;x++) totalrows+=d->elem[x].store->rows;
+    for (x=0;x<d->elems;x++)
+        totalrows+=(d->elem[x].enabled?d->elem[x].store->rows:0);
     rowheight=height/totalrows;
     
     MemPagePut(mp);
@@ -774,8 +785,11 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
     aty=vp->y1+(rowheight);
     for (x=0;x<d->elems;x++) // control names
     {
-        _grtext(vp->x1+2,aty+2,d->elem[x].name);
-        aty+=(d->elem[x].store->rows*rowheight);
+        if (d->elem[x].enabled)
+        {
+            _grtext(vp->x1+2,aty+2,d->elem[x].name);
+            aty+=(d->elem[x].store->rows*rowheight);
+        }
     }
 
     control.x1=vp->x1+1;
@@ -783,27 +797,30 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
     aty=vp->y1+(rowheight);
     for (x=0;x<d->elems;x++)
     {
-        control.y1=aty+1;
-        control.y2=aty+(d->elem[x].store->rows*rowheight)-1;
-        if (x==d->current)
+        if (d->elem[x].enabled)
         {
-            _setcolor(*(d->hilite));
-            _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
-            _rectangle(_GBORDER,vp->x1+1,control.y1-1,vp->x2-1,control.y2+1);                        
+            control.y1=aty+1;
+            control.y2=aty+(d->elem[x].store->rows*rowheight)-1;
+            if (x==d->current)
+            {
+                _setcolor(*(d->hilite));
+                _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
+                _rectangle(_GBORDER,vp->x1+1,control.y1-1,vp->x2-1,control.y2+1);                        
+            }
+            else
+            {
+                _setlinestyle(0x1111);      // 7 in 8 dots remove 
+                _setcolor(CONTROLTEXT);
+                _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
+                _setlinestyle(0xffff);            
+            }
+            if (d->elem[x].name[0]=='\0') control.x1=vp->x1;
+            else                          control.x1=vp->x1+names;
+            control.y1+=1;
+            control.y2-=1;
+            ControlDisplay(d->elem[x].store,&control,*(d->hilite));
+            aty+=(d->elem[x].store->rows)*rowheight;
         }
-        else
-        {
-            _setlinestyle(0x1111);      // 7 in 8 dots remove 
-            _setcolor(CONTROLTEXT);
-            _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
-            _setlinestyle(0xffff);            
-        }
-        if (d->elem[x].name[0]=='\0') control.x1=vp->x1;
-        else                          control.x1=vp->x1+names;
-        control.y1+=1;
-        control.y2-=1;
-        ControlDisplay(d->elem[x].store,&control,*(d->hilite));
-        aty+=(d->elem[x].store->rows)*rowheight;
     }
 }
 
@@ -885,6 +902,16 @@ void DialogCurrentItemSet(DIALOG *d,int item)
     {
         ControlCurrentSet(c,item);
     }
+}
+
+int DialogSelectables(DIALOG *d)
+// purpose : to find out how many controls in the dialog are selectable
+// returns : the number
+{
+    int ret=0,x;
+    for (x=0;x<d->elems;x++)
+        if (d->elem[x].selectable) ++ret;
+    return ret;
 }
 
 int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (* help)(void),int usemouse)

@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <conio.h>
 #include <graph.h>
 #include "mouse.h"
 #include "screen.h"
@@ -56,6 +57,7 @@ int GetMouseInput(int *x,int *y)
     {
         MouseStat(&gmims);
         *x=gmims.xpos-xadjust;
+// DANGEROUS        if (*x<0) {xadjusy-=*x; *x
         *y=gmims.ypos-yadjust;
         return NMB;            
     }
@@ -124,20 +126,23 @@ int GetMouseInput(int *x,int *y)
 }
 */
 
-void InitMouse(void)
+int InitMouse(void)
+// returns : TRUE if use mouse, else FALSE
 {
-    int x,y,thisx,thisy;
+    int x,y,ret=TRUE;  // mouse successfully initialised is default
     char bfg[80];
     xadjust=0;
     yadjust=0;
-    ResetMouse();
+    if (!ResetMouse()) return FALSE;
     ShowMouse();
     while (LMB!=GetMouseInput(&x,&y))
     {
+        if (kbhit()) {getch(); ret=FALSE; break;}
         _clearscreen(_GCLEARSCREEN);
         _grtext(30,200,"Move the mouse to the top left");
         _grtext(30,240,"corner of the screen and press");
         _grtext(30,280,"the left mouse button.");
+        _grtext(30,320,"Or any key to use no mouse.");
         sprintf(bfg,"%10d,%10d",x,y);
         _grtext(30,100,bfg);
         SwapPage();
@@ -147,4 +152,5 @@ void InitMouse(void)
     _clearscreen(_GCLEARSCREEN);
     SwapPage();
     HideMouse();
+    return ret;
 }

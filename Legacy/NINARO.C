@@ -100,6 +100,7 @@ int ai_speed;
 int ai_delay; // milliseconds
 int hilite,back,text;
 int mouseusage;
+int mouseinstalled;
 
 int BothPlayerAI(void)
 {
@@ -793,7 +794,7 @@ void GameOptions(void)
         ControlCurrentSet(c1,1);
     }
     ControlCurrentSetTo(c2,hilite);
-    ControlCurrentSetTo(c3,mouseusage);
+    if (mouseinstalled) ControlCurrentSetTo(c3,mouseusage);
     DialogCall(gameoptionsdialog,&vp,vs->current,5,11,HelpGameOptions,mouseusage==2);
     if (ControlCurrentGet(c1)==0)
     {
@@ -806,7 +807,10 @@ void GameOptions(void)
         _remappalette(BLACK,_BRIGHTWHITE); _remappalette(WHITE,_BLACK);
     }
     ControlValueGet(c2,ControlCurrentGet(c2),&hilite);
-    ControlValueGet(c3,ControlCurrentGet(c3),&mouseusage);
+    if (mouseinstalled)
+    {
+        ControlValueGet(c3,ControlCurrentGet(c3),&mouseusage);
+    }
 }
 
 int PlayerDialog(int pnum)
@@ -1400,13 +1404,15 @@ void ProgInit() // initialises global variables
         "Connect",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
 
-    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",&hilite,3,
+    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",&hilite,4,
         "Background",TRUE,TRUE,ControlNew(List,Color,1,2,15,2,
                         BLACK,"",WHITE,""),
         "Hilite",TRUE,TRUE,ControlNew(List,Color,1,5,11,5,
                         RED,"",GREEN,"",BLUE,"",YELLOW,"",ORANGE,""),
         "Mouse Use",TRUE,TRUE,ControlNew(List,Radio,1,3,8,3,
-                        0,"None",1,"Partial",2,"Full"));
+                        0,"None",1,"Partial",2,"Full"),
+        "Mouse Use",FALSE,FALSE,ControlNew(List,Name,1,1,20,1,
+                        0,"Mouse Not Installed"));
 
     optionsdialog=DialogNew(pkeys,NULL,"Player Options",&hilite,3,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
@@ -1489,7 +1495,7 @@ void ProgInit() // initialises global variables
         bestof=0;   // infinity
         ai_speed=2; // normal
         ai_delay=500; // half a second
-        mouseusage=1; // partial
+        mouseusage=0; // none
     }
     win->win=malloc(win->tokens*sizeof(TOKEN));
     win_occured=FALSE;
@@ -1514,9 +1520,10 @@ void main()
 {
     PLAYER *pl;
     int waitesc,col,ccols,crows,csize,mb,mx,my;
+    CONTROL *mousebad;
 
     ScreenInit();
-    InitMouse();
+    mouseinstalled=InitMouse();
     _setcolor(RED);
     _setcharsize_w(0.02,0.02);
     _setcharspacing_w(-(0.01));
@@ -1542,6 +1549,12 @@ void main()
         _remappalette(BLACK,_BRIGHTWHITE); _remappalette(WHITE,_BLACK);
     }
     GetMouseInput(&mx,&my); // first call inititalises
+    if (!mouseinstalled)
+    {
+        mouseusage=0; // NONE
+        DialogControlEnable(gameoptionsdialog,2,FALSE);
+        DialogControlEnable(gameoptionsdialog,3,TRUE);
+    }
     for (;;)
     {
         while (ingame)

@@ -132,6 +132,9 @@ void ControlDisplay(CONTROL *c,VIEWPORT *vp,int hilite);
 // returns : void
 
 /*---------------------------DIALOG-----------------------------------*/
+int DialogSelectables(DIALOG *d);
+// purpose : to find out how many controls in the dialog are selectable
+// returns : the number
 DIALOG *DialogNew(KEYGROUP *kg,void (* change)(DIALOG *,int),char *name,int *hilite,int controls,...);
 // purpose : creates a new dialog, ...= {name,enabled,selectable,CONTROL *}
 //           dialogs have a default control of buttons, 'OK,Reset,Cancel'
@@ -188,6 +191,9 @@ int DialogStateGet(DIALOG *d,int *buffer);
 int DialogStateSet(DIALOG *d,int *buffer);
 // purpose : sets the current of each control in the dialog, ...{int}*d->elems
 // returns : TRUE if all successfully set, else FALSE
+void DialogControlEnable(DIALOG *d,int control,int enable);
+// purpose : to set the enabled state of a control in the dialog
+// returns : void
 void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars);
 // purpose : displays the dialog in the viewport with the mempage background
 //           1/namefract is the name of each control, where up to chars characters are displayed
