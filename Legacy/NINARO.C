@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : NINARO
+Module Purpose : the main module for the ninaro project
+Creation Date  : 7 March 1998
+Updated        : 2 May 1998     CREATED AI's and modified main to fit
+****************************************************************/
 //  todo :
 //  DONE  grid save and load
 //  DONE  title screen
@@ -102,7 +109,6 @@ void SetP2(int player)
 
 void SetP1Current()
 {
-    int type;
     player_current=player_one;
     MenuItemEnable(mainmenu,2,0,TRUE);
     MenuItemEnable(mainmenu,2,1,FALSE);
@@ -111,7 +117,6 @@ void SetP1Current()
 
 void SetP2Current()
 {
-    int type;
     player_current=player_two;
     MenuItemEnable(mainmenu,2,1,TRUE);
     MenuItemEnable(mainmenu,2,0,FALSE);
@@ -598,6 +603,26 @@ void LoadGame(void)
         win_occured=FALSE; 
         ResetTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
         GameStatus();
+        if (ingame)
+        {
+            if (player_current==player_one)
+            {
+                MenuItemEnable(mainmenu,2,0,TRUE); // player one
+                MenuItemEnable(mainmenu,2,1,FALSE); // player two
+                MenuSubCurrentSet(mainmenu,2,0);
+            }
+            else
+            {
+                MenuItemEnable(mainmenu,2,0,FALSE); // player one
+                MenuItemEnable(mainmenu,2,1,TRUE); // player two
+                MenuSubCurrentSet(mainmenu,2,1);
+            }
+        }
+        else
+        {
+            MenuItemEnable(mainmenu,2,0,TRUE); // player one
+            MenuItemEnable(mainmenu,2,1,TRUE); // player two
+        }
     }
 }
 
@@ -710,15 +735,8 @@ int RandomMoveFromList(int size,int *list)
     int move,found;
     for (x=1;x<size;x++)
     {
-        if (list[x]>max)
-        {
-            max=list[x]; howmany=1; first=x;
-        }
-        else if (list[x]==max)
-        {
-            ++howmany;
-        }
-        // else ignore
+        if (list[x]>max) {max=list[x]; howmany=1; first=x;}
+        else if (list[x]==max) {++howmany;} // else ignore
     }
     move=Random(howmany);
 
@@ -737,8 +755,9 @@ int RandomMoveFromList(int size,int *list)
 int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
 // level is how many rules to invoke
 {
+    char tmp[40];
     int cols=GridCols(grid),rows=GridRows(grid);
-    int x,*col=malloc(sizeof(int)*cols);
+    int *col=malloc(sizeof(int)*cols),x;
     int atlevel,canuse=FALSE,ret;
     int triggered=FALSE;
     
@@ -795,10 +814,27 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
                     }
                 }
             break;
-            case 4 : break;
+            case 4 :
+                for (x=0;x<cols;x++)
+                {
+                    if (col[x])
+                    {
+                        if (rows-GridInCol(playgrid,x)>1) // rule applicable
+                        {
+                            if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x)-1,win,otherplayer))
+                            {
+                                col[x]-=90;
+                            }
+                        }
+                    }
+                }
+            break;
         }
     }
     ret=RandomMoveFromList(cols,col);
+    sprintf(tmp,"%d %d %d %d %d %d %d",col[0],col[1],col[2],col[3],col[4],col[5],col[6]);
+    TextBoxFixedAddLine(msgbox,tmp);
+    ViewSysWindowChanged(vs,3,TRUE);    
     free(col);
     return ret;
 }
@@ -1135,7 +1171,7 @@ void ProgFree() // frees global variables
 void main()
 {
     PLAYER *pl;
-    int col,dist,del,kd,gotmove;
+    int col,dist,del,gotmove;
 
     ScreenInit();
     _setcolor(RED);

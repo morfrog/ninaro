@@ -1,3 +1,11 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : CONNECT4
+Module Purpose : To provide functions for the game connect 4
+Creation Date  : 23 March 1998
+Updated        : 4 May 1998         RemoveTokenTarget   CREATED
+                 5 May 1998         WinPotential        CREATED 
+****************************************************************/
 #ifndef CONNECT4_H
 #define CONNECT4_H
 #include "grid.h"
@@ -27,7 +35,8 @@ int InsertTokenTarget(GRID *grid,int col);
 int RemoveTokenTarget(GRID *grid,int col);
 PLAYER *RemoveToken(GRID *grid,int col);
 // returns PLAYER * if token was successfully removed, else NULL
-int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win,PLAYER *player);
+int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,
+        WIN *win,PLAYER *player,int (* compare)(PLAYER *,PLAYER *));
 int CheckForWin(GRID *grid,int size,int col,int row,WIN *win,PLAYER *player);
 // checks for win which includes the player token 
 // if there isn't one 0 is returned else

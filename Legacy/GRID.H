@@ -1,3 +1,12 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : GRID
+Module Purpose : To provide a grid of players
+Creation Date  : 19 February 1998
+Updated        : 24 April 1998      CREATED Save and Load Functions
+                 5 May 1998         NumInDirection added func paramater
+                                    -> FuncNumInDirection
+****************************************************************/
 #ifndef GRID_H
 #define GRID_H
 
@@ -68,11 +77,17 @@ int TokensInGrid(GRID *grid);
 int MaxTokensInGrid(GRID *grid);
 // purpose : to get how many tokens the grid can contain
 // returns : the number
-int NumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
-                    PLAYER *player);
-// purpose : to find how many player tokens lie in direction(col_mod,row_mod)
-//           starting at row,col in grid, modifies current position by
-//           col_mod and row_mod till token of same type not found then
+int FuncEqual(PLAYER *p1,PLAYER *p2);
+// returns : p1==p2
+int FuncNotEqual(PLAYER *p1,PLAYER *p2);
+// returns : p1!=p2
+int FuncNumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
+                    PLAYER *player,int (* compare)(PLAYER *,PLAYER *));
+// purpose : to find how many compare func player tokens lie in direction
+//           (col_mod,row_mod) starting at row,col in grid, modifies current
+//           position by col_mod and row_mod till compare function returns
+//           not FALSE. compare function parameters are {player at grid pos},
+//           player. Does not include the token at col,row.
 // returns : the number of such tokens found 
 void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap);
 // purpose : moves all tokens in the grid across col_dir and down row_dir

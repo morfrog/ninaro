@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : SCREEN
+Module Purpose : to implement screen functions
+Creation Date  : 29 February 1998
+Updated        : 30 March 1998          ADDED BorderedBox
+****************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include <graph.h>

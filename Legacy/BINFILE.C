@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : BINFILE
+Module Purpose : creation and use of binary files, allows data encoding
+Creation Date  : 5 April 1998
+Updated        : 1 May 1998         BinFileGetTill      CREATED
+****************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include "binfile.h"

@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : MENU
+Module Purpose : to provide menus
+Creation Date  : 15 April 1998
+Updated        : 1 May 1998         MODIFIED so that MenuCall has help func
+****************************************************************/
 // ESC brings up the menu, could also use Ctrl-menuletter if no conflicts
 // if a menu item's name is NULL then that menuitem is a separator
 #include <stdlib.h>

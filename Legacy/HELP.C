@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : HELP
+Module Purpose : to provide help facilities
+Creation Date  : 23 April 1998
+Updated        : 24 April 1998  CREATED PageUp,PageDown,End,Home
+****************************************************************/
 #include <stdlib.h>
 #include <graph.h>
 #include "sys.h"

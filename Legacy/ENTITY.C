@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : ENTITY
+Module Purpose : to design AI players
+Creation Date  : 26 April 1998
+Updated        : None
+****************************************************************/
 #include "connectn.h"
 #include "grid.h"
 

@@ -1,3 +1,11 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : CONNECT4
+Module Purpose : To provide functions for the game connect 4
+Creation Date  : 23 March 1998
+Updated        : 4 May 1998         RemoveTokenTarget   CREATED
+                 5 May 1998         WinPotential        CREATED 
+****************************************************************/
 #include <stdlib.h>
 #include "sys.h"
 #include "grid.h"
@@ -11,11 +19,13 @@ int Continuance(GRID *grid,int size)
 // returns TRUE if a continuance was made else FALSE if not.
 {
     int x;
-    int minimum=grid->numincol[0];
+    int minimum=GridInCol(grid,0);
     int shift;
+    int incol;
     for (x=1;x<grid->width;x++)
     {
-        if (grid->numincol[x]<minimum) minimum=grid->numincol[x];
+        incol=GridInCol(grid,x);
+        if (incol<minimum) minimum=incol;
     }
     if (minimum<=size-1) return FALSE;
     shift=minimum-size+1;
@@ -26,12 +36,12 @@ int Continuance(GRID *grid,int size)
 int InsertTokenTarget(GRID *grid,int col)
 // returns which row the token will fall to.
 {
-    return (grid->height)-(grid->numincol[col])-1;
+    return (GridRows(grid))-(GridInCol(grid,col))-1;
 }
 
 int RemoveTokenTarget(GRID *grid,int col)
 {
-    return (grid->height)-(grid->numincol[col]);
+    return (GridRows(grid))-(GridInCol(grid,col));
 }
 
 int InsertToken(GRID *grid,int col,PLAYER *player)
@@ -46,12 +56,13 @@ PLAYER *RemoveToken(GRID *grid,int col)
     return RemoveTokenAtCR(grid,col,RemoveTokenTarget(grid,col));
 }
 
-int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win,PLAYER *player)
+int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,
+        WIN *win,PLAYER *player,int (* compare)(PLAYER *,PLAYER *))
 {
     int left,right,start_col,start_row,x;
-    left=NumInDirection(grid,col,row,col_dir,row_dir,player);
+    left=FuncNumInDirection(grid,col,row,col_dir,row_dir,player,compare);
     if (left>=size) left=size-1;    // ensures token is a part of the win
-    right=NumInDirection(grid,col,row,-col_dir,-row_dir,player);
+    right=FuncNumInDirection(grid,col,row,-col_dir,-row_dir,player,compare);
     if (right>=size) right=size-1;  // ensures token is a part of the win
 
     if ((left+right+1)>=size)                   // A win has been found
@@ -74,15 +85,39 @@ int CheckForWin(GRID *grid,int size,int col,int row,WIN *win,PLAYER *player)
 // if there isn't one 0 is returned else
 // 1 is returned and the tokens which are the win are in the WIN *
 {
-    // check vertical    0  -1
-    if (CheckAngle(grid,size,col,row,0,-1,win,player)) return TRUE;
-    // check horizontal -1   0
-    else if (CheckAngle(grid,size,col,row,-1,0,win,player)) return TRUE;
-    // check /          +1  -1
-    else if (CheckAngle(grid,size,col,row,1,-1,win,player)) return TRUE;
-    // check \          -1  -1
-    else if (CheckAngle(grid,size,col,row,1,1,win,player)) return TRUE;
+    if (CheckAngle(grid,size,col,row,0,-1,win,player,FuncNotEqual))
+        return TRUE; // check vertical    0  -1
+    else if (CheckAngle(grid,size,col,row,-1,0,win,player,FuncNotEqual))
+        return TRUE; // check horizontal -1   0
+    else if (CheckAngle(grid,size,col,row,1,-1,win,player,FuncNotEqual))
+        return TRUE; // check /          +1  -1
+    else if (CheckAngle(grid,size,col,row,1,1,win,player,FuncNotEqual))
+        return TRUE; // check \          -1  -1
     else return FALSE;
+}
+
+int WinPotential(GRID *grid,int size,int col,int row,PLAYER *player)
+// purpose : checks for how much potential for wins are around token at
+//           (col,row) and
+// returns : a number which is a measure of this. the measure is in the
+//           range {0..((size*2)*4)}
+{
+    int col_dir,row_dir;
+    int left=FuncNumInDirection(grid,col,row,col_dir,row_dir,player,FuncEqual),
+        right=FuncNumInDirection(grid,col,row,-col_dir,-row_dir,player,FuncEqual);
+/*    
+
+
+    int ret=(CheckAngle(grid,size,col,row,0,-1,win,player,FuncNotEqual))
+        return TRUE; // check vertical    0  -1
+    else if (CheckAngle(grid,size,col,row,-1,0,win,player,FuncNotEqual))
+        return TRUE; // check horizontal -1   0
+    else if (CheckAngle(grid,size,col,row,1,-1,win,player,FuncNotEqual))
+        return TRUE; // check /          +1  -1
+    else if (CheckAngle(grid,size,col,row,1,1,win,player,FuncNotEqual))
+        return TRUE; // check \          -1  -1
+    else return FALSE;
+*/
 }
 
 int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win)

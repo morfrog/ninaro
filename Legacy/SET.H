@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : SET
+Module Purpose : to provide a set ADT
+Creation Date  : 3 April 1998
+Updated        : None
+****************************************************************/
 /* Sets ADT */
 
 #ifndef SET_H

@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : SYS
+Module Purpose : to provide system functions
+Creation Date  : 27 February 1998
+Updated        : 14 April 1998      ADDED IntToByteString,ByteStringToInt
+****************************************************************/
 #ifndef SYS_H
 #define SYS_H
 #include <stdlib.h>

@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : COLOR
+Module Purpose : to test colors
+Creation Date  : 7 April 1998
+Updated        : None
+****************************************************************/
 #include <graph.h>
 #include "sys.h"
 #include "screen.h"

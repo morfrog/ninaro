@@ -1,3 +1,11 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : GENNAME
+Module Purpose : to generate the save file for the ninaro title screen
+Creation Date  : 23 April 1998
+Updated        : 3 May 1998         update sizes for visiblility reasons
+****************************************************************/
+
 #include <stdlib.h>
 
 #include "binfile.h"

@@ -1,3 +1,11 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : VIEWSYS
+Module Purpose : to provide a fully scalable view system, made of windows
+                 which have VIEWPORT and display function
+Creation Date  : 27 February 1998
+Updated        : 2 May 1998         ADDED ViewSysMouse
+****************************************************************/
 // made for the one top-size window, can't change it, new windows oords
 // are calculated at creation time only
 // window->active : only active windows receive display signals

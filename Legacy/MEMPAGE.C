@@ -1,3 +1,11 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : MEMPAGE
+Module Purpose : to provide a memory page mechanism, so that screens can
+                 be saved and loaded.
+Creation Date  : 17 March 1998
+Updated        : None
+****************************************************************/
 #include <stdlib.h>
 #include <graph.h>
 #include "screen.h"

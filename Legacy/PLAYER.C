@@ -1,3 +1,11 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : PLAYER
+Module Purpose : to provide a player object
+Creation Date  : 2 March 1998
+Updated        : 12 April 1998  CREATED PlayerGroup's
+                 2 MAY 1998     ADDED getmove func to player
+****************************************************************/
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>

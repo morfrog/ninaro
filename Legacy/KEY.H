@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : KEY
+Module Purpose : to provide key input and use, including extended keys
+Creation Date  : 15 April 1998
+Updated        : 20 April 1998      CREATED KeyGroup and KeySys 
+****************************************************************/
 #ifndef KEY_H
 #define KEY_H
 #include "set.h"

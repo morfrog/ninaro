@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : TXTBOX
+Module Purpose : to provide text boxes
+Creation Date  : 14 April 1998
+Updated        : 1 May 1998         ADDED TxtBoxFixedAddLine
+****************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include <graph.h>

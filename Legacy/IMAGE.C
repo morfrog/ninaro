@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : IMAGE
+Module Purpose : to explore imaging features of C
+Creation Date  : 
+Updated        : 
+****************************************************************/
 #include <stdlib.h>
 #include <graph.h>
 #include <conio.h>

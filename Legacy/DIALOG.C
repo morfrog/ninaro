@@ -1,3 +1,11 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : DIALOG
+Module Purpose : To provide dialogs for data entry and modifcation
+Creation Date  : 14 April 1998
+Updated        : 27 April 1998      DialogCall made more general
+                 2 May 1998         Changed width of control border
+****************************************************************/
 #include <stdlib.h>
 #include <conio.h>
 #include <stdio.h>

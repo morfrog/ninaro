@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : MENU
+Module Purpose : to provide menus
+Creation Date  : 15 April 1998
+Updated        : 1 May 1998         MODIFIED so that MenuCall has help func
+****************************************************************/
 #ifndef MENU_H
 #define MENU_H
 #include "sys.h"

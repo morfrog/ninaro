@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : REJECTS
+Module Purpose : to store sections of code which have been rejected
+Creation Date  : 18 March 1998
+Updated        : None
+****************************************************************/
 -----------MOUSE-------------------------------------------
 
 MAPPING **map;      // map of the windows in the viewsystem

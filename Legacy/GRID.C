@@ -1,3 +1,12 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : GRID
+Module Purpose : To provide a grid of players
+Creation Date  : 19 February 1998
+Updated        : 24 April 1998      CREATED Save and Load Functions
+                 5 May 1998         NumInDirection added func paramater
+                                    -> FuncNumInDirection
+****************************************************************/
 #include <stdlib.h>
 #include "defines.h"
 #include "sys.h"
@@ -190,18 +199,22 @@ int MaxTokensInGrid(GRID *grid)
     return (grid->width*grid->height);
 }
 
-int NumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
-                    PLAYER *player)
-// purpose : to find how many player tokens lie in direction(col_mod,row_mod)
-//           starting at row,col in grid, modifies current position by
-//           col_mod and row_mod till token of same type not found then
+int FuncEqual(PLAYER *p1,PLAYER *p2) {return p1==p2;}
+int FuncNotEqual(PLAYER *p1,PLAYER *p2) {return p1!=p2;}
+
+int FuncNumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
+                    PLAYER *player,int (* compare)(PLAYER *,PLAYER *))
+// purpose : to find how many compare func player tokens lie in direction
+//           (col_mod,row_mod) starting at row,col in grid, modifies current
+//           position by col_mod and row_mod till compare function returns
+//           not FALSE. compare function parameters are {player at grid pos},
+//           player. Does not include the token at col,row.
 // returns : the number of such tokens found 
 {
     int cur_col=col;
     int cur_row=row;
     int number=0;
 
-//    if (col_mod==row_mod==0) return 0;
     for (;;)
     {
         cur_col+=col_mod;
@@ -209,9 +222,9 @@ int NumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,
         if ((cur_col>grid->width-1) || (cur_col<0) ||
             (cur_row>grid->height-1) || (cur_row<0)) // then out of range
             return number;
-        else if (grid->grid[cur_col][cur_row]!=player) // then another player found
+        else if (compare(grid->grid[cur_col][cur_row],player)) // then end function
             return number;
-        else // in range and same player
+        else // in range compare FALSE
             ++number;        
     }
 }

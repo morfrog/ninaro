@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : CONTROLS
+Module Purpose : To provide dialog controls
+Creation Date  : 20 March 1998
+Updated        : 14 April 1998      MADE OBSOLETE BY Module DIALOG 
+****************************************************************/
 #ifndef CONTROLS_H
 #define CONTROLS_H
 #include "sys.h"

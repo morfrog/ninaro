@@ -1,3 +1,10 @@
+/****************************************************************
+Copyright 1998 the author
+Module Name    : MEMMAIN
+Module Purpose : to test the module MEMPAGE
+Creation Date  : 17 March 1998
+Updated        : None
+****************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
