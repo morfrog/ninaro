@@ -8,6 +8,7 @@ struct playerTag
     char name[20];
     int color;  // 0..15
     int type;   // {Computer,Human}
+    int pid;    // internal player id, used by playergroup
 };
 typedef struct playerTag PLAYER;
 

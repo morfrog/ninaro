@@ -17,48 +17,57 @@ HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int textcol,in
     char buffer[80]; // can read up to 80 characters
     int left,got,x;
     HELP *help=malloc(sizeof(HELP));
-    BINFILE *bf=BinFileReadFull(filename,0);
-#ifdef DEBUG_HELP
-    BinFilePrint(bf);
-#endif
+    BINFILE *bf;
 
     help->ks=KeySysNew(kg);
-    KeySysIFunc(help->ks,1,HelpPageUp);
-    KeySysIFunc(help->ks,2,HelpPageDown);
+    KeySysIFunc(help->ks,0,HelpPageUp);
+    KeySysIFunc(help->ks,1,HelpPageDown);
     KeySysIFunc(help->ks,2,HelpLineUp);
     KeySysIFunc(help->ks,3,HelpLineDown);
     KeySysIFunc(help->ks,4,HelpCancel);
     KeySysIFunc(help->ks,5,HelpCancel);
 
     help->tb=TextBoxNew(lines,bordercol,textcol,boldcol,maxwidth);
-    left=BinFileRemain(bf);
-#ifdef DEBUG_HELP
-    TextBoxAddLine(help->tb,"This is the top of it",ATEND);
-    printf("Start=%d",left);
-    GetKey();
-#endif
-    while (left>0)
+    if (filename!=NULL)
     {
-        got=BinFileGetTill(bf,79,buffer,13);
-        if (got==0) // finished
-        {
-            left=0;
-        }
-        else
-        {
-            buffer[got]='\0';   // terminate string
-            left-=got;
+        bf=BinFileReadFull(filename,0);
+        left=BinFileRemain(bf);
 #ifdef DEBUG_HELP
-            printf("Left=%d_%s\n",left,buffer); GetKey();
+        BinFilePrint(bf);
+        TextBoxAddLine(help->tb,"This is the top of it",ATEND);
+        printf("Start=%d",left);
+        GetKey();
 #endif
-            TextBoxAddLine(help->tb,buffer,ATEND);
+        while (left>0)
+        {
+            got=BinFileGetTill(bf,79,buffer,13);
+            if (got==0) // finished
+            {
+                left=0;
+            }   
+            else
+            {
+                buffer[got]='\0';   // terminate string
+                left-=got;
+#ifdef DEBUG_HELP
+                printf("Left=%d_%s\n",left,buffer); GetKey();
+#endif
+                TextBoxAddLine(help->tb,buffer,ATEND);
+            }
+            BinFileGet(bf,1,buffer); // get the line feed character
         }
-        BinFileGet(bf,1,buffer); // get the line feed character
+#ifdef DEBUG_HELP
+        TextBoxAddLine(help->tb,"This is the bottom of it",ATEND);
+#endif
     }
-#ifdef DEBUG_HELP
-    TextBoxAddLine(help->tb,"This is the bottom of it",ATEND);
-#endif
     return help;
+}
+
+void HelpAddLine(HELP *help,char *string)
+// purpose : adds a line to the end of the help
+// returns : void
+{
+    TextBoxAddLine(help->tb,string,ATEND);
 }
 
 void HelpFree(HELP *help)
@@ -143,7 +152,7 @@ int HelpPageUp(HELP *help)
 // purpose : scrolls the help box up one page
 // returns : TRUE if scrolled else FALSE
 {
-    return TextBoxScroll(help->tb,-(TextBoxLines(help->tb)));
+    return TextBoxScroll(help->tb,-1*(TextBoxLines(help->tb)));
 }
 
 int HelpPageDown(HELP *help)

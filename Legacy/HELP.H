@@ -15,6 +15,9 @@ typedef struct helpTag HELP;
 HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int textcol,int boldcol,int maxwidth);
 // purpose : to create a new help box
 // returns : the help box
+void HelpAddLine(HELP *help,char *string);
+// purpose : adds a line to the end of the help
+// returns : void
 void HelpDisplay(HELP *help,VIEWPORT *vp);
 // purpose : to display the help box in the viewport
 // returns : void

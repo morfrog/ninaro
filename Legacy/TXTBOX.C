@@ -248,25 +248,32 @@ int TextBoxScroll(TXTBOX *tb,int amount)
 // returns : TRUE if scrolled, else FALSE
 {
     int left=amount<0?amount*-1:amount; // a positive number
-    if (amount==0)
+    if (amount<0)   // scroll up
+    {
+        if (tb->start==tb->head) return FALSE; 
+        do
+        {
+            if (tb->start==tb->head) return TRUE;
+            tb->start=tb->start->prev;
+            --left;
+        } while (left>0);
+    }
+    else if (amount>0)  // scroll down
+    {
+        if (tb->start==tb->head->prev) return FALSE; // cant scroll down
+        do
+        {
+            if (tb->start==tb->head->prev) return TRUE; // cant scroll down
+            tb->start=tb->start->next;
+            --left;
+        } while (left>0);
+    }
+    else // (amount==0)
     {
         tb->start=tb->head;
         return FALSE;
     }
-    if (amount<0)   // scroll up
-        do
-        {
-            if (tb->start==tb->head) return FALSE; 
-            tb->start=tb->start->prev;
-            --left;
-        } while (left>0);
-    else // amount > 0  // scroll down
-        do
-        {
-            if (tb->start==tb->head->prev) return FALSE; // cant scroll down
-            tb->start=tb->start->next;
-            --left;
-        } while (left>0);
+
     return TRUE;    
 }
 

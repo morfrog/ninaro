@@ -1,9 +1,21 @@
-// will have to use DisplayAll until a mechanism is worked out that will
-// enable the display of changed windows to appear properly without destroying
-// the background - in hopes that one day the background will be a picture,
-// not just an inconsequential black emptiness
-// could store the background in a page I create, then switch that relevant
-// section into the changed window and restore the changed window on top...
+// todo : grid save and load
+//        title screen
+//        player has new attribute (* func)(GRID *grid) which gets move
+//        so each player has own function
+//        getting a computer move cannot be interrupted, interrupt between
+//        turns
+//        player_swap could swap keys only???
+//        possible mouse inclusion, though is perhaps too late.
+//          mouse in main,dialog,menu.
+//        options dialog must do something.
+//        options dialog could use computer speed, so that computers could
+//        play at human speed(3 seconds?), or at computer speed(0 secs);
+//        that way could watch random vs tree play 500 games in 1 minute.
+//        when two computers battling it out, player can press ESC or M to
+//        interrupt them to gain menu access
+//        provide animation for computers
+//        possibly merge player color and type icons to expand score width
+//        if score too big - too many characters squash char width to fit.
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
@@ -17,6 +29,7 @@
 #include "viewsys.h"
 #include "menu.h"
 #include "screen.h"
+#include "mempage.h"
 #include "grid.h"
 #include "player.h"
 #include "dialog.h"
@@ -53,6 +66,8 @@ DIALOG *playerdialog;
 DIALOG *boarddialog;
 DIALOG *optionsdialog;
 HELP *help;
+HELP *aboutgame;
+MEMPAGE *aboutmp;
 KEYSYS *ks;
 
 void SetP1(int player)
@@ -409,13 +424,17 @@ void HelpContents(void)
 
 void HelpAbout(void)
 {
-    ViewSysDisplay(vs,DisplayChanged);
-    BorderedBox(200,100,439,249,GREY,LTBLUE);
+    VIEWPORT vp={210,181,429,259};
+    MemPagePut(ViewSysCurrent(vs));
+    BorderedBox(200,100,439,269,GREY,LTBLUE);
     BorderedBox(210,110,429,179,BLACK,LTBLUE);
     _setviewport(210,110,429,179);
     DisplayGameName();
+    MemPageGet(ViewSysCurrent(vs));
     SwapPage();
-    GetKey(); // should change so that only current player can do
+    MemPagePut(ViewSysCurrent(vs));     // both pages same
+    HelpCall(aboutgame,&vp,ViewSysCurrent(vs));
+    ViewSysDisplay(vs,DisplayAll);      // refesh to normal
 }
 
 void GameStatus(void)
@@ -555,7 +574,7 @@ void ProgInit() // initialises global variables
     vs=ViewSysInit(0,0,639,349,20,20);
     
     msgbox=TextBoxNew(8,RED,WHITE,GREEN,25);
-
+    
     players=PlayerGroupNew(7, // allows for only two humans
         PlayerNew("Player One",YELLOW,Human),
         PlayerNew("Player Two",RED,Human),
@@ -646,6 +665,15 @@ void ProgInit() // initialises global variables
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
 
     help=HelpNew("NINARO.HLP",pkeys,20,RED,WHITE,GREEN,60);
+
+    aboutgame=HelpNew(NULL,pkeys,3,LTBLUE,WHITE,GREEN,30);
+    HelpAddLine(aboutgame,"Project");
+    HelpAddLine(aboutgame,"By the author");
+    HelpAddLine(aboutgame,"");
+    HelpAddLine(aboutgame,"");
+    HelpAddLine(aboutgame,"Semester One 1998");
+    HelpAddLine(aboutgame,"");
+
 }
 
 void ProgFree() // frees global variables

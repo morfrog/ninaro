@@ -32,10 +32,13 @@ int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl)
 // purpose : to find the pid of player in the playergroup
 // returns : -1 if player not in group else index is returned
 {
+    return pl->pid;
+/*
     int x;
     for (x=0;x<pg->players;x++)
        if (pg->player[x]==pl) return x; // found
     return -1; // not found
+*/
 }
 
 PLAYERGROUP *PlayerGroupNew(int players,...)
@@ -52,6 +55,7 @@ PLAYERGROUP *PlayerGroupNew(int players,...)
     for (x=0;x<players;x++)
     {
         pg->player[x]=va_arg(ap,PLAYER *);
+        pg->player[x]->pid=x;
     }
     va_end(ap);
     return pg;
