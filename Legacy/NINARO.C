@@ -8,7 +8,7 @@
 //        player_swap could swap keys only???
 //        possible mouse inclusion, though is perhaps too late.
 //          mouse in main,dialog,menu.
-//        options dialog must do something.
+//  DONE  options dialog must do something.
 //  DONE  options dialog could use computer speed, so that computers could
 //        play at human speed(3 seconds?), or at computer speed(0 secs);
 //        that way could watch random vs tree play 500 games in 1 minute.
@@ -17,7 +17,7 @@
 //        provide animation for computers
 //  DONE  possibly merge player color and type icons to expand score width
 //        if score too big - too many characters squash char width to fit.
-//        ERROR found - load saved game and cant drop tokens!!!
+//  DONE  ERROR found - load saved game and cant drop tokens!!!
 //        hoping proper save/load will fix the error
 #include <stdlib.h>
 #include <stdio.h>
@@ -77,7 +77,9 @@ HELP *aboutgame;
 MEMPAGE *aboutmp;
 KEYSYS *ks;
 int ingame;
+int isdraw;
 int goesfirst;
+int wentfirst;
 
 void SetP1(int player)
 {
@@ -462,6 +464,12 @@ int KeyDown(void *vp)
             RemoveTokenAtCR(entrygrid,keypos,0);
             NextPlayer();
             InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
+            if (TokensInGrid(playgrid)==MaxTokensInGrid(playgrid)) // draw
+            {
+                TextBoxFixedAddLine(msgbox,"It's A Draw...");
+                TextBoxFixedAddLine(msgbox,"~Press the ESC Key To Continue");
+                isdraw=TRUE; 
+            }
             return DisplayAll;
             break;
         case Win :
@@ -514,7 +522,8 @@ void NewGame(void)
             TextBoxFixedAddLine(msgbox,"Winner Goes First");
             break;
         case GFSuccessive :
-            NextPlayer();
+            if (wentfirst==player_two) SetP1Current();
+            else                        SetP2Current();
             TextBoxFixedAddLine(msgbox,"Successive Player Goes First");
             break;
         case GFRandom :
@@ -522,6 +531,7 @@ void NewGame(void)
             TextBoxFixedAddLine(msgbox,"Random Player Goes First");
             break;
     }
+    wentfirst=player_current;
     GridEmpty(playgrid); GridEmpty(entrygrid);
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
     win_occured=FALSE; 
@@ -532,7 +542,9 @@ void NewGame(void)
     MenuItemEnable(mainmenu,0,3,TRUE); // enable end game
     MenuItemEnable(mainmenu,0,0,FALSE); // disable new game
     MenuSubCurrentSet(mainmenu,0,1);
-    ingame=1;
+    ingame=TRUE;
+    isdraw=FALSE;
+    TextBoxFixedAddLine(msgbox,"Currently Playing Game.");
 }
 
 void EndGame(void)
@@ -546,7 +558,8 @@ void EndGame(void)
     MenuItemEnable(mainmenu,0,3,FALSE); // disable end game
     MenuItemEnable(mainmenu,0,0,TRUE); // enable new game
     MenuSubCurrentSet(mainmenu,0,0);
-    ingame=0;
+    TextBoxFixedAddLine(msgbox,"Currently Not Playing.");
+    ingame=FALSE;
 }
 
 int PlayersInGrid(GRID *grid,int *p1,int *p2)
@@ -665,9 +678,9 @@ void P1Dialog(void)
     if (player!=-1) // player has changed
     {
         SetP1(player);
-        NewGame();
         player_one_score=0;
         player_two_score=0;
+        if (ingame) NewGame();
     }
 }
 
@@ -677,12 +690,13 @@ void P2Dialog(void)
     CONTROL *c=DialogControlGet(playerdialog,0); // names
     ControlElemSet(c,0,1,"Human");
     player=PlayerDialog(player_two);
-    if (player!=-1) // player has changed
+    if (player!=-1)// player has changed
     {
         SetP2(player);
-        NewGame();
         player_one_score=0;
         player_two_score=0;
+        if (ingame) NewGame();
+
     }
 }
 
@@ -694,6 +708,103 @@ void PlayerOptions(void)
     {
         goesfirst=ControlCurrentGet(DialogControlGet(optionsdialog,0));
     }
+}
+
+int RandomMove(GRID *grid)
+// returns -1 if unable to make a move, else the moves column is returned
+{
+    int cols=GridCols(grid),move=Random(cols),incol=GridInCol(grid,move);
+    int tokcols,x;
+
+    if (incol) // there are tokens in the col
+    {
+        return move;
+    }
+    else
+    {
+        tokcols=0;
+        for (x=0;x<cols;x++) // find how many columns still have tokens
+        {
+            if (GridInCol(grid,x)>0) ++tokcols;
+        }
+        move=Random(tokcols); // random of tokened columns
+        tokcols=0;
+        for (x=0;x<cols;x++)
+        {
+            incol=GridInCol(grid,x);
+            if (incol!=0) ++tokcols; // found a tokened col
+            if (tokcols==move+1) return x;
+        }
+        // error if get here, may have called func too many times.
+        return -1;
+    }
+}
+
+void TitleScreen(void)
+// uses global variables
+{
+    VIEWPORT vp;
+    PLAYER *pl;
+    GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
+    int x,tokens,scol; // source col
+    int up=1,add=0;
+    long sety,adds[3]={0x010100L,0x000101L,0x010001L};
+    long bottom=0x010000L,top=bottom+0x030303L;
+
+    if (filegrid==NULL) return;
+    ResetViewport(&vp,vs->main.x1,vs->main.y1,vs->main.x2,vs->main.y2-30);
+    tokens=MaxTokensInGrid(filegrid);
+   _remappalette(YELLOW,0x020202L); _remappalette(GREEN,0x040404L);
+    StartRandom();
+    ResetGameSize(GridCols(filegrid),GridRows(filegrid),4);
+    _setcolor(WHITE); _setcharsize(20,10); _setcharspacing(0);
+    _settextalign(_CENTER,_TOP);
+    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
+    SwapPage();
+    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
+    SwapPage();
+    SetViewport(&(vp));
+    _setcolor(GREEN); DisplayGrid(playgrid,0.95);
+    sety=bottom;
+    x=0;
+    do
+    {
+        if (x<tokens)
+        {
+            scol=RandomMove(filegrid);
+            pl=RemoveToken(filegrid,scol);
+            InsertTokenInCol(playgrid,scol,pl,win);
+            _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
+            x++;
+        }
+        if (up)
+        {
+            sety+=adds[add]; if (add==2) add=0; else ++add;
+            if (sety>top) up=0;
+        }
+        else // down
+        {
+            sety-=adds[add]; if (add==2) add=0; else ++add;
+            if (sety<bottom) up=1;
+        }
+        _remappalette(YELLOW,sety);
+    }
+    while (!kbhit());
+    _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
+    GetKey();
+    GridFree(filegrid);
+    ResetGameSize(7,8,4);
+}
+
+void Test(void)
+{
+    Buzz(800,900,50,400);
+}
+
+void ToggleSound(void)
+{
+    ToggleMute();
+    GameStatus();
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
@@ -722,17 +833,6 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
     ViewSysWindowNew(vs,0.91,0.452,1.0,0.5,TRUE,
         DisplayP2Score,NULL,"Player Two's Score");
     return vs;
-}
-
-void Test(void)
-{
-    Buzz(800,900,50,400);
-}
-
-void ToggleSound(void)
-{
-    ToggleMute();
-    GameStatus();
 }
 
 void ProgInit() // initialises global variables
@@ -861,8 +961,10 @@ void ProgInit() // initialises global variables
     HelpAddLine(aboutgame,"");
     HelpAddLine(aboutgame,"       Copyright 1998");
 
-    ingame=1;
+    ingame=TRUE;
     goesfirst=GFSuccessive;
+    wentfirst=player_one;
+    NewGame();
 }
 
 void ProgFree() // frees global variables
@@ -875,117 +977,6 @@ void ProgFree() // frees global variables
     GridFree(entrygrid);
     ViewSysFree(vs);
     TextBoxFree(msgbox);
-}
-
-void TitleMove(GRID *grid,int *col,int *row)
-{
-    int cols=GridCols(grid);
-    int move=Random(cols);
-    int incol=GridInCol(grid,move);
-    int tokcols,x;
-
-
-//    ShutDown();
-//    _Break(4,"GridRows",GridRows(grid),"Incol",incol,"cols",cols,"move",move);
-//    exit(0);
-
-    if (incol) // there are tokens in the col
-    {
-        *col=move;
-        *row=(GridRows(grid)-incol);
-    }
-    else
-    {
-        tokcols=0;
-        for (x=0;x<cols;x++) // find how many columns still have tokens
-        {
-            if (GridInCol(grid,x)>0) ++tokcols;
-        }
-        move=Random(tokcols); // random of tokened columns
-        tokcols=0;
-        for (x=0;x<cols;x++)
-        {
-            incol=GridInCol(grid,x);
-            if (incol!=0) ++tokcols; // found a tokened col
-            if (tokcols==move+1)
-            {
-                *col=x;
-                *row=GridRows(grid)-incol;
-                x=cols; // break out
-            }
-        }
-        // error if get here, may have called func too many times.
-    }
-}
-
-void TitleScreen(void)
-// uses global variables
-{
-    VIEWPORT vp;
-    PLAYER *pl;
-    GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
-    int x;
-    int tokens;
-    int scol,srow;  // source col & row
-    int up=1,add=0;
-    long sety,adds[3]={0x010100L,0x000101L,0x010001L};
-    long bottom=0x010000L;
-    long top=bottom+0x030303L;
-
-    vp.x1=vs->main.x1;
-    vp.y1=vs->main.y1;
-    vp.x2=vs->main.x2;
-    vp.y2=vs->main.y2-30;
-    if (filegrid==NULL) return;
-    tokens=MaxTokensInGrid(filegrid);
-   _remappalette(YELLOW,0x020202L);
-   _remappalette(GREEN,0x040404L);
-    StartRandom();
-    ResetGameSize(GridCols(filegrid),GridRows(filegrid),4);
-    _setcolor(WHITE);
-    _setcharsize(20,10);
-    _setcharspacing(0);
-    _settextalign(_CENTER,_TOP);
-    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
-    SwapPage();
-    _grtext(vp.x1+((vp.x2-vp.x1)/2),vp.y2+5,"Hit Any Key To Continue...");
-    SwapPage();
-    SetViewport(&(vp));
-    _setcolor(GREEN);
-    DisplayGrid(playgrid,0.95);
-    sety=bottom;
-    x=0;
-    do
-    {
-        if (x<tokens)
-        {
-            TitleMove(filegrid,&scol,&srow);
-            pl=RemoveTokenAtCR(filegrid,scol,srow);
-            InsertTokenInCol(playgrid,scol,pl,win);
-            _setcolor(GREEN);
-            DisplayGrid(playgrid,0.95);
-            SwapPage();
-            x++;
-        }
-        if (up)
-        {
-            sety+=adds[add]; if (add==2) add=0; else ++add;
-            if (sety>top) up=0;
-        }
-        else // down
-        {
-            sety-=adds[add]; if (add==2) add=0; else ++add;
-            if (sety<bottom) up=1;
-        }
-        _remappalette(YELLOW,sety);
-    }
-    while (!kbhit());
-      _setcolor(GREEN);
-    DisplayGrid(playgrid,0.95);
-    SwapPage();
-    GetKey();
-    GridFree(filegrid);
-    ResetGameSize(7,8,4);
 }
 
 void main()
@@ -1060,12 +1051,13 @@ void main()
                 case F10 : ExitGame(); break;
             }
         }
-        if (win_occured)
+        if ((win_occured) || (isdraw))
         {
             do {} while (GetKey()!=ESC);
             NewGame();
             ViewSysDisplay(vs,DisplayAll);
             SwapPage();
         }
+        
     }
 }

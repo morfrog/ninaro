@@ -16,6 +16,7 @@ struct gridTag
     PLAYER ***grid; // set as NULL = empty, else = player *
     int *numincol; // how many tokens are in the columns
     int *numinrow; // how many tokens are in the rows
+    int tokensingrid;
 };
 
 typedef struct gridTag GRID;

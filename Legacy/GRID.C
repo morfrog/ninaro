@@ -10,6 +10,7 @@ void GridEmpty(GRID *grid)
 // returns : void
 {
     int x,y;
+    grid->tokensingrid=0;
     for (x=0;x<grid->width;x++)
         for (y=0;y<grid->height;y++)
             grid->grid[x][y]=NULL;
@@ -30,6 +31,7 @@ GRID *GridNew(int width,int height)
     ret->numincol=malloc(width*sizeof(int));
     ret->numinrow=malloc(height*sizeof(int));
     GridEmpty(ret);
+    ret->tokensingrid=0;
     return ret;
 }
 
@@ -96,6 +98,7 @@ int InsertTokenAtCR(GRID *grid,int col,int row,PLAYER *player)
         grid->grid[col][row]=player;
         grid->numincol[col]+=1;
         grid->numinrow[row]+=1;
+        grid->tokensingrid+=1;
         return TRUE;
     }
     else
@@ -129,6 +132,7 @@ PLAYER *RemoveTokenAtCR(GRID *grid,int col,int row)
         grid->grid[col][row]=NULL;
         grid->numincol[col]-=1;
         grid->numinrow[row]-=1;
+        grid->tokensingrid-=1;
     }
     return ret;
 }
@@ -176,11 +180,7 @@ int TokensInGrid(GRID *grid)
 // purpose : to get the number of tokens in the grid
 // returns : how many tokens are in the grid (0..MaxTokensInGrid)
 {
-    int x,ret=0;
-    
-    for (x=0;x<grid->width;x++)
-        ret+=grid->numincol[x];
-    return ret;
+    return grid->tokensingrid;
 }
 
 int MaxTokensInGrid(GRID *grid)
@@ -256,6 +256,7 @@ void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap)
             {
                 grid->numincol[x]+=1;
                 grid->numinrow[y]+=1;
+                grid->tokensingrid+=1;
             }
                                 
     free(copygrid);

@@ -29,10 +29,21 @@ int InsertTokenTarget(GRID *grid,int col)
     return (grid->height)-(grid->numincol[col])-1;
 }
 
+int RemoveTokenTarget(GRID *grid,int col)
+{
+    return (grid->height)-(grid->numincol[col]);
+}
+
 int InsertToken(GRID *grid,int col,PLAYER *player)
 // returns if token was successfully inserted
 {
     return InsertTokenAtCR(grid,col,InsertTokenTarget(grid,col),player);
+}
+
+PLAYER *RemoveToken(GRID *grid,int col)
+// returns PLAYER * if token was successfully removed, else NULL
+{
+    return RemoveTokenAtCR(grid,col,RemoveTokenTarget(grid,col));
 }
 
 int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win)

@@ -24,6 +24,9 @@ typedef struct winTag WIN;
 int Continuance(GRID *grid,int size);
 int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win);
 int InsertTokenTarget(GRID *grid,int col);
+int RemoveTokenTarget(GRID *grid,int col);
+PLAYER *RemoveToken(GRID *grid,int col);
+// returns PLAYER * if token was successfully removed, else NULL
 int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win);
 int CheckForWin(GRID *grid,int size,int col,int row,WIN *win);
 void SetWinSize(WIN *win,int size);
