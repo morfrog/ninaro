@@ -9,7 +9,7 @@
 //        possible mouse inclusion, though is perhaps too late.
 //          mouse in main,dialog,menu.
 //        options dialog must do something.
-//        options dialog could use computer speed, so that computers could
+//  DONE  options dialog could use computer speed, so that computers could
 //        play at human speed(3 seconds?), or at computer speed(0 secs);
 //        that way could watch random vs tree play 500 games in 1 minute.
 //        when two computers battling it out, player can press ESC or M to
@@ -699,7 +699,7 @@ void ProgInit() // initialises global variables
                         3,"",50,""),
         "Size",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
-    optionsdialog=DialogNew(pkeys,NULL,"Player Options",2,
+    optionsdialog=DialogNew(pkeys,NULL,"Player Options",3,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Successive",
                         1,"Player One",
@@ -707,10 +707,17 @@ void ProgInit() // initialises global variables
                         3,"Winner",
                         4,"Loser",
                         5,"Random"),
-        "AI Skill",TRUE,TRUE,ControlNew(List,Slider,1,1,7,3,
+        "AI Skill",TRUE,TRUE,ControlNew(List,Slider,2,1,7,3,
                         0,"Low",
                         1,"Medium",
-                        2,"High"));
+                        2,"High"),
+        "AI Speed",TRUE,TRUE,ControlNew(List,Slider,2,1,7,5,                        
+                        4,"Slowest",
+                        3,"Slow",
+                        2,"Cruise",
+                        1,"Fast",
+                        0,"Fastest"));
+                        
 /*
         "Best Of",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Infinity",

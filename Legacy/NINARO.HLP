@@ -44,12 +44,38 @@ menu is accessable at almost anytime by pressing ESC, M for
 menu, or your appropriate player key.
 
 ~The Game Menu
+The game menu lets you control the game.
+New     - starts a new game
+Load    - loads the saved game
+Save    - saves the game
+End     - ends the current game, when no game is on all
+          options are accessable (e.g. player one and two)
+          dialogs.
+Status  - displays the rows, columns and connect status of
+          the game in the message box
+Suggest - suggests a move to make. The move is suggested by
+Move      the best AI.
+Sound   - toggles the sound On and Off
+Exit    - exits the game
 
 ~The Board Menu
+The board menu lets you change the board attributes
+7x8x4   - changes the board to 7 Columns, 8 Rows,Connect 4
+12x13x6 - changes the board to 12 Columns,13 Rows,Connect 4
+Custom  - changes the board via The Custom Board Dialog
 
 ~The Player Menu
+The player menu lets you change the player attributes
+One...  - changes the attributes of player one via The
+          Player Dialog
+Two...  - changes the attributes of player two via The
+          Player Dialog
+Options - changes the player options via The Player Options
+          Dialog
 
 ~The Help Menu
+The help menu provides all your help needs, via this screen.
+Help is available at anytime by pressing either F1 or H.
 
 ~The Dialogs
 Dialogs help you choose from a group of options. In the
