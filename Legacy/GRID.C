@@ -91,7 +91,7 @@ int InsertTokenAtCR(GRID *grid,int col,int row,PLAYER *player)
 // purpose : to insert a player token at col,row in the grid
 // returns : TRUE if col,row was empty and token inserted, else FALSE
 {
-    if (grid->grid[col][row]==NULL)
+    if ((grid->grid[col][row]==NULL) && (player!=NULL))
     {
         grid->grid[col][row]=player;
         grid->numincol[col]+=1;
@@ -261,13 +261,20 @@ void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap)
     free(copygrid);
 }
 
-void GridSave(GRID *grid,PLAYERGROUP *pg,char *gridname)
-// purpose : saves the grid, assumes all players have unique ID's
+int GridSaveSize(GRID *grid)
+// purpose : to find how many bytes a grid requires to be saved
+// returns : the number
+{
+    return (sizeof(int)*(2+MaxTokensInGrid(grid)));
+}
+
+void GridSave(BINFILE *bf,GRID *grid,PLAYERGROUP *pg)
+// purpose : saves the grid to the binfile, assumes all players have
+//           unique ID's
 // returns : void
 {
     int x,y;
     PLAYER *player;
-    BINFILE *bf=BinFileNew(sizeof(int)*(2+MaxTokensInGrid(grid)));
 
     BinFilePutInt(bf,grid->width);
     BinFilePutInt(bf,grid->height);
@@ -278,20 +285,26 @@ void GridSave(GRID *grid,PLAYERGROUP *pg,char *gridname)
             player=grid->grid[x][y];
             BinFilePutInt(bf,player==NULL?0:PlayerGroupFind(pg,player)+1);
         }
+}
+
+void GridSaveFull(GRID *grid,PLAYERGROUP *pg,char *gridname)
+// purpose : to save the grid to gridname file
+// returns : void
+{
+    BINFILE *bf=BinFileNew(GridSaveSize(grid));
+    GridSave(bf,grid,pg);
     BinFileWriteFull(bf,gridname);
     BinFileFree(bf);
 }
 
-GRID *GridLoad(PLAYERGROUP *pg,char *gridname)
+GRID *GridLoad(BINFILE *bf,PLAYERGROUP *pg)
 // purpose : load a grid
 // returns : NULL if load unsuccessful, else the grid
 {
-    BINFILE *bf=BinFileReadFull(gridname,0);
     int player;
     GRID *ret;
     int width,height,x,y;
 
-    if (bf==NULL) return NULL;  // failed to load file
     width=BinFileGetInt(bf);
     height=BinFileGetInt(bf);
     ret=GridNew(width,height);
@@ -299,9 +312,19 @@ GRID *GridLoad(PLAYERGROUP *pg,char *gridname)
         for (y=0;y<height;y++)
         {
             player=BinFileGetInt(bf);
-            InsertTokenAtCR(ret,x,y,(player==0?NULL:PlayerGroupPlayer(pg,player-1)));
+            if (player!=0) InsertTokenAtCR(ret,x,y,PlayerGroupPlayer(pg,player-1));
         }
-    BinFileFree(bf);
     return ret;
 }
 
+GRID *GridLoadFull(PLAYERGROUP *pg,char *gridname)
+// purpose : to load grid from file gridname
+// returns : NULL if couldn't read file, else the grid is returned
+{
+    BINFILE *bf=BinFileReadFull(gridname,0);
+    GRID *ret;
+    if (bf==NULL) return NULL; // failed to load file
+    ret=GridLoad(bf,pg);
+    BinFileFree(bf);
+    return ret;
+}

@@ -424,7 +424,7 @@ int KeyDown(void *vp)
             sprintf(buffer,"%s Wins",PlayerGetName(PlayerGroupPlayer(players,player_current)));
             if (player_current==player_one) ++player_one_score;
             else                            ++player_two_score;
-            TextBoxAddLine(msgbox,buffer,ATEND);
+            TextBoxFixedAddLine(msgbox,buffer);
             TextBoxScrollEnd(msgbox);
             RemoveTokenAtCR(entrygrid,keypos,0);
             NextPlayer(); // should be removed from proper system, though
@@ -448,7 +448,7 @@ void MsgGameN(void)
 {
     char nbuf[40];
     sprintf(nbuf,"Playing %d in a row.",win->tokens);
-    TextBoxAddLine(msgbox,nbuf,ATEND);
+    TextBoxFixedAddLine(msgbox,nbuf);
     TextBoxScrollEnd(msgbox);
 }
 
@@ -487,39 +487,36 @@ int PlayersInGrid(GRID *grid,int *p1,int *p2)
 
 void LoadGame(void)
 {
-    int p1,p2;
-    GRID *tmp;
-    tmp=GridLoad(players,"NINARO.SAV");
+    int p1,p2,current;
+    GRID *tmp=GameLoad(&p1,&p2,&current,players,"NINARO.SAV");
     if (tmp==NULL) // failed to load
     {
-        TextBoxAddLine(msgbox,"~Load Error!",ATEND);
+        TextBoxFixedAddLine(msgbox,"~Load Error!");
     }
     else // loaded OK
     {
         GridFree(playgrid);
         playgrid=tmp;
-        PlayersInGrid(playgrid,&p1,&p2);
-        // is known to return true because only saves ones which have 2 players
         SetP1(p1);
         SetP2(p2);
-        TextBoxAddLine(msgbox,"Game Loaded",ATEND);
+        player_current=current;
+        TextBoxFixedAddLine(msgbox,"Game Loaded");
         win_occured=FALSE; MsgGameN();
+        RemoveTokenAtCR(entrygrid,keypos,0);
+        InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
     }
     TextBoxScrollEnd(msgbox);
 }
 
 void SaveGame(void)
 {
-    int p1,p2;
-    if (PlayersInGrid(playgrid,&p1,&p2)) // will change when implement save
-    // properly, can save any grid
+    if (GameSave(player_one,player_two,player_current,playgrid,players,"NINARO.SAV"))
     {
-        GridSave(playgrid,players,"NINARO.SAV");
-        TextBoxAddLine(msgbox,"Game Saved",ATEND);
+        TextBoxFixedAddLine(msgbox,"Game Saved");
     }
-    else // can't save due to lack of players    
+    else // can't save - file error
     {
-        TextBoxAddLine(msgbox,"~Save Error!",ATEND);
+        TextBoxFixedAddLine(msgbox,"~Save Error!");
     }
     TextBoxScrollEnd(msgbox);
 }
@@ -532,15 +529,15 @@ void GameStatus(void)
 
     char gbuf[50];
     sprintf(gbuf,"~-----Game Status-----");
-    TextBoxAddLine(msgbox,gbuf,ATEND);
+    TextBoxFixedAddLine(msgbox,gbuf);
     sprintf(gbuf,"%d Columns x %d Rows",grid_cols,grid_rows);
-    TextBoxAddLine(msgbox,gbuf,ATEND);
+    TextBoxFixedAddLine(msgbox,gbuf);
     sprintf(gbuf,"Connect %d",win->tokens);
-    TextBoxAddLine(msgbox,gbuf,ATEND);
+    TextBoxFixedAddLine(msgbox,gbuf);
     sprintf(gbuf,"Player One is %s",PlayerGetName(PlayerGroupPlayer(players,player_one)));
-    TextBoxAddLine(msgbox,gbuf,ATEND);
+    TextBoxFixedAddLine(msgbox,gbuf);
     sprintf(gbuf,"Player Two is %s",PlayerGetName(PlayerGroupPlayer(players,player_two)));
-    TextBoxAddLine(msgbox,gbuf,ATEND);
+    TextBoxFixedAddLine(msgbox,gbuf);
     TextBoxScrollEnd(msgbox);
 }
 
@@ -648,7 +645,7 @@ void ToggleSound(void)
 {
     char buffer[20];
     sprintf(buffer,"Sound is now %s",ToggleMute()?"Off":"On");
-    TextBoxAddLine(msgbox,buffer,ATEND);
+    TextBoxFixedAddLine(msgbox,buffer);
     TextBoxScrollEnd(msgbox);
 }
 
@@ -681,10 +678,10 @@ void ProgInit() // initialises global variables
     player_one_score=0;
     player_two_score=0;
 
-    TextBoxAddLine(msgbox,"Player1 Arrives",ATEND);
-    TextBoxAddLine(msgbox,"Ronda Random Arrives",ATEND);
-    TextBoxAddLine(msgbox,"~This is the first line",ATSTART);
-    TextBoxAddLine(msgbox,"~Let The Game Begin",ATEND);
+    TextBoxFixedAddLine(msgbox,"~This is the first line");
+    TextBoxFixedAddLine(msgbox,"Player1 Arrives");
+    TextBoxFixedAddLine(msgbox,"Ronda Random Arrives");
+    TextBoxFixedAddLine(msgbox,"~Let The Game Begin");
     TextBoxScrollEnd(msgbox);
                     
     playgrid=GridNew(grid_cols,grid_rows);
@@ -838,7 +835,7 @@ void TitleScreen(void)
 // uses global variables
 {
     PLAYER *pl;
-    GRID *filegrid=GridLoad(players,"NINARO.TTL");
+    GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
     int x;
     int tokens;
     int scol,srow;  // source col & row
@@ -889,12 +886,9 @@ void TitleScreen(void)
         _remappalette(YELLOW,sety);
     }
     while (!kbhit());
-   _remappalette(RED,_RED);
     GetKey();
     GridFree(filegrid);
     ResetGameSize(7,8,4);
-   _remappalette(GREEN,_GREEN);
-   _remappalette(YELLOW,_YELLOW);
 }
 
 void main()
@@ -916,7 +910,8 @@ void main()
 
     ViewSysDisplay(vs,DisplayAll);
     SwapPage();
-        
+    ResetPalette();
+            
     for (;;)
     {
         key=GetKey();

@@ -42,6 +42,10 @@ TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int boldcol,int maxwidth)
 //           with maxwidth being the maximum length of a string in a line of
 //           the box text boxes are lined 1..
 // returns : the text box
+int TextBoxFixedAddLine(TXTBOX *tb,char *string);
+// purpose : to add string line to end of txtbox, without allocating more
+//           memory (top line is removed)
+// returns : TRUE if successfully added, else FALSE
 int TextBoxAddLine(TXTBOX *tb,char *string,int afterline);
 // purpose : adds a string line to the text box after line afterline, can be
 //           ATEND or ATSTART or any number. the string must be terminated

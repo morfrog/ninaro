@@ -24,6 +24,19 @@ TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int boldcol,int maxwidth)
     return ret;
 }
 
+int TextBoxFixedAddLine(TXTBOX *tb,char *string)
+// purpose : to add string line to end of txtbox, without allocating more
+//           memory (top line is removed)
+// returns : TRUE if successfully added, else FALSE
+{
+    char *top=tb->head->string;
+    if (tb->size<tb->lines) return TextBoxAddLine(tb,string,ATEND);
+    strncpy(tb->head->string,string,tb->width-1);
+    tb->head=tb->head->next;
+    tb->start=tb->start->next;
+    return TRUE;
+}
+
 int TextBoxAddLine(TXTBOX *tb,char *string,int afterline)
 // purpose : adds a string line to the text box after line afterline, can be
 //           ATEND or ATSTART or any number. the string must be terminated

@@ -97,3 +97,31 @@ void SetWinSize(WIN *win,int size)
     win->tokens=size;
     win->win=malloc(size*sizeof(TOKEN));
 }
+
+int GameSave(int p1,int p2,int current,GRID *grid,PLAYERGROUP *pg,
+                char *filename)
+{
+    int ret;
+    BINFILE *bf=BinFileNew((3*sizeof(int))+GridSaveSize(grid));
+    BinFilePutInt(bf,p1);
+    BinFilePutInt(bf,p2);
+    BinFilePutInt(bf,current);
+    GridSave(bf,grid,pg);       // save grid to bin file
+    ret=BinFileWriteFull(bf,filename);
+    BinFileFree(bf);
+    return ret;
+}
+
+GRID *GameLoad(int *p1,int *p2,int *current,PLAYERGROUP *pg,char *filename)
+{
+    BINFILE *bf=BinFileReadFull(filename,0);
+    GRID *ret;
+    if (bf==NULL) return NULL;
+    *p1=BinFileGetInt(bf);
+    *p2=BinFileGetInt(bf);
+    *current=BinFileGetInt(bf);
+    ret=GridLoad(bf,pg);
+    BinFileFree(bf);
+    return ret;
+}
+

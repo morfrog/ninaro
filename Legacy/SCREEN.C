@@ -60,11 +60,17 @@ void BorderedBox(int x1,int y1,int x2,int y2,int p,int s)
     _rectangle(_GBORDER,x1,y1,x2,y2);
 }
 
+void ResetPalette(void)
+{
+    long colors[ 16 ] =
+        { _BLACK, _RED,_YELLOW,_BLUE,_GREEN,_MAGENTA,_BROWN,_WHITE,
+        _CYAN,_LIGHTRED,_LIGHTYELLOW,_LIGHTBLUE,_LIGHTGREEN,_LIGHTMAGENTA,
+        _GRAY,_GRAY+0x080808};
+    _remapallpalette(colors);
+}
+
 void ScreenInit()
 {
-long colors[ 16 ] =
-{ _BLACK, _RED,_YELLOW,_BLUE,_GREEN,_MAGENTA,_BROWN,_WHITE,
-_CYAN,_LIGHTRED,_LIGHTYELLOW,_LIGHTBLUE,_LIGHTGREEN,_LIGHTMAGENTA,_GRAY,_GRAY+0x080808};
     _setvideomode(16); // 640x350 2 pages 16 colors
     _settextwindow(0,0,24,79);
     _setwindow(0,0.0,0.0,1.0,1.0);
@@ -73,8 +79,7 @@ _CYAN,_LIGHTRED,_LIGHTYELLOW,_LIGHTBLUE,_LIGHTGREEN,_LIGHTMAGENTA,_GRAY,_GRAY+0x
     _setactivepage(0);
     _setvisualpage(1);
     _setviewport(0,0,639,349);
-    _remapallpalette(colors);
-//    _remappalette(GREY,_GRAY+0x080808);
+    ResetPalette();
 }
 
 void DrawGrid(int x,int y)

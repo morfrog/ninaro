@@ -30,6 +30,7 @@ void ViewportFromViewport(VIEWPORT *new,VIEWWIN *vw,VIEWPORT *vp);
 // purpose : to create a new viewport as the viewwin section of vp
 // returns : void
 void BorderedBox(int x1,int y1,int x2,int y2,int p,int s);
+void ResetPalette(void);
 void ScreenInit();
 void DrawGrid(int x,int y);
 void DrawDisc(int col,int cols,int row,int rows,int color,double discsize);

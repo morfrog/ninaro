@@ -1,6 +1,7 @@
 #ifndef GRID_H
 #define GRID_H
 
+#include "binfile.h"
 #include "player.h"
 
 #define T_UP 0
@@ -78,12 +79,21 @@ void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap);
 //           wrap determines if it cycles to the other side(TRUE) or is
 //           lost entirely(FALSE)
 // returns : void
-void GridSave(GRID *grid,PLAYERGROUP *pg,char *gridname);
-// purpose : saves the grid, assumes all players have unique ID's
+int GridSaveSize(GRID *grid);
+// purpose : to find how many bytes a grid requires to be saved
+// returns : the number
+void GridSave(BINFILE *bf,GRID *grid,PLAYERGROUP *pg);
+// purpose : saves the grid to the binfile, assumes all players have
+//           unique ID's
 // returns : void
-GRID *GridLoad(PLAYERGROUP *pg,char *gridname);
+void GridSaveFull(GRID *grid,PLAYERGROUP *pg,char *gridname);
+// purpose : to save the grid to gridname file
+// returns : void
+GRID *GridLoad(BINFILE *bf,PLAYERGROUP *pg);
 // purpose : load a grid
 // returns : NULL if load unsuccessful, else the grid
-
+GRID *GridLoadFull(PLAYERGROUP *pg,char *gridname);
+// purpose : to load grid from file gridname
+// returns : NULL if couldn't read file, else the grid is returned
 
 #endif

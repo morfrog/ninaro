@@ -27,4 +27,7 @@ int InsertTokenTarget(GRID *grid,int col);
 int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win);
 int CheckForWin(GRID *grid,int size,int col,int row,WIN *win);
 void SetWinSize(WIN *win,int size);
+int GameSave(int p1,int p2,int current,GRID *grid,PLAYERGROUP *pg,
+                char *filename);
+GRID *GameLoad(int *p1,int *p2,int *current,PLAYERGROUP *pg,char *filename);                
 #endif
