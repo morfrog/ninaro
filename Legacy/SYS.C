@@ -8,6 +8,8 @@
 #include <i86.h>
 #include <conio.h>
 #include <graph.h>
+#include <direct.h>
+#include <string.h>
 #include "sys.h"
 
 void *salloc(int n_items,size_t something) {
@@ -93,8 +95,57 @@ int GetKey() // uses enum keys
         return (256+getch());
     }
     else return ch;
-}   
+}
 
+void IntToByteString(int in,char *array)
+{
+    int mask=255; // 11111111
+    int masker,x;
+    for (x=0;x<4;x++)
+    {
+        masker=mask << ((3-x)*8);
+        array[x]=(masker & in) >> ((3-x)*8);
+    }
+}
+
+int ByteStringToInt(char *array)
+{
+    int ret=0,x;
+    for (x=0;x<4;x++)
+        ret+=(array[x] << ((3-x)*8)); 
+    return ret;
+}
+
+long FileSize(char *directory,char *filename)
+{
+    DIR *dirp;
+    struct dirent *direntp;
+    long ret=-1; // file does not exist
+
+    dirp = opendir( directory );
+    if( dirp != NULL )
+    {
+      for(;;)
+      {
+        direntp = readdir( dirp );
+        if( direntp == NULL ) break;
+        if (strcmp(direntp->d_name,filename)==0)
+        {
+            ret=direntp->d_size;
+            break;
+        }
+      }
+      closedir( dirp );
+    }
+    return ret;
+}
+
+char *NewString(char *string)
+{
+    char *ret=malloc((strlen(string)+1)*sizeof(char));
+    strcpy(ret,string);
+    return ret;
+}
 
 void StartRandom()
 {

@@ -30,6 +30,10 @@ char *allocate_N_by_N_array(int n1, int n2, int sizeof_element, char *array_name
 int sfree(void *ptr);
 char mygetch();
 int GetKey();
+void IntToByteString(int in,char *array);
+int ByteStringToInt(char *array);
+long FileSize(char *directory,char *filename);
+char *NewString(char *string);
 void StartRandom();
 int Random(int num);
 void PrintList(int *list,int listsize);

@@ -402,121 +402,97 @@ void GameSizeCustom(void)
     }
 }
 
+void PlayerDialogPlayer(PLAYER *player)
+{
+    ControlsDialogSet(playerdialog,1,PlayerGetType(player));
+    if (type==Human) {
+        ControlsDialogControlEnable(playerdialog,2,FALSE); // computers
+        ControlsDialogControlEnable(playerdialog,3,TRUE);  // humans
+        ControlsDialogSet(playerdialog,3,name);
+        // set the name in the human radio control to the players name
+        666
+    }
+    else { // computer
+        ControlsDialogControlEnable(playerdialog,2,TRUE); // computers
+        ControlsDialogControlEnable(playerdialog,3,FALSE);// humans
+        ControlsDialogSet(playerdialog,2,name);
+    }
+    ControlsDialogSet(playerdialog,4,color);
+    ControlsDialogSet(playerdialog,5,skill);
+}
+
 void PlayerDialog(int pnum)
 {
     VIEWPORT vp={50,50,590,300};
-    PLAYER *player=PlayerGroupUseGet(players,pnum);
+    PLAYER *player=PlayerGroupPlayer(players,pnum);
     PLAYER *select;
     int type=PlayerGetType(player);
     int name=PlayerGroupFind(players,player);
     int color=PlayerGetColor(player);
     int skill=PlayerGetSkill(player);
     int at;
+    int key,success;
 
-/*
-    case ENTER :
-        switch (ControlsDialogDefaultButton(boarddialog))
-        {
-            case 0 : // OK
-                PlayerGroupUseSet(players,pnum,name);
-                
-            case 1 : // Reset
-                
-            case 2 : // Cancel
-                return; break;
-        }
-*/    
-    ControlsDialogSet(playerdialog,1,type);
-    ControlsDialogSet(playerdialog,type==Human?2:3,name);
-                                          
-    ControlsDialogSet(playerdialog,4,color);
-    ControlsDialogSet(playerdialog,5,skill);
-    if (type==Human)
-    {
-        ControlsDialogControlEnable(playerdialog,2,FALSE);
-        ControlsDialogControlEnable(playerdialog,3,TRUE);
-    }
-    else // computer
-    {
-        ControlsDialogControlEnable(playerdialog,2,TRUE);
-        ControlsDialogControlEnable(playerdialog,3,FALSE);
-    }
+    PlayerDialogPlayer(type,name,color,skill);
     for (;;)
     {
         MemPagePut(vs->current);
         ControlsDialogDisplay(&vp,playerdialog,2);    
         SwapPage();
-        switch(GetKey())
+        key=GetKey();
+        success=FALSE;
+        switch (key)
         {
-            case KP4 :
-                if (ControlsDialogControlPrev(playerdialog))
-                {
-                    at=ControlsDialogGet(playerdialog,playerdialog->current);
-                    switch (playerdialog->current)
-                    {
-                        // case 0 : name
-                        case 1 : // type
-                            if (at==Computer)
-                            {
-                                ControlsDialogControlEnable(playerdialog,2,TRUE);
-                                ControlsDialogControlEnable(playerdialog,3,FALSE);
-                            }
-                            else // human
-                            {
-                                ControlsDialogControlEnable(playerdialog,2,FALSE);
-                                ControlsDialogControlEnable(playerdialog,3,TRUE);
-                            }
-                            break;
-                        case 2 : // humans
-//                            ControlsDialogSet(playerdialog,4,name);
-                        case 3 : // computers
-                        case 4 : // color
-                        case 5 : // skill
-                        break;                            
-                     }
-                }
-            break;
-            case KP6 :
-                if (ControlsDialogControlNext(playerdialog))
-                {
-                    at=ControlsDialogGet(playerdialog,playerdialog->current);
-                    switch (playerdialog->current)
-                    {
-                        // case 0 : name
-                        case 1 : // type
-                            if (at==Computer)
-                            {
-                                ControlsDialogControlEnable(playerdialog,2,TRUE);
-                                ControlsDialogControlEnable(playerdialog,3,FALSE);
-                            }
-                            else // human
-                            {
-                                ControlsDialogControlEnable(playerdialog,2,FALSE);
-                                ControlsDialogControlEnable(playerdialog,3,TRUE);
-                            }
-                            break;
-                        case 2 : // humans
-                            
-                        case 3 : // computers
-                        break;                            
-                     }
-                }
-            break;
+            case KP4 : success=ControlsDialogControlPrev(playerdialog); break;
+            case KP6 : success=ControlsDialogControlNext(playerdialog); break;
             case KP8 : ControlsDialogPrev(playerdialog); break;
             case KP2 : ControlsDialogNext(playerdialog); break;
             case ESC : return; break;
+            case ENTER :
+                switch (ControlsDialogDefaultButton(boarddialog))
+                {
+                    case 0 : // OK
+                       
+                    case 1 : // Reset
+                        
+                    case 2 : // Cancel
+                        return; break;
+                }
+            break;
+        }
+        if (success)
+        {
+            at=ControlsDialogGet(playerdialog,playerdialog->current);
+            switch (playerdialog->current)
+            {
+                // case 0 : dialog name
+                case 1 : // type
+                    type=ControlsDialogGet(playerdialog,1);
+                case 2 : case 3 : // computers, humans
+                    name=ControlsDialogGet(playerdialog,type==Computer?2:3);
+                    if (name==-1) break; // is new player so no changes
+                    player=PlayerGroupPlayer(players,name);
+                    color=PlayerGetColor(player);
+                    skill=PlayerGetSkill(player);
+                    PlayerDialogPlayer(type,name,color,skill);
+                    break;
+                case 4 : // color
+                break;
+                case 5 : // skill
+                break;                            
+            }
         }
     }    
 }
 
 void P1Dialog(void)
 {
-    PlayerDialog(0);
+    PlayerDialog(PlayerGroupUseGet(0));
 }
 
 void P2Dialog(void)
 {
-    PlayerDialog(1);
+    PlayerDialog(PlayerGroupUseGet(1));
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
@@ -578,7 +554,7 @@ void ProgInit() // initialises global variables
 
     msgbox=TextBoxNew(8,RED,WHITE,40);
 
-    players=PlayerGroupNew(2,7,
+    players=PlayerGroupNew(2,7, // allows for only two humans
         PlayerNew("Player1",YELLOW,Human,Low),
         PlayerNew("Player2",RED,Human,Low),
         PlayerNew("Ronda Random",LTBLUE,Computer,Low),
@@ -609,9 +585,9 @@ void ProgInit() // initialises global variables
                                            4,PlayerGetName(PlayerGroupPlayer(players,4)),
                                            5,PlayerGetName(PlayerGroupPlayer(players,5)),
                                            6,PlayerGetName(PlayerGroupPlayer(players,6))),
-        FALSE,"Name",   2,  3,    10, 0.3,
+        FALSE,"Name",   2,  3,    15, 0.3,
             ControlsControlListNew(Radio,TRUE,2,0,PlayerGetName(PlayerGroupPlayer(players,0)),
-                                                1,PlayerGetName(PlayerGroupPlayer(players,1))),
+                                                -1,"New Player"),
         TRUE,"Color",   10,  1,  0,  0.1,
             ControlsControlListNew(Color,TRUE,10,TRUE,1),
         TRUE,"Skill",   1,  1, 6,  0.2,

@@ -284,8 +284,6 @@ void DisplayScale(VIEWPORT *vp,int range,int pos,int value,int chars)
     }
 }
 
-// must change to use a viewport parameter and setcharsize() instead of _w
-// for the algorithm to be correct on any sized viewport
 void ControlsControlListDisplay(VIEWPORT *vpt,CONTROLLIST *cl,int cols,int rows,int chars)
 // displays the control list in the current viewport, cols and chars,
 // if relevant, are used to display in cols columns with chars characters
@@ -404,6 +402,7 @@ int ControlsDialogDefaultButton(DIALOG *dl)
 }
 
 int ControlsDialogSet(DIALOG *dl,int control,...)
+// sets the current of control to ...
 {
     va_list ap;
 
@@ -486,6 +485,16 @@ int ControlsDialogNext(DIALOG *dl)
             return TRUE;
         // else continue
     }
+}
+
+int ControlsDialogSetAt(DIALOG *dl,int elem)
+{
+    if (dl->control[elem].enabled)
+    {
+        dl->current=elem;
+        return TRUE;
+    }
+    else return FALSE;
 }
 
 int ControlsDialogControlPrev(DIALOG *dl)
