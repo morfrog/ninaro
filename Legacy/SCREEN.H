@@ -30,6 +30,7 @@ void SetViewport(VIEWPORT *vp);
 void ClearViewport(VIEWPORT *vp);
 VIEWPORT *CurrentViewport();
 void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2);
+void MoveViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2);
 int PointInsideViewport(int x,int y,VIEWPORT *vp);
 // purpose : is point x,y inside viewport
 // returns : TRUE if is, else FALSE

@@ -613,6 +613,27 @@ void EndGame(void)
     GridEmpty(playgrid);
 }
 
+void DemoMode(int type)
+// uses current board
+{
+    int p1;
+    if (type==Computer)
+    {
+        p1=Random(4);
+        SetP1(2+p1);
+        SetP2(3+p1);
+        TextBoxFixedAddLine(msgbox,"~Demo MODE!");
+    }
+    else
+    {
+        SetP1(0);
+        SetP2(1);
+    }
+    NewGame();
+    ResetScores();
+    ViewSysDisplay(vs,DisplayAll); SwapPage();
+}
+
 void LoadGame(void)
 {
     int p1,p2,current,size;
@@ -1019,15 +1040,22 @@ int AIRandomMove(GRID *grid)
     return RuleMove(grid,0,PlayerGroupPlayer(players,player_current),OtherPlayer());
 }
 
+void DoMouseInit(void)
+{
+    SetViewport(&(vs->main));
+    mouseinstalled=InitMouse();
+}
+
 void TitleScreen(void)
 // uses global variables
 {
     VIEWPORT vp;
+    VIEWPORT clear;
     PLAYER *plname=PlayerNew("",RED,Human,NULL);
     PLAYER *plback=PlayerNew("",YELLOW,Human,NULL);
     PLAYER *pl;
     GRID *filegrid=GridLoadFull(players,"NINARO.TTL");
-    int x,tokens,scol; // source col
+    int x,y,tokens,scol; // source col
     int up=1,add=0,row;
 
 //    long sety,adds[3]={0x010001L,0x000200L,0x010001L};
@@ -1081,10 +1109,7 @@ void TitleScreen(void)
         while (!kbhit());
         _setcolor(GREEN); DisplayGrid(playgrid,0.95); SwapPage();
         GetKey();
-        GridFree(filegrid);
     }
-    PlayerFree(plname);
-    PlayerFree(plback);
     if (_getvisualpage()==0)
     {
         _setvisualpage(1); SetMousePage(1); _setactivepage(0);
@@ -1093,6 +1118,43 @@ void TitleScreen(void)
     {
         _setvisualpage(0); SetMousePage(0); _setactivepage(1);
     }
+    _clearscreen(_GCLEARSCREEN);
+    SwapPage();
+    _clearscreen(_GCLEARSCREEN);
+    SwapPage();
+    
+//    playgrid=invert filegrid
+    for (x=0;x<GridCols(filegrid);x++)
+        for (y=0;y<GridRows(filegrid);y++)
+        {
+            pl=StatusOfCR(filegrid,x,y);
+            if (pl!=NULL)
+                ResetTokenAtCR(playgrid,x,GridRows(filegrid)-1-y,pl);
+        }
+    GridFree(filegrid);
+
+    ResetViewport(&clear,vp.x1,vp.y1,vp.x2,vp.y2);
+    for (x=0;x<20;x++)
+    {
+        if (kbhit()) break;
+        MoveViewport(&vp,+13,0,0,-9);
+        ClearViewport(&vp);
+        _setcolor(BLACK); // no grid, just tokens
+        DisplayGrid(playgrid,0.9);
+        SwapPage();
+        ClearViewport(&clear);
+        MoveViewport(&clear,+10,0,0,-7);
+    }    
+    if (!kbhit())
+    {
+        ClearViewport(&vp);
+        _setcolor(BLACK); // no grid, just tokens
+        DisplayGrid(playgrid,0.9);
+    }
+    DoMouseInit();
+
+    PlayerFree(plname);
+    PlayerFree(plback);
 }
 
 void Test(void)
@@ -1127,6 +1189,10 @@ int ExtraFunctionality(int key)
             break;
         case AF4 : case CX : case CQ :
         case F10 : ExitGame(); break;
+        case F6  : DemoMode(Computer); break;
+        case F7  : DemoMode(Human); break;
+        case F8  : ToggleSound(); ViewSysWindowChanged(vs,4,TRUE);
+            ViewSysDisplay(vs,DisplayChanged); SwapPage(); break;
         default : return FALSE; break;
     } // switch
     return TRUE;
@@ -1420,8 +1486,8 @@ void ProgInit() // initialises global variables
                         RED,"",GREEN,"",BLUE,"",YELLOW,"",ORANGE,""),
         "Mouse Use",TRUE,TRUE,ControlNew(List,Radio,1,3,8,3,
                         0,"None",1,"Partial",2,"Full"),
-        "Mouse Use",FALSE,FALSE,ControlNew(List,Name,1,1,20,1,
-                        0,"Mouse Not Installed"));
+        "Mouse Use",FALSE,FALSE,ControlNew(List,Name,1,1,24,1,
+                        0,"Mouse Not Initialised"));
 
     optionsdialog=DialogNew(pkeys,NULL,"Player Options",&hilite,3,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
@@ -1489,7 +1555,7 @@ void ProgInit() // initialises global variables
     HelpAddLine(aboutgame,"      Semester One 1998");
     HelpAddLine(aboutgame,"");
     HelpAddLine(aboutgame,"       Copyright 1998");
-    HelpAddLine(aboutgame,"        Version 0.9b");
+    HelpAddLine(aboutgame,"        Version 2.07");
 
     win=malloc(sizeof(WIN));
     if (!LoadCfg()) // no cfg file
@@ -1534,7 +1600,6 @@ void main()
     _setvisualpage(1);
     SetMousePage(1);
     _setactivepage(0);
-    mouseinstalled=InitMouse();
     _setcolor(RED);
     _setcharsize_w(0.02,0.02);
     _setcharspacing_w(-(0.01));
@@ -1616,7 +1681,8 @@ void main()
                             TextBoxFixedAddLine(msgbox,"~Press ESC To Continue");
 #endif
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
-                        TextBoxDelLine(msgbox,7);
+                        if (waitesc)
+                            TextBoxDelLine(msgbox,7);
                         NewGame();
 #ifndef TESTING
                         if (waitesc)

@@ -84,8 +84,9 @@ int InitMouse(void)
     xadjust=0;
     yadjust=0;
     if (!ResetMouse()) return FALSE;
-
-    _clearscreen(_GCLEARSCREEN);
+    _settextalign(_LEFT,_TOP);
+    _setcharsize(20,20);
+    _setcolor(WHITE);
     _moveto(0,0); _lineto(20,0);
     _moveto(0,0); _lineto(0,20);
     _grtext(30,160,"Mouse Configuration Screen");
@@ -94,7 +95,6 @@ int InitMouse(void)
     _grtext(30,280,"press a mouse button.");
     _grtext(30,320,"Or any key to use no mouse.");
     SwapPage();
-    _clearscreen(_GCLEARSCREEN);
     _moveto(0,0); _lineto(20,0);
     _moveto(0,0); _lineto(0,20);
     _grtext(30,160,"Mouse Configuration Screen");
@@ -104,8 +104,8 @@ int InitMouse(void)
     _grtext(30,320,"Or any key to use no mouse.");
     SwapPage();
     ShowMouse();
-    _setviewport(1,1,300,150);
-    _setcharsize_w(0.07,0.020);
+    _setviewport(1,1,220,150);
+    _setcharsize_w(0.07,0.017);
     while (NMB==GetMouseInput(&x,&y))
     {
         if (kbhit()) {while (kbhit()) {getch();} ret=FALSE; break;}

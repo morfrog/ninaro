@@ -38,6 +38,11 @@ void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2)
     vp->x1=x1; vp->y1=y1; vp->x2=x2; vp->y2=y2;
 }
 
+void MoveViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2)
+{
+    vp->x1+=x1; vp->y1+=y1; vp->x2+=x2; vp->y2+=y2;
+}
+
 int PointInsideViewport(int x,int y,VIEWPORT *vp)
 // purpose : is point x,y inside viewport
 // returns : TRUE if is, else FALSE
