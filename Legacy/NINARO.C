@@ -1067,6 +1067,8 @@ int ExtraFunctionality(int key)
 {
     switch (key)
     {
+        case F2 : SaveGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
+        case F3 : LoadGame(); ViewSysDisplay(vs,DisplayAll); SwapPage(); break;
         case 'h' : case F1  :
             KeyGroupCopy(pkeys,p2keys);
             // F1 to help defaults to numeric keys
