@@ -71,6 +71,9 @@ PLAYER *PlayerGroupPlayer(PLAYERGROUP *pg,int index);
 int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl);
 // purpose : to find the index of player in the playergroup
 // returns : -1 if player not in group else index is returned
+int PlayerGroupWho(PLAYERGROUP *pg,char *name);
+// purpose : to the ID of the first person in pg with name
+// returns : the index, -1 if name not in group
 void PlayerGroupFree(PLAYERGROUP *pg);
 // purpose : to free memory allocated to the playergroup
 // returns : void

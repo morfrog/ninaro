@@ -85,6 +85,16 @@ int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl)
 */
 }
 
+int PlayerGroupWho(PLAYERGROUP *pg,char *name)
+// purpose : to the ID of the first person in pg with name
+// returns : the index, -1 if name not in group
+{
+    int x;
+    for (x=0;x<pg->players;x++)
+       if (strcmp(pg->player[x],name)==0) return x; // found
+    return -1; // not found
+}
+
 PLAYERGROUP *PlayerGroupNew(int players,...)
 // purpose : creates a new player group containing players
 //           ... is players*{PLAYER *}

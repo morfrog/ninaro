@@ -219,9 +219,19 @@ void SetupPlayer(int player_index)
     else
         DialogNameSet(playerdialog,"New Player"); // should never happen
     if ((player_index==0) || (player_index==1)) // human
-        ControlCurrentSetTo(DialogControlGet(playerdialog,0),1); // set player
+        ControlCurrentSetTo(DialogControlGet(playerdialog,0),player_index); // set player
     else
-        ControlCurrentSetTo(DialogControlGet(playerdialog,0),player_index); // set player            
+    {
+        if (player_index==7) // copy player
+        {
+            ControlCurrentSetTo(DialogControlGet(playerdialog,0),
+                PlayerGroupWho(players,
+                  PlayerGetName(PlayerGroupPlayer(players,7))));
+                // set player            
+        }
+        else
+            ControlCurrentSetTo(DialogControlGet(playerdialog,0),player_index); // set player            
+    }
     ControlCurrentSetTo(DialogControlGet(playerdialog,1),pcol); // set color
 }
 
@@ -1593,6 +1603,7 @@ void main()
                                 BestOfResult();
                                 TextBoxFixedAddLine(msgbox,"~Press ESC To Continue");
                                 ViewSysDisplay(vs,DisplayAll); SwapPage();
+                                TextBoxDelLine(msgbox,7);
                                 while (GetKey()!=ESC) {}
                                 waitesc=FALSE; // no longer need to display msg
                                 ResetScores();
@@ -1604,6 +1615,7 @@ void main()
                             TextBoxFixedAddLine(msgbox,"~Press ESC To Continue");
 #endif
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
+                        TextBoxDelLine(msgbox,7);
                         NewGame();
 #ifndef TESTING
                         if (waitesc)
