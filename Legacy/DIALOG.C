@@ -896,9 +896,12 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
     int *newstate,same;
     CONTROL *c;
         
-    DialogStateGet(d,d->state);
     DialogCurrentSet(d,d->elems-1);
+    DialogStateGet(d,d->state);
     MemPagePut(mp);
+    c=DialogControlGet(d,d->current);
+    SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),MouseRow(d->current,d->elems));
+
     DialogDisplay(d,vp,mp,namefract,chars);
     SwapPage();
 
@@ -1004,7 +1007,12 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars,void (
                         if (!same) return TRUE;
                         // else continue to cancel
                     }
-                    else if (funcret==UNKNOWN) break;    // reset
+                    else if (funcret==UNKNOWN)
+                    {
+                        c=DialogControlGet(d,d->current);
+                        SetMousePos(MouseCol(ControlTransCurrentGet(c),ControlRange(c)),MouseRow(d->current,d->elems));
+                        break;    // reset
+                    }
                 case 5 : // CANCEL
                     return FALSE;     // dialog finished via cancel
             }

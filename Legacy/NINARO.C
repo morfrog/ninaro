@@ -51,6 +51,7 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 
 enum {GFOne=0,GFTwo,GFLoser,GFWinner,GFSuccessive,GFRandom}; // goes first
 
+
 // #define TESTING
 
 #define ColAdd 2 // 3 is red/green
@@ -944,7 +945,7 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
 
                         // also if opponent can make a move which gives them
                         // size-1 in a row with a gap either side block that
-                        // move
+                        // move +40 
                     }
                 }
             break;
@@ -1107,13 +1108,6 @@ int GetMouseCol(int x)
     return (x*grid_cols/width);
 }
 
-void SetMouseCol(int col)
-// sets the mouse pos to the middle of the col
-{
-    int width=(vs->main.x2-vs->main.x1+1)/grid_cols; // col width
-    SetMousePos(vs->main.x1+(col*width)+(width/2),vs->main.y1);
-}
-
 int HumanMove(GRID *grid,int usemouse)
 // returns column, returns -1 if anything other than a move occurs
 {
@@ -1232,6 +1226,13 @@ int AIGeniusMove(GRID *grid)
     return RuleMove(grid,4,PlayerGroupPlayer(players,player_current),OtherPlayer());
 }
 
+void SetMouseCol(int col)
+// sets the mouse pos to the middle of the col
+{
+    int width=(vs->main.x2-vs->main.x1+1)/grid_cols; // col width
+    SetMousePos(vs->main.x1+(col*width)+(width/2),vs->main.y1);
+}
+
 void SuggestMove(void)
 {
     PLAYER *pl=PlayerGroupPlayer(players,6); // AI genius
@@ -1251,7 +1252,11 @@ void SuggestMove(void)
         ViewSysDisplay(vs,DisplayChanged); SwapPage();
         delay(ai_speed*ai_delay);
     }
-    else AnimateMove(col);
+    else
+    {
+        AnimateMove(col);
+        SetMouseCol(col);
+    }
     _setfillmask( old_mask );
 }
 
@@ -1263,7 +1268,7 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
     ViewSysWindowNew(vs,0.0,0.09,0.6,1.0,TRUE,
         DisplayPlayGrid,MouseMove,"Enter Your Token Here");       // playgrid is 1
     ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,TRUE,
-        DisplayGameName,NULL,"Ninaro - By the author 1998");
+        DisplayGameName,NULL,"Ninaro");
     ViewSysWindowNew(vs,0.61,0.52,1.0,1.0,TRUE,
         DisplayMsgBox,NULL,"Messages appear here");
     ViewSysWindowNew(vs,0.61,0.1,1.0,0.37,TRUE,
@@ -1296,7 +1301,7 @@ void ProgInit() // initialises global variables
         PlayerNew("AI Expert",YELLOW,Computer,AIExpertMove),
         PlayerNew("AI Genius",PURPLE,Computer,AIGeniusMove),
         PlayerNew("Empty AI",GREEN,Computer,NULL));
-    pkeys=KeyGroupNew(6,0,0,0,0,0,0); //KP4,KP6,KP8,KP2,ENTER,BKSP);
+    pkeys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP); // default keys
     p1keys=KeyGroupNew(6,'a','d','w','s','e','q');
     p2keys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
     ResetScores();
@@ -1335,13 +1340,14 @@ void ProgInit() // initialises global variables
         "Connect",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
 
-    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",2,
+    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",3,
         "Background",TRUE,TRUE,ControlNew(List,Color,1,2,15,2,
                         BLACK,"",WHITE,""),
-//         black or white
         "Hilite",TRUE,TRUE,ControlNew(List,Color,1,5,11,5,
-                        RED,"",GREEN,"",BLUE,"",YELLOW,"",ORANGE,""));
-//         red,green,blue,yellow,white
+                        RED,"",GREEN,"",BLUE,"",YELLOW,"",ORANGE,""),
+        "Mouse Use",TRUE,TRUE,ControlNew(List,Radio,1,3,8,3,
+                        2,"Full",1,"Partial",0,"None"));
+
         
 //        hilite color red
 //        text color black
@@ -1481,6 +1487,7 @@ void main()
             {
 
             }
+            if (GetMouseInput(&mx,&my)==RMB) KeyUp(NULL); // menu call
             if (kbhit())
             {
                 ExtraFunctionality(GetKey());
@@ -1490,6 +1497,7 @@ void main()
                 if (col!=keypos) // animate move
                 {
                     AnimateMove(col);
+                    SetMouseCol(col);
                 }   // now col==keypos;
                 keypos=col;
                 if (DropToken()!=Failure)
@@ -1497,10 +1505,13 @@ void main()
                     if ((win_occured) || (isdraw))
                     {
                         waitesc=((ai_speed) || (!BothPlayerAI()));
+#ifndef TESTING
                         if (waitesc)
                             TextBoxFixedAddLine(msgbox,"~Press Cancel To Continue");
+#endif
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
                         NewGame();
+#ifndef TESTING
                         if (waitesc)
                         {
                             for (;;)
@@ -1513,7 +1524,6 @@ void main()
                                 }
                             }
                         }
-#ifndef TESTING                        
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
 #endif
                     }
