@@ -19,17 +19,29 @@ struct gridTag
 
 typedef struct gridTag GRID;
 
-GRID *NewGrid(int width,int height);
+GRID *GridNew(int width,int height);
 // purpose : to create a new grid, of width columns and height rows
 // returns : the grid
+int GridRows(GRID *grid);
+// purpose : to get the number of rows in the grid
+// returns : void
+int GridInRow(GRID *grid,int row);
+// purpose : how many tokens are in row of grid, row = 0..
+// returns : -1 of row out of range, else the number
+int GridCols(GRID *grid);
+// purpose : to get the number of columns in the grid
+// returns : void
+int GridInCol(GRID *grid,int col);
+// purpose : how many tokens are in col of grid, col = 0..
+// returns : -1 of row out of range, else the number
 void GridEmpty(GRID *grid);
 // purpose : empties the grid of all tokens
 // returns : void
 void GridFree(GRID *grid);
 // purpose : to free the memory allocated to the grid
 // returns : void
-void DisplayGrid(GRID *grid);
-// purpose : to display the grid in the current viewport
+void DisplayGrid(GRID *grid,double size);
+// purpose : to display the grid in the current viewport, tokens being of size
 // returns : void
 int InsertTokenAtCR(GRID *grid,int col,int row,PLAYER *player);
 // purpose : to insert a player token at col,row in the grid
@@ -66,6 +78,12 @@ void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap);
 //           wrap determines if it cycles to the other side(TRUE) or is
 //           lost entirely(FALSE)
 // returns : void
+void GridSave(GRID *grid,PLAYERGROUP *pg,char *gridname);
+// purpose : saves the grid, assumes all players have unique ID's
+// returns : void
+GRID *GridLoad(PLAYERGROUP *pg,char *gridname);
+// purpose : load a grid
+// returns : NULL if load unsuccessful, else the grid
 
 
 #endif

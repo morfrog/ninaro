@@ -834,7 +834,8 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
                 case 'r' : // Reset
                 case 'R' : DialogDefaultSet(d,1); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
                 case 'c' : // Cancel
-                case 'C' : DialogDefaultSet(d,2); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
+                case 'C' :
+                case ESC : DialogDefaultSet(d,2); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
             }
         }
         if (used) // key is used, via extra functionality or keysys

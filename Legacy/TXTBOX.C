@@ -36,7 +36,7 @@ int TextBoxAddLine(TXTBOX *tb,char *string,int afterline)
     NODE *look;
     NODE *new=malloc(sizeof(NODE));
     new->string=malloc((tb->width)*sizeof(char));
-    strcpy(new->string,string);
+    strncpy(new->string,string,tb->width-1);
     new->string[tb->width-1]='\0'; // terminate string
     if (tb->size==0) // the box is empty
     {

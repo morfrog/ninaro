@@ -17,7 +17,7 @@ void GridEmpty(GRID *grid)
     for (y=0;y<grid->height;y++) grid->numinrow[y]=0;
 }
 
-GRID *NewGrid(int width,int height)
+GRID *GridNew(int width,int height)
 // purpose : to create a new grid, of width columns and height rows
 // returns : the grid
 {
@@ -33,6 +33,36 @@ GRID *NewGrid(int width,int height)
     return ret;
 }
 
+int GridRows(GRID *grid)
+// purpose : to get the number of rows in the grid
+// returns : void
+{
+    return grid->height;
+}
+
+int GridInRow(GRID *grid,int row)
+// purpose : how many tokens are in row of grid, row = 0..
+// returns : -1 of row out of range, else the number
+{
+    if (row>=grid->height) return -1;
+    return (grid->numinrow[row]);
+}
+
+int GridCols(GRID *grid)
+// purpose : to get the number of columns in the grid
+// returns : void
+{
+    return grid->width;
+}
+
+int GridInCol(GRID *grid,int col)
+// purpose : how many tokens are in col of grid, col = 0..
+// returns : -1 of row out of range, else the number
+{
+    if (col>=grid->width) return -1;
+    return (grid->numincol[col]);
+}
+
 void GridFree(GRID *grid)
 // purpose : to free the memory allocated to the grid
 // returns : void
@@ -43,8 +73,8 @@ void GridFree(GRID *grid)
     free(grid);
 }
 
-void DisplayGrid(GRID *grid)
-// purpose : to display the grid in the current viewport
+void DisplayGrid(GRID *grid,double size)
+// purpose : to display the grid in the current viewport, tokens being of size
 // returns : void
 {
     int x,y;
@@ -53,7 +83,7 @@ void DisplayGrid(GRID *grid)
         for (y=0;y<grid->height;y++)
         {
             if (grid->grid[x][y]!=NULL) // not empty
-                DrawDisc(x,grid->width,y,grid->height,PlayerGetColor(grid->grid[x][y]),0.60);
+                DrawDisc(x,grid->width,y,grid->height,PlayerGetColor(grid->grid[x][y]),size);
         }
 }
 
@@ -231,21 +261,47 @@ void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap)
     free(copygrid);
 }
 
-void GridSave(GRID *grid,PLAYERGROUP *pg,char *gamename)
+void GridSave(GRID *grid,PLAYERGROUP *pg,char *gridname)
+// purpose : saves the grid, assumes all players have unique ID's
+// returns : void
 {
     int x,y;
-    char buffer[10];
-    BINFILE *bf=BinFileNew(8+MaxTokensInGrid(grid));
+    PLAYER *player;
+    BINFILE *bf=BinFileNew(sizeof(int)*(2+MaxTokensInGrid(grid)));
 
-    BinFilePutInt(bf,grid->height);
     BinFilePutInt(bf,grid->width);
+    BinFilePutInt(bf,grid->height);
 
     for (x=0;x<grid->width;x++)
-        for (y=0;y<grid->width;y++)
+        for (y=0;y<grid->height;y++)
         {
-            BinFilePutInt(bf,grid->width);
+            player=grid->grid[x][y];
+            BinFilePutInt(bf,player==NULL?0:PlayerGroupFind(pg,player)+1);
         }
-
-    BinFileWriteFull(bf,gamename);
-    
+    BinFileWriteFull(bf,gridname);
+    BinFileFree(bf);
 }
+
+GRID *GridLoad(PLAYERGROUP *pg,char *gridname)
+// purpose : load a grid
+// returns : NULL if load unsuccessful, else the grid
+{
+    BINFILE *bf=BinFileReadFull(gridname,0);
+    int player;
+    GRID *ret;
+    int width,height,x,y;
+
+    if (bf==NULL) return NULL;  // failed to load file
+    width=BinFileGetInt(bf);
+    height=BinFileGetInt(bf);
+    ret=GridNew(width,height);
+    for (x=0;x<width;x++)
+        for (y=0;y<height;y++)
+        {
+            player=BinFileGetInt(bf);
+            InsertTokenAtCR(ret,x,y,(player==0?NULL:PlayerGroupPlayer(pg,player-1)));
+        }
+    BinFileFree(bf);
+    return ret;
+}
+

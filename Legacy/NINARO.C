@@ -1,5 +1,6 @@
-// todo : grid save and load
-//        title screen
+// todo :
+//  DONE  grid save and load
+//  DONE  title screen
 //        player has new attribute (* func)(GRID *grid) which gets move
 //        so each player has own function
 //        getting a computer move cannot be interrupted, interrupt between
@@ -14,7 +15,7 @@
 //        when two computers battling it out, player can press ESC or M to
 //        interrupt them to gain menu access
 //        provide animation for computers
-//        possibly merge player color and type icons to expand score width
+//  DONE  possibly merge player color and type icons to expand score width
 //        if score too big - too many characters squash char width to fit.
 #include <stdlib.h>
 #include <stdio.h>
@@ -44,7 +45,7 @@
 // Nathan Neuro
 // Minny Maxx
 
-char buffer[40];    //  general use buffer for output
+char buffer[40];
 int win_occured;
 WIN *win;
 int grid_cols;
@@ -151,10 +152,8 @@ void ResetGameSize(int cols,int rows,int inarow)
     keypos=(cols/2)+(cols%2);
     win_occured=FALSE;
     SetWinSize(win,inarow);
-    GameSizeFit(boarddialog);
-    playgrid=NewGrid(grid_cols,grid_rows);
-    entrygrid=NewGrid(grid_cols,1);
-    keypos=0;
+    playgrid=GridNew(grid_cols,grid_rows);
+    entrygrid=GridNew(grid_cols,1);
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
 }
 
@@ -198,21 +197,22 @@ void DisplayHuman(int primary,int secondary)
 {
     _setcolor(primary);
     _ellipse_w(_GFILLINTERIOR,0.2,0.1,0.8,0.25);  //head
-    _moveto_w(0.5,0.25); _lineto_w(0.5,0.7);     // body
+    _moveto_w(0.49,0.25); _lineto_w(0.49,0.7);     // body
+    _moveto_w(0.51,0.25); _lineto_w(0.51,0.7);     // body
     _setcolor(secondary);
-    _moveto_w(0.5,0.7); _lineto_w(0.8,0.9);     // right leg
-    _moveto_w(0.5,0.7); _lineto_w(0.2,0.9);     // left leg
+    _moveto_w(0.49,0.7); _lineto_w(0.8,0.9);     // left leg
+    _moveto_w(0.51,0.7); _lineto_w(0.2,0.9);     // right leg
     _moveto_w(0.1,0.4); _lineto_w(0.9,0.4);     // arms
 }
 
 void DisplayComputer(int primary,int secondary)
 // draws a computer in the current viewport
 {
-    _setcolor(primary);
+    _setcolor(secondary);
     _rectangle_w(_GBORDER,0.1,0.1,0.9,0.65);
     _rectangle_w(_GBORDER,0.45,0.65,0.55,0.75);
     _rectangle_w(_GBORDER,0.1,0.75,0.9,0.9);
-    _setcolor(secondary);
+    _setcolor(primary);
     _rectangle_w(_GFILLINTERIOR,0.2,0.2,0.8,0.55);
 }
 
@@ -243,10 +243,10 @@ void DisplayPlayerName(PLAYER *player)
 
 void DisplayPlayerScore(int score)
 {
-    char buffer[5];
+    char sbuf[5];
     _setcolor(GREEN);
-    sprintf(buffer,"%d",score);
-    _grtext_w(0.0,1.0,buffer);
+    sprintf(sbuf,"%d",score);
+    _grtext_w(0.0,1.0,sbuf);
 }
 
 void Debug(char *string)
@@ -256,14 +256,14 @@ void Debug(char *string)
     _grtext_w(0.5,0.5, string);
 }
 
-void DisplayEntryGrid(void) {_setcolor(YELLOW);DisplayGrid(entrygrid);}
+void DisplayEntryGrid(void) {_setcolor(YELLOW);DisplayGrid(entrygrid,0.6);}
 
 void DisplayPlayGrid(void)
 {
     int x;
     int col,row;
     _setcolor(GREEN);
-    DisplayGrid(playgrid);
+    DisplayGrid(playgrid,0.6);
     if (win_occured)
         for (x=0;x<win->tokens;x++)
         {
@@ -401,9 +401,9 @@ int KeyCancel(void *vp) {return KeyUp(vp);}
 
 void MsgGameN(void)
 {
-    char buffer[40];
-    sprintf(buffer,"Playing %d in a row.",win->tokens);
-    TextBoxAddLine(msgbox,buffer,ATEND);
+    char nbuf[40];
+    sprintf(nbuf,"Playing %d in a row.",win->tokens);
+    TextBoxAddLine(msgbox,nbuf,ATEND);
     TextBoxScrollEnd(msgbox);
 }
 
@@ -413,6 +413,71 @@ void NewGame(void)
     InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupPlayer(players,player_current));
     win_occured=FALSE; MsgGameN();
 }
+
+int PlayersInGrid(GRID *grid,int *p1,int *p2)
+// purpose : to find which players are in the grid
+// returns : TRUE if got players, else FALSE if was unable to
+{
+    int cols=GridCols(grid),rows=GridRows(grid);
+    PLAYER *pl;
+    int find,x,y;
+
+    *p1=-1; // not found
+    *p2=-1; // not found
+    
+    for (x=0;x<cols;x++)
+        for (y=0;y<rows;y++)
+        {
+            pl=StatusOfCR(grid,x,y);
+            if (pl!=NULL)
+            {
+                find=PlayerGroupFind(players,pl);
+                if (*p1==-1) *p1=find;
+                else if (*p2==-1) {if (*p1!=find) *p2=find;}
+                else return TRUE;    // both are initialised
+            }
+        }
+    return FALSE;
+}
+
+void LoadGame(void)
+{
+    int p1,p2;
+    GRID *tmp;
+    tmp=GridLoad(players,"NINARO.SAV");
+    if (tmp==NULL) // failed to load
+    {
+        TextBoxAddLine(msgbox,"~Load Error!",ATEND);
+    }
+    else // loaded OK
+    {
+        GridFree(playgrid);
+        playgrid=tmp;
+        PlayersInGrid(playgrid,&p1,&p2);
+        // is known to return true because only saves ones which have 2 players
+        SetP1(p1);
+        SetP2(p2);
+        TextBoxAddLine(msgbox,"Game Loaded",ATEND);
+    }
+    TextBoxScrollEnd(msgbox);
+    win_occured=FALSE; MsgGameN();
+}
+
+void SaveGame(void)
+{
+    int p1,p2;
+    if (PlayersInGrid(playgrid,&p1,&p2))
+    {
+        GridSave(playgrid,players,"NINARO.SAV");
+        TextBoxAddLine(msgbox,"Game Saved",ATEND);
+    }
+    else // can't save due to lack of players    
+    {
+        TextBoxAddLine(msgbox,"~Save Error!",ATEND);
+    }
+    TextBoxScrollEnd(msgbox);
+}
+
 void EndGame(void) {NewGame();}
 void ExitGame(void) {ProgFree(); ShutDown(); exit(0);}
 
@@ -439,33 +504,37 @@ void HelpAbout(void)
 
 void GameStatus(void)
 {
-    char buffer[50];
-    sprintf(buffer,"~----------Game Status----------------");
-    TextBoxAddLine(msgbox,buffer,ATEND);
-    sprintf(buffer,"%d Columns x %d Rows, Connect %d",grid_cols,grid_rows,win->tokens);
-    TextBoxAddLine(msgbox,buffer,ATEND);
-    sprintf(buffer,"Player One is %s",PlayerGetName(PlayerGroupPlayer(players,player_one)));
-    TextBoxAddLine(msgbox,buffer,ATEND);
-    sprintf(buffer,"Player Two is %s",PlayerGetName(PlayerGroupPlayer(players,player_two)));
-    TextBoxAddLine(msgbox,buffer,ATEND);
+
+    char gbuf[50];
+    sprintf(gbuf,"~-----Game Status-----");
+    TextBoxAddLine(msgbox,gbuf,ATEND);
+    sprintf(gbuf,"%d Columns x %d Rows",grid_cols,grid_rows);
+    TextBoxAddLine(msgbox,gbuf,ATEND);
+    sprintf(gbuf,"Connect %d",win->tokens);
+    TextBoxAddLine(msgbox,gbuf,ATEND);
+    sprintf(gbuf,"Player One is %s",PlayerGetName(PlayerGroupPlayer(players,player_one)));
+    TextBoxAddLine(msgbox,gbuf,ATEND);
+    sprintf(gbuf,"Player Two is %s",PlayerGetName(PlayerGroupPlayer(players,player_two)));
+    TextBoxAddLine(msgbox,gbuf,ATEND);
     TextBoxScrollEnd(msgbox);
 }
 
 void GameSizeCustom(void)
 {
     VIEWPORT vp={50,50,590,300};
-    int buffer[4];
-    buffer[0]=grid_rows;
-    buffer[1]=grid_cols;
-    buffer[2]=win->tokens;
-    buffer[3]=0;
-    DialogStateSet(boarddialog,buffer);
+    int cbuf[4];
+    cbuf[0]=grid_rows;
+    cbuf[1]=grid_cols;
+    cbuf[2]=win->tokens;
+    cbuf[3]=0; // OK
+    DialogStateSet(boarddialog,cbuf);
+    GameSizeFit(boarddialog);
     if (DialogCall(boarddialog,&vp,vs->current,5,8))
     {
-        DialogStateGet(boarddialog,buffer);
-        ResetGameSize(buffer[1],buffer[0],buffer[2]);
+        DialogStateGet(boarddialog,cbuf);
+        ResetGameSize(cbuf[1],cbuf[0],cbuf[2]);
+        GameStatus();
     }
-    GameStatus();
 }
 
 int PlayerDialog(int pnum)
@@ -531,20 +600,16 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
     ViewSysWindowNew(vs,0.61,0.1,1.0,0.6,ACTIVE,
         DisplayMsgBox,"Messages appear here");          // msg box is 3
     ViewSysWindowNew(vs,0.61,0.6,0.65,0.648,ACTIVE,
-        DisplayP1Color,"Player One's Color");
-    ViewSysWindowNew(vs,0.65,0.6,0.70,0.648,ACTIVE,
         DisplayP1Type,"Player One's Type");
-    ViewSysWindowNew(vs,0.7,0.6,0.94,0.648,ACTIVE,
+    ViewSysWindowNew(vs,0.66,0.6,0.90,0.648,ACTIVE,
         DisplayP1Name,"Player One's Name");
-    ViewSysWindowNew(vs,0.94,0.6,1.0,0.648,ACTIVE,
+    ViewSysWindowNew(vs,0.91,0.6,1.0,0.648,ACTIVE,
         DisplayP1Score,"Player One's Score");
     ViewSysWindowNew(vs,0.61,0.652,0.65,0.7,ACTIVE,
-        DisplayP2Color,"Player Two's Color");
-    ViewSysWindowNew(vs,0.65,0.652,0.7,0.7,ACTIVE,
         DisplayP2Type,"Player Two's Type");
-    ViewSysWindowNew(vs,0.7,0.652,0.94,0.7,ACTIVE,
+    ViewSysWindowNew(vs,0.66,0.652,0.90,0.7,ACTIVE,
         DisplayP2Name,"Player Two's Name");
-    ViewSysWindowNew(vs,0.94,0.652,1.0,0.7,ACTIVE,
+    ViewSysWindowNew(vs,0.91,0.652,1.0,0.7,ACTIVE,
         DisplayP2Score,"Player Two's Score");
     return vs;
 }
@@ -573,7 +638,7 @@ void ProgInit() // initialises global variables
 
     vs=ViewSysInit(0,0,639,349,20,20);
     
-    msgbox=TextBoxNew(8,RED,WHITE,GREEN,25);
+    msgbox=TextBoxNew(8,RED,WHITE,GREEN,30);
     
     players=PlayerGroupNew(7, // allows for only two humans
         PlayerNew("Player One",YELLOW,Human),
@@ -597,8 +662,8 @@ void ProgInit() // initialises global variables
     TextBoxAddLine(msgbox,"~Let The Game Begin",ATEND);
     TextBoxScrollEnd(msgbox);
                     
-    playgrid=NewGrid(grid_cols,grid_rows);
-    entrygrid=NewGrid(grid_cols,1);
+    playgrid=GridNew(grid_cols,grid_rows);
+    entrygrid=GridNew(grid_cols,1);
     playerdialog=DialogNew(pkeys,ModifyPlayer,"Player One",2,
         "Player",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         1,"Human",
@@ -634,8 +699,10 @@ void ProgInit() // initialises global variables
                         51,"Fifty-One"));
 */            
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
-    MenuNewSub(mainmenu,"Game",6,
+    MenuNewSub(mainmenu,"Game",8,
         "New",      CN, NewGame,    TRUE,
+        "Load",   NONE, LoadGame,   TRUE,
+        "Save",   NONE, SaveGame,   TRUE,
         "End",      CE, EndGame,    FALSE,
         "Status",   CS, GameStatus, TRUE,
         "Suggest Move",NONE,NULL,   TRUE,
@@ -673,6 +740,7 @@ void ProgInit() // initialises global variables
     HelpAddLine(aboutgame,"");
     HelpAddLine(aboutgame,"Semester One 1998");
     HelpAddLine(aboutgame,"");
+    HelpAddLine(aboutgame,"Copyright 1998");
 
 }
 
@@ -686,6 +754,109 @@ void ProgFree() // frees global variables
     GridFree(entrygrid);
     ViewSysFree(vs);
     TextBoxFree(msgbox);
+}
+
+void TitleMove(GRID *grid,int *col,int *row)
+{
+    int cols=GridCols(grid);
+    int move=Random(cols);
+    int incol=GridInCol(grid,move);
+    int tokcols,x;
+
+
+//    ShutDown();
+//    _Break(4,"GridRows",GridRows(grid),"Incol",incol,"cols",cols,"move",move);
+//    exit(0);
+
+    if (incol) // there are tokens in the col
+    {
+        *col=move;
+        *row=(GridRows(grid)-incol);
+    }
+    else
+    {
+        tokcols=0;
+        for (x=0;x<cols;x++) // find how many columns still have tokens
+        {
+            if (GridInCol(grid,x)>0) ++tokcols;
+        }
+        move=Random(tokcols); // random of tokened columns
+        tokcols=0;
+        for (x=0;x<cols;x++)
+        {
+            incol=GridInCol(grid,x);
+            if (incol!=0) ++tokcols; // found a tokened col
+            if (tokcols==move+1)
+            {
+                *col=x;
+                *row=GridRows(grid)-incol;
+                x=cols; // break out
+            }
+        }
+        // error if get here, may have called func too many times.
+    }
+}
+
+void TitleScreen(void)
+// uses global variables
+{
+    PLAYER *pl;
+    GRID *filegrid=GridLoad(players,"NINARO.TTL");
+    int x;
+    int tokens=31*9;
+    int scol,srow;  // source col & row
+    int sety,setr,bit=0,top=0;
+// 0x153f3fL
+    if (filegrid==NULL) return;
+   _remappalette(YELLOW,0x020202L);
+   _remappalette(GREEN,0x040404L);
+    StartRandom();
+    ResetGameSize(31,9,4);
+    SetViewport(&(vs->main));
+    _setcolor(GREEN);
+    DisplayGrid(playgrid,0.95);
+    SwapPage();
+
+    for (x=0;x<tokens;x++)
+    {
+        TitleMove(filegrid,&scol,&srow);
+        pl=RemoveTokenAtCR(filegrid,scol,srow);
+        InsertTokenInCol(playgrid,scol,pl,win);
+        _setcolor(GREEN);
+        DisplayGrid(playgrid,0.95);
+        SwapPage();
+        if (kbhit()) x=tokens;
+    }
+    // display "hit any key to continue"
+    Buzz(200,400,20,100);
+    _setcolor(GREEN);
+    DisplayGrid(playgrid,0.95);
+    SwapPage();
+    sety=0x000000L; setr=_RED; 
+    do
+    {
+        if (bit)
+        {
+            bit=0;
+            sety+=0x010001L; setr-=0x000001L;
+        }
+        else
+        {
+            bit=1;
+            sety+=0x000101L; setr-=0x000001L;
+        }
+        _remappalette(YELLOW,sety);
+        _remappalette(RED,setr);
+        if (kbhit()) sety=_YELLOW;
+    }
+    while (sety<_YELLOW);
+   _remappalette(RED,_RED);
+   _remappalette(YELLOW,0x040404L);
+    GetKey();
+    GridFree(filegrid);
+    ResetGameSize(7,8,4);
+   _remappalette(GREEN,_GREEN);
+   _remappalette(YELLOW,_YELLOW);
 }
 
 void main()
@@ -703,9 +874,11 @@ void main()
     _settextalign(_CENTER,_HALF);
     ProgInit(); // some parts rely on graphics mode
 
+    TitleScreen();
+
     ViewSysDisplay(vs,DisplayAll);
     SwapPage();
-    
+        
     for (;;)
     {
         key=GetKey();
