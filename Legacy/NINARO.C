@@ -42,7 +42,7 @@ PLAYER *player_two;
 PLAYER *player_current;
 TXTBOX *msgbox;
 VIEWSYS *vs;
-MENU *menu;
+MENU *mainmenu;
 
 void SetP1Current()
 {
@@ -199,7 +199,7 @@ void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
 int KeyUp(void)
 {
-    MenuDisplay(menu);
+    MenuCall(mainmenu,vs->current);
     return TRUE;
 }
 
@@ -249,7 +249,7 @@ int KeyDown(void)
     return NoDisplay; // should never happen
 }
 
-VIEWSYS *ViewSysInit(int maxwindows,int maxkeys,int x1,int y1,int x2,int y2)
+VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
 {
     VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys,ViewSysClear);
     ViewSysWindowNew(vs,0.0,0.0,0.6,0.09,ACTIVE,
@@ -284,6 +284,8 @@ void Test(void)
     Buzz(800,900,50,400);
 }
 
+void ExitGame(void) {ShutDown(); ProgFree(); exit(0);}
+
 void ProgInit() // initialises global variables
 {
     win=malloc(sizeof(WIN));
@@ -294,16 +296,16 @@ void ProgInit() // initialises global variables
     grid_rows=8;
     grid_cols=7;
 
-    vs=ViewSysInit(20,20,0,0,639,349);
+    vs=ViewSysInit(0,0,639,349,20,20);
 
     ViewSysKeyAdd(vs,KP4,KeyLeft,DISABLE);  // move token left
-    ViewSysKeyAdd(vs,KP2,KeyDown,DISABLE);  // drop token
     ViewSysKeyAdd(vs,KP6,KeyRight,DISABLE); // move token right
     ViewSysKeyAdd(vs,KP8,KeyUp,DISABLE);    // call menu
+    ViewSysKeyAdd(vs,KP2,KeyDown,DISABLE);  // drop token
     ViewSysKeyAdd(vs,'a',KeyLeft,DISABLE);  // move token left
     ViewSysKeyAdd(vs,'d',KeyRight,DISABLE); // move token right
-    ViewSysKeyAdd(vs,'s',KeyDown,DISABLE);  // drop token
     ViewSysKeyAdd(vs,'w',KeyUp,DISABLE);    // call menu
+    ViewSysKeyAdd(vs,'s',KeyDown,DISABLE);  // drop token
     ViewSysKeyAdd(vs,ESC,KeyUp,ENABLE);     // call menu
 
     msgbox=TextBoxNew(5,RED,WHITE,40);
@@ -329,9 +331,17 @@ void ProgInit() // initialises global variables
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
 
-    menu=MenuNew(20,0,0,639,349,ViewSysCurrent(vs));
-    MenuNewSub(menu,"Game",2,"New",CN,Test,ItemEnabled,
-                             "Exit",CX,NULL,ItemEnabled);
+    mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs));
+    MenuNewSub(mainmenu,"Game",2,"New",CN,Test,ItemEnabled,
+                             "Exit",CX,ExitGame,ItemEnabled);
+    MenuNewSub(mainmenu,"Board",3,"7x8x4",NONE,NULL,ItemEnabled,
+                              "12x13x6",NONE,NULL,ItemEnabled, 
+                              "Custom...",NONE,NULL,ItemEnabled);
+    MenuNewSub(mainmenu,"Player",2,"One...",NONE,NULL,ItemEnabled,
+                               "Two...",NONE,NULL,ItemDisabled);
+    MenuNewSub(mainmenu,"Help",2,"Contents",NONE,NULL,ItemEnabled,
+                             "About",NONE,NULL,ItemEnabled);                              
+    MenuKeysSet(mainmenu,KP4,KP6,KP8,KP2,ENTER,ESC);
 }
 
 void ProgFree() // frees global variables
@@ -352,7 +362,7 @@ void ProgFree() // frees global variables
     GridFree(playgrid);
     GridFree(entrygrid);
     printf("Freeing Menu...");
-    MenuFree(menu);
+    MenuFree(mainmenu);
 }
 
 void main()
@@ -372,7 +382,9 @@ void main()
 
     ViewSysDisplay(vs,DisplayAll);
     SwapPage();
-
+//    ViewSysDisplay(vs,DisplayAll);
+//    SwapPage();
+    
     for (;ever;)
     {
         if (kbhit())

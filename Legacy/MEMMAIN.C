@@ -1,9 +1,30 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <conio.h>
 #include <graph.h>
 #include "screen.h"
 #include "mempage.h"
  
+
+void main()
+{
+    MEMPAGE *mp;
+    VIEWPORT vp={0,0,639,349};
+    ScreenInit();
+    mp=MemPageNew(&vp);
+    _setactivepage(0);
+    _setvisualpage(1);
+    _ellipse(_GFILLINTERIOR,0,0,100,100);
+    getch();
+    MemPageGet(mp);
+    _clearscreen(_GCLEARSCREEN);
+    MemPagePut(mp);
+    _setvisualpage(0);
+    getch();
+    ShutDown();
+    
+}
+/*
 void main()
 {
     MEMPAGE *one;
@@ -22,6 +43,7 @@ void main()
     ShutDown();
     printf("%d=%d,%d=%d,%d=%d\n",640*350/2,x,640*480/2,y,800*600/2,z);
 }
+*/
 /*
     printf("%d %d\n",(one->image[0] & (mask << 4)),(one->image[0] & mask));
     printf("%d %d\n",(one->image[1] & (mask << 4)),(one->image[1] & mask));

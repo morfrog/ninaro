@@ -69,6 +69,8 @@ void ViewSysKeyAdd(VIEWSYS *vs,int key,int (* func)(void),int enable);
 void ViewSysKeyEnable(VIEWSYS *vs,int enable,int n_key);
 void ViewSysKeyEnableAll(VIEWSYS *vs,int enable,int key);
 void ViewSysKeyEnableGroup(VIEWSYS *vs,int enable,int num,...);
+int ViewSysKeyNum(VIEWSYS *vs,int keynum);
 void ViewSysFree(VIEWSYS *vs);
+
 #endif
 

@@ -33,6 +33,7 @@ struct viewportTag
 
 typedef struct viewportTag VIEWPORT;
 
+void SetViewport(VIEWPORT *vp);
 void ScreenInit();
 void DrawGrid(int x,int y);
 void DrawDisc(int col,int cols,int row,int rows,int color,double discsize);

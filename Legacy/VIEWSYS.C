@@ -33,7 +33,7 @@ VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
     viewsys->keys=0;
     viewsys->window=malloc(maxwindows*sizeof(WINDOW));
     viewsys->key=malloc(maxkeys*sizeof(KEYIN));
-    viewsys->current=MemPageNew(x1,y1,x2,y2);
+    viewsys->current=MemPageNew(&(viewsys->main));
     viewsys->background=background;
     return viewsys;
 }
@@ -93,11 +93,6 @@ void ViewSysKeyAdd(VIEWSYS *vs,int key,int (* func)(void),int enable)
     }
 }
 
-void SetViewport(VIEWPORT *vp)
-{
-    _setviewport(vp->x1,vp->y1,vp->x2,vp->y2);
-}
-
 void ViewSysClear(VIEWPORT *vp)
 // clears the vp viewport
 {
@@ -128,8 +123,10 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
                     wp->changed=NOCHANGE;
                 }
             }
+            MemPageGet(vs->current); // update current to reflect changes
             break;
         case DisplayChanged :
+            _clearscreen(_GCLEARSCREEN);
             MemPagePut(vs->current);
             for (n=0;n<vs->windows;n++)
             {
@@ -142,10 +139,10 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
                     wp->changed=NOCHANGE;
                 }
             }
+            MemPageGet(vs->current); // update current to reflect changes
             break;
         default : return FALSE; break; // NoDisplay
     }
-    MemPageGet(vs->current); // update current to reflect changes
     return TRUE;
 }
 
@@ -204,6 +201,11 @@ void ViewSysKeyEnableGroup(VIEWSYS *vs,int enable,int num,...)
         vs->key[n_key].enable=enable;
     }
     va_end(ap);
+}
+
+int ViewSysKeyNum(VIEWSYS *vs,int keynum)
+{
+    return vs->key[keynum].key;
 }
 
 void ViewSysWindowChanged(VIEWSYS *vs,int window,int changed)

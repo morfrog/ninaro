@@ -51,6 +51,7 @@ void SetFree(SET *set)
     free(set);
 }
 
+/*
 void main()
 {
     SET *set=SetNew(9);
@@ -62,3 +63,4 @@ void main()
     SetPrint(set);
     SetFree(set);
 }
+*/

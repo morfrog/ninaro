@@ -1,6 +1,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <graph.h>
+#include "screen.h"
+
+void SetViewport(VIEWPORT *vp)
+{
+    _setviewport(vp->x1,vp->y1,vp->x2,vp->y2);
+}
 
 void ScreenInit()
 {
