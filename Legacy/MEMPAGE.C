@@ -15,13 +15,15 @@ MEMPAGE *MemPageNew(VIEWPORT *vp)
 void MemPageGet(MEMPAGE *mp)
 // gets the image of the mempages viewport and saves it
 {
-    _getimage(mp->vp->x1,mp->vp->y1,mp->vp->x2,mp->vp->y2,mp->image);
+    SetViewport(mp->vp);
+    _getimage_w(0.0,0.0,1.0,1.0,mp->image);
 }
 
 void MemPagePut(MEMPAGE *mp)
 // puts the image of the mempages viewport on the screen
 {
-    _putimage(mp->vp->x1,mp->vp->y1,mp->image,_GPSET);
+    SetViewport(mp->vp);
+    _putimage_w(0.0,0.0,mp->image,_GPSET);
 }
 
 void MemPageFree(MEMPAGE *mp)

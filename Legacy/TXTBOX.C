@@ -156,8 +156,8 @@ void TextBoxShow(TXTBOX *tb)
     int pixels_line_height=(xyc2.ycoord-xyc1.ycoord)/tb->lines;
     int pixels_line_width=xyc2.xcoord-xyc1.xcoord;
     double char_width=(double)pixels_line_height/(double)pixels_line_width;
-    _setcharspacing(-0.05);
-    _setcharsize_w(0.2*1.0/(double)tb->lines,char_width*0.2);
+    _setcharspacing_w(-0.005);
+    _setcharsize_w(0.4*1.0/(double)tb->lines,char_width*0.2);
     _settextalign(_LEFT,_BOTTOM);
     if (tb->bordercol!=NOBORDER)
     {

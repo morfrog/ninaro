@@ -8,6 +8,14 @@ void SetViewport(VIEWPORT *vp)
     _setviewport(vp->x1,vp->y1,vp->x2,vp->y2);
 }
 
+void BorderedBox(double x1,double y1,double x2,double y2,int p,int s)
+{
+    _setcolor(p);
+    _rectangle_w(_GFILLINTERIOR,x1,y1,x2,y2);
+    _setcolor(s);
+    _rectangle_w(_GBORDER,x1,y1,x2,y2);
+}
+
 void ScreenInit()
 {
     _setvideomode(16); // 640x350 2 pages 16 colors

@@ -35,6 +35,7 @@ VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
     viewsys->key=malloc(maxkeys*sizeof(KEYIN));
     viewsys->current=MemPageNew(&(viewsys->main));
     viewsys->background=background;
+    viewsys->changed=0;
     return viewsys;
 }
 
@@ -126,20 +127,23 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
             MemPageGet(vs->current); // update current to reflect changes
             break;
         case DisplayChanged :
-            _clearscreen(_GCLEARSCREEN);
             MemPagePut(vs->current);
-            for (n=0;n<vs->windows;n++)
+            if (vs->changed>0) // else just display current
             {
-                wp=&(vs->window[n]);
-                if ((wp->changed) && (wp->active) && (wp->display!=NULL))
+                for (n=0;n<vs->windows;n++)
                 {
-                    vs->background(&(wp->vp));
-                    SetViewport(&(wp->vp));
-                    wp->display();
-                    wp->changed=NOCHANGE;
+                    wp=&(vs->window[n]);
+                    if ((wp->changed) && (wp->active) && (wp->display!=NULL))
+                    {
+                        vs->background(&(wp->vp));
+                        SetViewport(&(wp->vp));
+                        wp->display();
+                        wp->changed=NOCHANGE;
+                    }
                 }
+                MemPageGet(vs->current); // update current to reflect changes
+                vs->changed=0;
             }
-            MemPageGet(vs->current); // update current to reflect changes
             break;
         default : return FALSE; break; // NoDisplay
     }
@@ -211,7 +215,11 @@ int ViewSysKeyNum(VIEWSYS *vs,int keynum)
 void ViewSysWindowChanged(VIEWSYS *vs,int window,int changed)
 {
     vs->window[window].changed=changed;
-}
+    if ((vs->window[window].changed==CHANGED) && (changed==NOCHANGE))
+        vs->changed-=1;
+    else if ((vs->window[window].changed==NOCHANGE) && (changed==CHANGED))
+        vs->changed+=1;
+}       
 
 void ViewSysWindowActivate(VIEWSYS *vs,int window,int activity)
 {

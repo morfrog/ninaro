@@ -33,25 +33,31 @@ int MenuRight(MENUVIEW *mv)
 int MenuUp(MENUVIEW *mv)
 {
     SUBMENU *sm=&(mv->submenu[mv->current]);
-    if (sm->current>0)
+    int old=sm->current;
+    for (;;)
     {
-        do {sm->current-=1;}
-        while (sm->item[sm->current].name==SEPARATOR);
-        return directionok;
+        sm->current-=1;
+        if (sm->current<0) {sm->current=old; return directionbad;}
+        if ((sm->item[sm->current].name!=SEPARATOR) &&
+            (sm->item[sm->current].enabled!=ItemDisabled))
+            return directionok; // acceptable item
+        // else keep going
     }
-    return directionbad;
 }
 
 int MenuDown(MENUVIEW *mv)
 {
     SUBMENU *sm=&(mv->submenu[mv->current]);
-    if (sm->current<sm->items-1)
+    int old=sm->current;
+    for (;;)
     {
-        do {sm->current+=1;}
-        while (sm->item[sm->current].name==SEPARATOR);
-        return directionok;
+        sm->current+=1;
+        if (sm->current>sm->items-1) {sm->current=old; return directionbad;}
+        if ((sm->item[sm->current].name!=SEPARATOR) &&
+            (sm->item[sm->current].enabled!=ItemDisabled))
+            return directionok; // acceptable item
+        // else keep going
     }
-    return directionbad;
 }
 
 int MenuSelect(MENUVIEW *mv)
@@ -118,7 +124,9 @@ void MenuNewSub(MENU *menu,char *menuname,int items,...)
             strcpy(sm->item[n].name,name);
             sm->item[n].shortcut=va_arg(ap,int);
             sm->item[n].function=va_arg(ap,void *);
-            sm->item[n].enabled=va_arg(ap,byte);            
+            sm->item[n].enabled=va_arg(ap,byte);
+            if (sm->item[n].enabled==ItemEnabled) sm->current=n;
+            // ensures the current is a proper item
         }
     }
     ++(menu->view->current);
@@ -134,84 +142,92 @@ void MenuKeysSet(MENU *menu,int l,int r,int u,int d,int s,int e)
     menu->key[end].key=e;
 }
 
-void BorderedBox(double x1,double y1,double x2,double y2,int p,int s)
-{
-    _setcolor(p);
-    _rectangle_w(_GFILLINTERIOR,x1,y1,x2,y2);
-    _setcolor(s);
-    _rectangle_w(_GBORDER,x1,y1,x2,y2);
-}
-
 int MenuSub(MENU *menu) {return menu->view->current;}
 int MenuSubs(MENU *menu) {return menu->view->submenus;}
 int MenuSubItem(MENU *menu) {return menu->view->submenu[menu->view->current].current;}
 int MenuSubItems(MENU *menu) {return menu->view->submenu[menu->view->current].items;}
 
-void MenuDisplay(MENU *menu)
-// displays the menu in its current state
+void MenuDisplayBar(MENU *menu)
+// displays the menu bar in the current viewport
 {
     int x;
     double pos=0.0;
-    MENUVIEW *mv=menu->view;
     double menuwidth=(1.0/(double)MenuSubs(menu));
-    double menuheight=MenuSubItems(menu)*0.1;
-
-    _setcharspacing(-0.3);
-    _settextalign(_LEFT,_HALF);
-    _setcharsize_w(0.05,0.03);
-    SetViewport(menu->view->vp);
-    _clearscreen(_GCLEARSCREEN);
-    MemPagePut(mv->background);
-// menu bar
-    BorderedBox(0.0,0.0,1.0,0.05,MENUBACK,MENUHILITE);
+// the menu bar
+    BorderedBox(0.0,0.0,1.0,1.0,MENUBACK,MENUHILITE);
+// hilite selected
     _rectangle_w(_GFILLINTERIOR,(double)MenuSub(menu)*menuwidth,0.0,
-                                (double)(MenuSub(menu)+1)*menuwidth,0.05);
+                                (double)(MenuSub(menu)+1)*menuwidth,1.0);
+// write text
     _setcolor(MENUTEXT);
-    for (x=0;x<mv->submenus;x++)
+    for (x=0;x<MenuSubs(menu);x++)
     {
-        _grtext_w(pos,0.025,mv->submenu[x].name);
+        _grtext_w(pos,0.5,menu->view->submenu[x].name);
         pos+=menuwidth;
     }
-// submenu
-    BorderedBox((double)(MenuSub(menu))*menuwidth,0.05,
-                (double)(MenuSub(menu)+1)*menuwidth,
-                0.05+menuheight,MENUBACK,MENUHILITE);
+}
 
+void MenuDisplaySub(SUBMENU *sub)
+{
+    int x;
+    double itemheight=1.0/(double)sub->items;
+    double pos=itemheight/2.0;
+// the submenu
+    BorderedBox(0.0,0.0,1.0,1.0,MENUBACK,MENUHILITE);
 // hilite item
-    BorderedBox((double)(MenuSub(menu))*menuwidth,
-                0.05+menuheight*((double)MenuSubItem(menu)/(double)MenuSubItems(menu)),
-                (double)(MenuSub(menu)+1)*menuwidth,
-                0.05+menuheight*((double)(MenuSubItem(menu)+1)/(double)MenuSubItems(menu)),
+    BorderedBox(0.0,itemheight*((double)sub->current),
+                1.0,itemheight*((double)(sub->current+1)),
                 MENUHILITE,MENUHILITE);
 
-    pos=0.05+0.05;
-    _setcolor(MENUTEXT);
-    for (x=0;x<MenuSubItems(menu);x++)
+    for (x=0;x<sub->items;x++)
     {
-        if (mv->submenu[MenuSub(menu)].item[x].name==SEPARATOR)
+        if (sub->item[x].name==SEPARATOR)
         {
             _setcolor(MENUHILITE);
-            _moveto((double)(MenuSub(menu))*menuwidth,pos);
-            _lineto((double)(MenuSub(menu)+1)*menuwidth,pos);
-            _setcolor(MENUTEXT);    
+            _moveto_w(0.0,pos);
+            _lineto_w(1.0,pos);
         }
         else
         {
-            _grtext_w((double)(MenuSub(menu))*menuwidth,pos,
-                      mv->submenu[MenuSub(menu)].item[x].name);
+            if (sub->item[x].enabled==ItemDisabled)
+                _setcolor(MENUHILITE);
+            else
+                _setcolor(MENUTEXT);
+            _grtext_w(0.0,pos,sub->item[x].name);
         }
-        pos+=0.1;
+        pos+=itemheight;
     }   
 
 }
 
-int MenuCall(MENU *menu,MEMPAGE *mp)
+void MenuDisplay(MENU *menu)
+// displays the menu in its current state
+{
+    int width=menu->view->vp->x2-menu->view->vp->x1+1;
+    MENUVIEW *mv=menu->view;
+
+    _setcharspacing_w(-0.01);
+    _settextalign(_LEFT,_HALF);
+    _setcharsize_w(0.05,0.03);
+    MemPagePut(mv->background);
+// menu bar
+    _setviewport(menu->view->vp->x1,menu->view->vp->y1,
+                 menu->view->vp->x2,menu->view->vp->y1+30);
+    MenuDisplayBar(menu);
+// submenu
+    _setviewport(menu->view->vp->x1+(width*MenuSub(menu)/MenuSubs(menu)),
+                 menu->view->vp->y1+31,
+                 menu->view->vp->x1+(width*(MenuSub(menu)+1)/MenuSubs(menu)),
+                 menu->view->vp->y1+31+(MenuSubItems(menu)*30));
+    MenuDisplaySub(&(menu->view->submenu[MenuSub(menu)]));
+}
+
+int MenuCall(MENU *menu)
 // calls the menu
 {
     int key,n;
 
     menu->view->current=0;
-    menu->view->background=mp;
     MenuDisplay(menu);
     SwapPage();
 

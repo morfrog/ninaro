@@ -27,5 +27,5 @@ int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win);
 int InsertTokenTarget(GRID *grid,int col);
 int CheckAngle(GRID *grid,int size,int col,int row,int col_dir,int row_dir,WIN *win);
 int CheckForWin(GRID *grid,int size,int col,int row,WIN *win);
-
+void SetWinSize(WIN *win,int size);
 #endif

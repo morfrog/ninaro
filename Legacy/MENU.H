@@ -31,7 +31,7 @@ struct submenuTag
     char *name;     // The name of the submenu
     byte items;      // up to 256 menuitems
     MENUITEM *item; // array of menuitem
-    byte current;   // in range (0..menuitems-1)
+    short current;   // in range (0..menuitems-1)
 };
 
 typedef struct submenuTag SUBMENU;
@@ -65,7 +65,7 @@ typedef struct menuTag MENU;
 
 MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background);
 void MenuNewSub(MENU *menu,char *menuname,int items,...);
-int MenuCall(MENU *menu,MEMPAGE *mp);
+int MenuCall(MENU *menu);
 void MenuKeysSet(MENU *menu,int l,int r,int u,int d,int s,int e);
 void MenuFree(MENU *menu);
 #endif

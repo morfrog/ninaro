@@ -199,7 +199,7 @@ void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
 int KeyUp(void)
 {
-    MenuCall(mainmenu,vs->current);
+    MenuCall(mainmenu);
     return TRUE;
 }
 
@@ -249,6 +249,33 @@ int KeyDown(void)
     return NoDisplay; // should never happen
 }
 
+void MsgGameN(void)
+{
+    char buffer[40];
+    sprintf(buffer,"Playing %d in a row.",win->tokens);
+    TextBoxAddLine(msgbox,buffer,ATEND);
+    TextBoxScrollEnd(msgbox);
+}
+
+void NewGame(void)
+{
+    GridEmpty(playgrid); GridEmpty(entrygrid);
+    InsertTokenAtCR(entrygrid,keypos,0,player_current);
+    win_occured=FALSE; MsgGameN();
+}
+void EndGame(void) {NewGame();}
+void ExitGame(void) {ShutDown(); ProgFree(); exit(0);}
+
+void HelpAbout(void)
+{
+    ViewSysDisplay(vs,DisplayChanged);
+    _setviewport(200,100,439,249);
+    BorderedBox(0.0,0.0,1.0,1.0,BLACK,LTBLUE);
+    DisplayGameName();
+    SwapPage();
+    GetKey();
+}
+
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
 {
     VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys,ViewSysClear);
@@ -258,23 +285,23 @@ VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
         DisplayPlayGrid,"Enter Your Token Here");       // playgrid is 1
     ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,ACTIVE,
         DisplayGameName,"Ninaro - By the author 1998");
-    ViewSysWindowNew(vs,0.61,0.1,1.0,0.4,ACTIVE,
+    ViewSysWindowNew(vs,0.61,0.1,1.0,0.6,ACTIVE,
         DisplayMsgBox,"Messages appear here");
-    ViewSysWindowNew(vs,0.61,0.4,0.65,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.61,0.6,0.65,0.648,ACTIVE,
         DisplayP1Color,"Player One's Color");
-    ViewSysWindowNew(vs,0.65,0.4,0.70,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.65,0.6,0.70,0.648,ACTIVE,
         DisplayP1Type,"Player One's Type");
-    ViewSysWindowNew(vs,0.7,0.4,0.96,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.7,0.6,0.96,0.648,ACTIVE,
         DisplayP1Name,"Player One's Name");
-    ViewSysWindowNew(vs,0.96,0.4,1.0,0.448,ACTIVE,
+    ViewSysWindowNew(vs,0.96,0.6,1.0,0.648,ACTIVE,
         DisplayP1Score,"Player One's Score");
-    ViewSysWindowNew(vs,0.61,0.452,0.65,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.61,0.652,0.65,0.7,ACTIVE,
         DisplayP2Color,"Player Two's Color");
-    ViewSysWindowNew(vs,0.65,0.452,0.7,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.65,0.652,0.7,0.7,ACTIVE,
         DisplayP2Type,"Player Two's Type");
-    ViewSysWindowNew(vs,0.7,0.452,0.96,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.7,0.652,0.96,0.7,ACTIVE,
         DisplayP2Name,"Player Two's Name");
-    ViewSysWindowNew(vs,0.96,0.452,1.0,0.5,ACTIVE,
+    ViewSysWindowNew(vs,0.96,0.652,1.0,0.7,ACTIVE,
         DisplayP2Score,"Player Two's Score");
     return vs;
 }
@@ -284,7 +311,6 @@ void Test(void)
     Buzz(800,900,50,400);
 }
 
-void ExitGame(void) {ShutDown(); ProgFree(); exit(0);}
 
 void ProgInit() // initialises global variables
 {
@@ -308,7 +334,7 @@ void ProgInit() // initialises global variables
     ViewSysKeyAdd(vs,'s',KeyDown,DISABLE);  // drop token
     ViewSysKeyAdd(vs,ESC,KeyUp,ENABLE);     // call menu
 
-    msgbox=TextBoxNew(5,RED,WHITE,40);
+    msgbox=TextBoxNew(8,RED,WHITE,40);
 
     players=malloc(numplayers*sizeof(PLAYER *));
     players[0]=PlayerNew("Player1",YELLOW,Human,Low);
@@ -330,17 +356,20 @@ void ProgInit() // initialises global variables
                 
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
-
+    InsertTokenAtCR(entrygrid,keypos,0,player_current);
+    
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs));
-    MenuNewSub(mainmenu,"Game",2,"New",CN,Test,ItemEnabled,
+    MenuNewSub(mainmenu,"Game",4,"New",CN,NewGame,ItemEnabled,
+                             "End",CE,EndGame,ItemDisabled,
+                             SEPARATOR,
                              "Exit",CX,ExitGame,ItemEnabled);
     MenuNewSub(mainmenu,"Board",3,"7x8x4",NONE,NULL,ItemEnabled,
                               "12x13x6",NONE,NULL,ItemEnabled, 
                               "Custom...",NONE,NULL,ItemEnabled);
-    MenuNewSub(mainmenu,"Player",2,"One...",NONE,NULL,ItemEnabled,
-                               "Two...",NONE,NULL,ItemDisabled);
+    MenuNewSub(mainmenu,"Player",2,"One...",NONE,NULL,ItemDisabled,
+                               "Two...",NONE,NULL,ItemEnabled);
     MenuNewSub(mainmenu,"Help",2,"Contents",NONE,NULL,ItemEnabled,
-                             "About",NONE,NULL,ItemEnabled);                              
+                             "About",NONE,HelpAbout,ItemEnabled);                              
     MenuKeysSet(mainmenu,KP4,KP6,KP8,KP2,ENTER,ESC);
 }
 
@@ -378,12 +407,9 @@ void main()
     _setfont("t'Modern'");
     _settextalign(_CENTER,_HALF);
     ProgInit(); // some parts rely on graphics mode
-    InsertTokenAtCR(entrygrid,keypos,0,player_current);
 
     ViewSysDisplay(vs,DisplayAll);
     SwapPage();
-//    ViewSysDisplay(vs,DisplayAll);
-//    SwapPage();
     
     for (;ever;)
     {

@@ -90,3 +90,10 @@ int InsertTokenInCol(GRID *grid,int col,PLAYER *player,WIN *win)
     }
     else return Failure;
 }
+
+void SetWinSize(WIN *win,int size)
+{   
+    free(win->win);
+    win->tokens=size;
+    win->win=malloc(size+sizeof(TOKEN));
+}

@@ -44,10 +44,11 @@ struct viewsysTag
     void (* background)(VIEWPORT *); // function which draws the background
                                     // in the viewport
     MEMPAGE *current;   // the current screen
+    int changed;        // how many have changed
 };
 // DisplayChanged sets screen to current then updates changed windows, then
 // updates current. It runs the background function for the changed window
-// then updates the window.
+// then updates the window, for all windows which have changed
 // DisplayAll runs the background function for the main viewport, then
 // updates all windows, after which it also updates current to reflect changes.
 
