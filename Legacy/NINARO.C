@@ -2,6 +2,8 @@
 // enable the display of changed windows to appear properly without destroying
 // the background - in hopes that one day the background will be a picture,
 // not just an inconsequential black emptiness
+// could store the background in a page I create, then switch that relevant
+// section into the changed window and restore the changed window on top...
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
@@ -46,9 +48,9 @@ void SetP1Current()
     player_current=player_one;
 
     // disable irrelevant keys
-    ViewSysEnableGroup(vs,DISABLE,3,0,1,2);
-    if (type==Human) ViewSysEnableGroup(vs,ENABLE,3,3,4,5);
-    else             ViewSysEnableGroup(vs,DISABLE,3,3,4,5);
+    ViewSysEnableGroup(vs,DISABLE,4,0,1,2,3);
+    if (type==Human) ViewSysEnableGroup(vs,ENABLE,4,4,5,6,7);
+    else             ViewSysEnableGroup(vs,DISABLE,4,4,5,6,7);
                     // is Computer so disable all keys
 }
 
@@ -58,9 +60,9 @@ void SetP2Current()
     player_current=player_two;
 
     // disable irrelevant keys
-    ViewSysEnableGroup(vs,DISABLE,3,3,4,5);
-    if (type==Human) ViewSysEnableGroup(vs,ENABLE,3,0,1,2);
-    else             ViewSysEnableGroup(vs,DISABLE,3,0,1,2);
+    ViewSysEnableGroup(vs,DISABLE,4,4,5,6,7);
+    if (type==Human) ViewSysEnableGroup(vs,ENABLE,4,0,1,2,3);
+    else             ViewSysEnableGroup(vs,DISABLE,4,0,1,2,3);
                     // is Computer so disable all keys
 }
 
@@ -193,6 +195,12 @@ void DecP2Color(void) {DecPlayerColor(player_two);}
 void ClearScreen(void) {_clearscreen(_GCLEARSCREEN);}
 void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
+int KeyUp(void)
+{
+    PlayTune(6,100,20,200,30,300,40,200,5,100,5,500,100); // call menu
+    return TRUE;
+}
+
 int KeyLeft(void)
 {
     if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT))
@@ -211,7 +219,7 @@ int KeyRight(void)
         return NoDisplay;
 }
 
-int KeyDropToken(void)
+int KeyDown(void)
 {
     switch(InsertTokenInCol(playgrid,keypos,player_current,win))
     {
@@ -281,12 +289,14 @@ void ProgInit() // initialises global variables
 
     vs=ViewSysInit(20,20,0,0,639,349);
 
-    ViewSysAddKey(vs,KP4,KeyLeft,DISABLE);
-    ViewSysAddKey(vs,KP6,KeyRight,DISABLE);
-    ViewSysAddKey(vs,KP2,KeyDropToken,DISABLE);
-    ViewSysAddKey(vs,'a',KeyLeft,DISABLE);
-    ViewSysAddKey(vs,'d',KeyRight,DISABLE);
-    ViewSysAddKey(vs,'s',KeyDropToken,DISABLE);
+    ViewSysAddKey(vs,KP4,KeyLeft,DISABLE);  // move token left
+    ViewSysAddKey(vs,KP2,KeyDown,DISABLE);  // drop token
+    ViewSysAddKey(vs,KP6,KeyRight,DISABLE); // move token right
+    ViewSysAddKey(vs,KP8,KeyUp,DISABLE);    // call menu
+    ViewSysAddKey(vs,'a',KeyLeft,DISABLE);  // move token left
+    ViewSysAddKey(vs,'d',KeyRight,DISABLE); // move token right
+    ViewSysAddKey(vs,'s',KeyDown,DISABLE);  // drop token
+    ViewSysAddKey(vs,'w',KeyUp,DISABLE);    // call menu
 
     msgbox=TextBoxNew(5,RED,WHITE,40);
 
@@ -326,7 +336,10 @@ void ProgFree() // frees global variables
         free(players[x]);
     free(players);
     printf("Freeing Textbox...\n");
+    TextBoxFree(msgbox);
     printf("Freeing Grids...\n");
+    GridFree(playgrid);
+    GridFree(entrygrid);
 }
 
 void main()

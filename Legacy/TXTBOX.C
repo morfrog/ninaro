@@ -127,7 +127,7 @@ int TextBoxEmpty(TXTBOX *tb)
 {
     // inefficient but it works
     if (tb->size==0) return FALSE;
-    do {} while (TextBoxDelLine(tb,1));
+    while (TextBoxDelLine(tb,1)) {}
     return TRUE;
 }
 

@@ -1,30 +1,32 @@
 // ESC brings up the menu, could also use Ctrl-menuletter if no conflicts
 // if a menu item's name is NULL then that menuitem is a separator
+#include <stdlib.h>
+#include <string.h>
 #include "sys.h"
 #include "viewsys.h"
 
-struct menuitemTag
+MENU *MenuNew(byte maxmenus)
+// pre : maxmenus < 255
+// maxmenus menus are allocated memory so keep it at the real max
 {
-    char *name;                 // then menu item's name
-    int shortcut;               // the shortcut key that runs the function
-    void (* function)(void);    // the menu item's function
-};
+    MENU *menu=malloc(sizeof(MENU));
+    menu->maxmenus=maxmenus;
+    menu->submenus=0;
+    menu->submenu=malloc(maxmenus*sizeof(SUBMENU));
+    return menu;
+}
 
-typedef struct menuitemTag MENUITEM;
-
-struct submenuTag
+void MenuAddMenuItem(MENU *menu,byte submenu,
+    char *name,int shortcut,void (* function)(void))
 {
-    byte menitems;      // up to 256 menuitems
-    MENUITEM *menuitem; // array of menuitem
-    byte currentitem;   // in range (0..menuitems-1)
-};
+    strcpy(menu->submenu[submenu].name,name);
+    menu->submenu[submenu].shortcut=shortcut;
+    menu->submenu[submenu].function=function;
+    menu->submenu[submenu].submenu=NoSubMenu;
+}
 
-typedef struct submenuTag SUBMENU;
-
-struct menuTag
+void MenuAddSubMenu(MENU *menu,byte offmenu,byte offitem,byte submenu)
+// Adds a submenu to the menu, off offitem in offmenu.
 {
-    byte submenus;      // how many submenus - File,Player,Game...
-    SUBMENU submenu;    // functions are probably NULL
-};
-
-
+    menu->submenu[offmenu]
+}

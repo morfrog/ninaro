@@ -1,4 +1,8 @@
 #ifndef TXTBOX_H
+#define TXTBOX_H
+
+// lines are addressed as 1..tb->lines, thus enabling the use of ATSTART
+// which has a value of 0
 
 struct nodeTag
 {
@@ -29,6 +33,7 @@ struct txtboxTag    // circular double linked list
 typedef struct txtboxTag TXTBOX;
 
 TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int maxwidth);
+void TextBoxFree(TXTBOX *tb);
 int TextBoxAddLine(TXTBOX *tb,char *string,int afterline);
 int TextBoxDelLine(TXTBOX *tb,int line);
 char *TextBoxLine(TXTBOX *tb,int line);

@@ -20,6 +20,7 @@ struct gridTag
 typedef struct gridTag GRID;
 
 GRID *NewGrid(int width,int height);
+void GridFree(GRID *grid);
 void DisplayGrid(GRID *grid);
 int InsertTokenAtCR(GRID *grid,int col,int row,PLAYER *player);
 PLAYER *RemoveTokenAtCR(GRID *grid,int row,int col);
@@ -28,4 +29,6 @@ int StatusOfCR(GRID *grid,int col,int row);
 int TokensInGrid(GRID *grid);
 int NumInDirection(GRID *grid,int col,int row,int col_mod,int row_mod,PLAYER *player);
 void MoveAll(GRID *grid,int col_dir,int row_dir,int wrap);
+void GridEmpty(GRID *grid);
+
 #endif

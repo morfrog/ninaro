@@ -3,24 +3,37 @@
 #include "screen.h"
 #include "grid.h"
 
-GRID *NewGrid(int width,int height)
+void GridEmpty(GRID *grid)
+// empties the grid of all tokens
 {
     int x,y;
-    GRID *ret=malloc(sizeof(GRID));
+    for (x=0;x<grid->width;x++)
+        for (y=0;y<grid->height;y++)
+            grid->grid[x][y]=NULL;
+    for (x=0;x<grid->width;x++)  grid->numincol[x]=0;
+    for (y=0;y<grid->height;y++) grid->numinrow[y]=0;
+}
 
+GRID *NewGrid(int width,int height)
+{
+    int x;
+    GRID *ret=malloc(sizeof(GRID));
     ret->width=width;
     ret->height=height;
     ret->grid=malloc(width*sizeof(PLAYER **));
     for (x=0;x<width;x++) ret->grid[x]=malloc(height*sizeof(PLAYER *));
     ret->numincol=malloc(width*sizeof(int));
     ret->numinrow=malloc(height*sizeof(int));
-    for (x=0;x<width;x++)
-        for (y=0;y<height;y++)
-            ret->grid[x][y]=NULL;
-
-    for (x=0;x<width;x++)  ret->numincol[x]=0;
-    for (y=0;y<height;y++) ret->numinrow[y]=0;
+    GridEmpty(ret);
     return ret;
+}
+
+void GridFree(GRID *grid)
+{
+    int x;
+    for (x=0;x<grid->width;x++) free(grid->grid[x]);
+    free(grid->grid);
+    free(grid);
 }
 
 void DisplayGrid(GRID *grid)

@@ -1,7 +1,8 @@
 // made for the one top-size window, can't change it, new windows oords
 // are calculated at creation time only
 // window->active : only active windows receive display signals
-
+// TODO : might want a view system to include keys from another view system,
+// maybe have a link rather than a copy, or maybe copy better
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
