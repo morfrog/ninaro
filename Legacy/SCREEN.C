@@ -23,6 +23,9 @@ void BorderedBox(int x1,int y1,int x2,int y2,int p,int s)
 
 void ScreenInit()
 {
+long colors[ 16 ] =
+{ _BLACK, _RED,_YELLOW,_BLUE,_GREEN,_MAGENTA,_BROWN,_WHITE,
+_CYAN,_LIGHTRED,_LIGHTYELLOW,_LIGHTBLUE,_LIGHTGREEN,_LIGHTMAGENTA,_GRAY,_BRIGHTWHITE};
     _setvideomode(16); // 640x350 2 pages 16 colors
     _settextwindow(0,0,24,79);
     _setwindow(0,0.0,0.0,1.0,1.0);
@@ -31,8 +34,8 @@ void ScreenInit()
     _setactivepage(0);
     _setvisualpage(1);
     _setviewport(0,0,639,349);
-    _remappalette(ORANGE,_YELLOW-4);
-    _remappalette(GREY,_GRAY+0x080808);
+    _remapallpalette(colors);
+//    _remappalette(GREY,_GRAY+0x080808);
 }
 
 void DrawGrid(int x,int y)

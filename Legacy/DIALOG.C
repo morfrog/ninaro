@@ -338,12 +338,13 @@ void DisplayColor(int x1,int y1,int x2,int y2,int color,int selected)
     if (selected)
     {
         _setcolor(CONTROLHILITE);
-        _setlinestyle(0xff00);
+        _setlinestyle(0x5555);
         _rectangle(_GBORDER,x1,y1,x2,y2);
+        _rectangle(_GBORDER,x1+1,y1+1,x2-1,y2-1);
         _setlinestyle(0xffff);
     }
     _setcolor(color);
-    _rectangle(_GFILLINTERIOR,x1+2,y1+2,x2-2,y2-2);
+    _rectangle(_GFILLINTERIOR,x1+4,y1+4,x2-4,y2-4);
 }
 
 void DisplayScale(VIEWPORT *vp,int range,int pos,char *value,int chars)
@@ -729,18 +730,16 @@ void DialogDisplay(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         control.y2=aty+(d->elem[x].store->rows*rowheight)-1;
         if (x==d->current)
         {
+            _setlinestyle(0xeeee);      // 7 in 8 dots remove 
             _setcolor(CONTROLHILITE);
-            _setlinestyle(0xff00);        // dashed line
-            _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
-            _setlinestyle(0xffff);
         }
         else
         {
-            _setlinestyle(0x5555);      // dotted line
+            _setlinestyle(0x1111);      // 7 in 8 dots remove 
             _setcolor(CONTROLTEXT);
-            _rectangle(_GBORDER,vp->x1+1,control.y1,vp->x2-1,control.y2);
-            _setlinestyle(0xffff);            
         }
+        _rectangle(_GBORDER,vp->x1,control.y1,vp->x2,control.y2);
+        _setlinestyle(0xffff);            
         if (d->elem[x].name[0]=='\0') control.x1=vp->x1;
         else                          control.x1=vp->x1+names;
         control.y1+=1;
@@ -799,7 +798,8 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 //           changes, using chars for control names, which are in left
 //           1/namefract section of viewport
 //           kg keys are left,right,up,down,select,cancel
-// returns : FALSE if cancelled, TRUE if OK'd
+// returns : FALSE if cancelled, TRUE if OK'd. if exit state is same as entry
+//           state, cancel is assumed and FALSE is returned
 {
     int index,funcret,changed=FALSE,key,used;
     
@@ -836,6 +836,8 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
                 case 4 : // SELECT
                     if (funcret==TRUE) // dialog finished via ok
                     {
+//                        if (state is the same) break; 666
+//                        else
                         return TRUE;
                     }
                     else if (funcret==UNKNOWN) break;    // reset
@@ -851,7 +853,6 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         }
     }
 }
-
 
 /*
 void main()

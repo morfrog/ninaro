@@ -40,6 +40,7 @@ GRID *playgrid;
 GRID *entrygrid;
 PLAYERGROUP *players;
 int player_one,player_two,player_current;
+int dialogplayer;
 KEYGROUP *pkeys;
 KEYGROUP *p1keys;
 KEYGROUP *p2keys;
@@ -117,7 +118,6 @@ void SetupPlayer(int player_index)
 // uses the playerdialog dialog
 {
     PLAYER *player=PlayerGroupPlayer(players,player_index);
-    int ptype=PlayerGetType(player);
     int pcol=PlayerGetColor(player);
 
     if (player_index==player_one)
@@ -126,32 +126,26 @@ void SetupPlayer(int player_index)
         DialogNameSet(playerdialog,"Player Two");
     else
         DialogNameSet(playerdialog,"New Player");
-    ControlCurrentSetTo(DialogControlGet(playerdialog,0),ptype); // set type
-    if (ptype==Computer)
-    {
-        ControlReset(DialogControlGet(playerdialog,1),          // set names
-                        2,PlayerGetName(PlayerGroupPlayer(players,2)),
-                        3,PlayerGetName(PlayerGroupPlayer(players,3)),
-                        4,PlayerGetName(PlayerGroupPlayer(players,4)),
-                        5,PlayerGetName(PlayerGroupPlayer(players,5)),
-                        6,PlayerGetName(PlayerGroupPlayer(players,6)));
-    }
+    if ((player_index==0) || (player_index==1)) // human
+        ControlCurrentSetTo(DialogControlGet(playerdialog,0),1); // set player
     else
-    {
-        ControlReset(DialogControlGet(playerdialog,1),
-                        -1,PlayerGetName(player),
-                        -1,"New Player",
-                        -1,NULL,
-                        -1,NULL,
-                        -1,NULL);
-    }
-    ControlCurrentSetTo(DialogControlGet(playerdialog,2),pcol); // set color
+        ControlCurrentSetTo(DialogControlGet(playerdialog,0),player_index); // set player            
+    ControlCurrentSetTo(DialogControlGet(playerdialog,1),pcol); // set color
 }
 
 void ModifyPlayer(DIALOG *d)
 // only to be used with the playerdialog dialog
 {
-    
+    CONTROL *c=DialogControlGet(d,0);
+    int p;
+    if (DialogCurrentGet(d)==0) // changing names
+    {
+        ControlValueGet(c,ControlCurrentGet(c),&p); // which player
+        ControlCurrentSetTo(DialogControlGet(d,1),
+            PlayerGetColor(PlayerGroupPlayer(players,p))); // set color
+    }
+    // else changing colors - who cares, might at this stage want to stop
+    // player having same color as opponent.
 }
 
 void DisplayHuman(int primary,int secondary)
@@ -416,17 +410,21 @@ void GameSizeCustom(void)
 void PlayerDialog(int pnum)
 {
     VIEWPORT vp={50,50,590,300};
-    SetupPlayer(pnum);    
+    SetupPlayer(pnum);
     DialogCall(playerdialog,&vp,vs->current,5,8);
 }
 
 void P1Dialog(void)
 {
+    CONTROL *c=DialogControlGet(playerdialog,0); // names
+    ControlElemSet(c,0,0,"Human");
     PlayerDialog(player_one);
 }
 
 void P2Dialog(void)
 {
+    CONTROL *c=DialogControlGet(playerdialog,0); // names
+    ControlElemSet(c,0,1,"Human");
     PlayerDialog(player_two);
 }
 
@@ -487,12 +485,12 @@ void ProgInit() // initialises global variables
     msgbox=TextBoxNew(8,RED,WHITE,40);
 
     players=PlayerGroupNew(7, // allows for only two humans
-        PlayerNew("Player One",ORANGE,Human),
+        PlayerNew("Player One",YELLOW,Human),
         PlayerNew("Player Two",RED,Human),
-        PlayerNew("Ronda Random",LTBLUE,Computer),
+        PlayerNew("Ronda Random",ORANGE,Computer),
         PlayerNew("Alfa B Prune",GREEN,Computer),
         PlayerNew("Tammy Tree",BLUE,Computer),
-        PlayerNew("Rodney Rule",ORANGE,Computer),
+        PlayerNew("Rodney Rule",YELLOW,Computer),
         PlayerNew("Minny Maxx",PURPLE,Computer));
     pkeys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);   // not immediately usable
     p1keys=KeyGroupNew(6,'a','d','w','s','e','q');
@@ -508,11 +506,9 @@ void ProgInit() // initialises global variables
                     
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
-    playerdialog=DialogNew(pkeys,NULL,"Player One",3,
-        "Type",TRUE,TRUE,ControlNew(List,Radio,1,2,10,2,
-                        Computer,"Computer",
-                        Human,"Human"),
-        "Name",TRUE,TRUE,ControlNew(List,Radio,3,2,13,5,
+    playerdialog=DialogNew(pkeys,ModifyPlayer,"Player One",2,
+        "Player",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
+                        1,"Human",
                         2,PlayerGetName(PlayerGroupPlayer(players,2)),
                         3,PlayerGetName(PlayerGroupPlayer(players,3)),
                         4,PlayerGetName(PlayerGroupPlayer(players,4)),
