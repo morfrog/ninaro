@@ -10,8 +10,10 @@ Updated        : 1 May 1998         MODIFIED so that MenuCall has help func
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <graph.h>
 #include <conio.h>
+#include <i86.h>
 #include "defines.h"
 #include "sound.h"
 #include "mouse.h"
@@ -275,24 +277,13 @@ void SetMouseMenu(MENU *menu)
     int width=menu->vp->x2-menu->vp->x1+1;
     int smwidth=width/menu->submenus;
     SetMousePos((MenuSub(menu)*smwidth)+(smwidth/2),31+(MenuSubItem(menu)*30));
-    SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
+//    SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
 }
 
 int GetMouseMenuItem(MENU *menu,int y)
 // returns the mouse menuitem of the current submenu at y,
-// -2 if menubar, -1 if no item
 {
-    int items;
-    if (y<=(menu->vp->y1+30)) return -2;
-    else
-    {
-        items=menu->submenu[menu->current].items;
-        if (y>(menu->vp->y1+30+(items*30)))
-        {
-            return -1;
-        }
-        else return (y-(menu->vp->y1+30))/30;
-    }
+    return (y-(menu->vp->y1+30))/30;
 }
 
 int GetMouseMenuSub(MENU *menu,int x)
@@ -312,6 +303,7 @@ void MenuCall(MENU *menu,void (* help)(void))
 {
     int funcret,index,key,used,mx,my,btn,newmenu,newitem;
     int width=menu->vp->x2-menu->vp->x1+1;
+    char fart[50];
     
     if (menu->current>=menu->submenus) menu->current=0;
 
@@ -319,6 +311,7 @@ void MenuCall(MENU *menu,void (* help)(void))
     SetMouseMenu(menu);
     MenuDisplay(menu);
     SwapPage();
+    ShowMouse();
 
     for (;;)
     {   
@@ -333,38 +326,45 @@ void MenuCall(MENU *menu,void (* help)(void))
                 return; // menu finished
                 break;
             case NMB :
-                newmenu=GetMouseMenuSub(menu,mx);
-                if (newmenu>=0) // valid mouse pos
+                if (MouseMoved())
                 {
-                    if (newmenu!=menu->current)
+                    sprintf(fart,"%d,%d",mx,my);
+                    _setcolor(GREEN);
+                    _grtext(195,245,fart);
+                    SwapPage();
+                    delay(300);
+                    newmenu=GetMouseMenuSub(menu,mx);
+                    if (newmenu>=0) // valid mouse pos
                     {
-                        menu->current=newmenu;
-                        index=0; // left or right will be triggered,
-                                // and mouse y pos set to item
-                        funcret=TRUE;
-                        used=TRUE;
-                        SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
-                    }
-                    else // same menu, possibly different item
-                    {
-                        newitem=GetMouseMenuItem(menu,my);
-                        if ((newitem>=0) && (newitem<MenuSubItems(menu)))
-                        // valid mouse pos
+                        if (newmenu==menu->current) // same menu, possibly different item
                         {
-//                            Buzz(400,500,2,6);
-                            if ((newitem!=MenuSubItem(menu))
-                            && (menu->submenu[menu->current].item[newitem].enabled))
+//                            SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
+                            newitem=GetMouseMenuItem(menu,my);
+                            if (newitem==MenuSubItem(menu)) {}
+                            else if (newitem>MenuSubItem(menu))
                             {
-                                menu->submenu[menu->current].current=newitem;
-                                index=2; // up or down
-                                funcret=TRUE;
-                                used=TRUE;
+                                funcret=MenuDown(menu); index=-1; used=TRUE;
+                            }
+                            else // newitem<MenuSubItem(menu)
+                            {
+                                funcret=MenuUp(menu); index=-1; used=TRUE;
                             }
                         }
+                        else if (newmenu>menu->current)
+                        {
+                            funcret=MenuRight(menu); index=-1; used=TRUE;
+                        }
+                        else // newmenu<menu->current
+                        {
+                            funcret=MenuLeft(menu); index=-1; used=TRUE;
+                        }
                         
-                    }
+                    } // else mouse pos bad
                 }
-                // else mouse pos bad
+                else // mouse stationary
+                {
+                    used=FALSE;
+                }
                 break;
         }
 

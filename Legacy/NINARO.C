@@ -51,6 +51,8 @@ Updated        : 2 May 1998     CREATED AI's and modified main to fit
 
 enum {GFOne=0,GFTwo,GFLoser,GFWinner,GFSuccessive,GFRandom}; // goes first
 
+#define TESTING
+
 #define ColAdd 2 // 3 is red/green
 // secondary color = primary color + ColAdd
 
@@ -875,9 +877,14 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
                         if (rows-GridInCol(playgrid,x)>1) // rule applicable
                         {
                             if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x)-1,win,otherplayer))
-                            {
+                            {   // opponent goes above and wins
                                 col[x]-=90;
                             }
+                            else if (CheckForWin(playgrid,win->tokens,x,InsertTokenTarget(playgrid,x)-1,win,thisplayer))
+                            {   // opponent goes above and blocks
+                                col[x]-=20;
+                            }
+                            
                         }
                         // also if opponent can make a move which gives them
                         // size-1 in a row with a gap either side block that
@@ -1016,9 +1023,11 @@ void AnimateMove(int col)
     do
     {
         if (goright) KeyRight(NULL); else KeyLeft(NULL);
+#ifndef TESTING
         ViewSysWindowChanged(vs,0,TRUE); // entry grid
         ViewSysDisplay(vs,DisplayChanged); SwapPage();
         delay(del); // delay appropriate amount of time as per ai_speed 
+#endif
     } while (keypos!=col);
 }
 
@@ -1432,11 +1441,15 @@ void main()
                                 }
                             }
                         }
+#ifndef TESTING                        
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
+#endif
                     }
                     else // just a normal move
                     {
+#ifndef TESTING                        
                         ViewSysDisplay(vs,DisplayChanged); SwapPage();
+#endif                        
                     }
                 }
             }
