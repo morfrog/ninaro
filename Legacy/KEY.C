@@ -45,6 +45,28 @@ KEYGROUP *KeyGroupNew(int keys,...)
     return ret;
 }
 
+void KeyGroupCopy(KEYGROUP *dest,KEYGROUP *source)
+// purpose : to copy the key contents of source to destination, source must
+//           have at least as many keys as dest.
+// returns : void
+{
+    int x;
+    for (x=0;x<dest->keys;x++)
+    {
+        SetDel(dest->ingroup,dest->key[x]);
+        dest->key[x]=source->key[x];
+        SetAdd(dest->ingroup,dest->key[x]);
+    }
+}
+
+int KeyGroupIKey(KEYGROUP *kg,int index)
+// purpose : to get the key at index in the keygroup
+// returns : -1 if index out of range else the key us returned
+{
+    if (index>=kg->keys) return -1;
+    return kg->key[index];
+}
+
 int KeyGroupKey(KEYGROUP *kg,int key)
 // purpose : to get the number of the key in the group, 0..keys-1,
 // returns : -1 if key not in group else the keys index(0..keys-1)
@@ -116,6 +138,16 @@ KEYSYS *KeySysNew(KEYGROUP *kg)
     return ret;
 }
 
+int KeySysIKey(KEYSYS *ks,int index,void *object,int *funcret)
+// purpose : runs function at index of keysys on object
+// returns : TRUE if index in range else FALSE
+{
+    int *tmp;
+    int key=KeyGroupIKey(ks->kg,index);
+    if (key==-1) return FALSE;
+    return KeySysKey(ks,key,object,funcret,tmp);
+}
+
 int KeySysKey(KEYSYS *ks,int key,void *object,int *funcret,int *index)
 // purpose : to handle the input of key, runs associated function on object
 //           if key is enabled. sets funcret to result of running keys
@@ -123,14 +155,13 @@ int KeySysKey(KEYSYS *ks,int key,void *object,int *funcret,int *index)
 // returns : TRUE if key was used, else FALSE
 {
     *index=KeyGroupKey(ks->kg,key);
-    if ((*index)!=-1)  // key is in group
+    if ((*index)==-1) return FALSE; // key is not in group
+
+    if ((SetMember(ks->enabled,*index)) && (ks->kf[*index].func!=NULL))
+    // if enabled and runable
     {
-        if ((SetMember(ks->enabled,*index)) && (ks->kf[*index].func!=NULL))
-        // if enabled and runable
-        {
-            *funcret=(ks->kf[*index].func(object));
-            return TRUE; // key was used
-        }
+        *funcret=(ks->kf[*index].func(object));
+        return TRUE; // key was used
     }
     return FALSE;
 }

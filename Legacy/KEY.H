@@ -50,11 +50,18 @@ int KeyIsNormal(int key);               // not yet implemented
 KEYGROUP *KeyGroupNew(int keys,...);
 // purpose : create a new key group, ... is {int}*keys e.g. CA,CB,KP4
 // returns : the key group
+int KeyGroupIKey(KEYGROUP *kg,int index);
+// purpose : to get the key at index in the keygroup
+// returns : -1 if index out of range else the key us returned
 int KeyGroupKey(KEYGROUP *kg,int key);
 // purpose : to get the number of the key in the group, 0..keys-1,
 // returns : -1 if key not in group else the keys index(0..keys-1)
 void KeyGroupReset(KEYGROUP *kg,...);
 // purpose : resets the keys in the keygroup, ... is {int}*kg->keys
+// returns : void
+void KeyGroupCopy(KEYGROUP *dest,KEYGROUP *source);
+// purpose : to copy the key contents of source to destination, source must
+//           have at least as many keys as dest.
 // returns : void
 void KeyGroupPrint(KEYGROUP *kg);
 // purpose : print the contents of the keygroup
@@ -70,6 +77,9 @@ void KeySysIFunc(KEYSYS *ks,int index,int (* func)(void *));
 int KeySysFunc(KEYSYS *ks,int key,int (* func)(void *));
 // purpose : adds func to key in keysys
 // returns : TRUE if added else FALSE
+int KeySysIKey(KEYSYS *ks,int index,void *object,int *funcret);
+// purpose : runs function at index of keysys on object
+// returns : TRUE if index in range else FALSE
 int KeySysKey(KEYSYS *ks,int key,void *object,int *funcret,int *index);
 // purpose : to handle the input of key, runs associated function on object
 //           if key is enabled. sets funcret to result of running keys

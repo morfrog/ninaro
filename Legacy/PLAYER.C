@@ -3,73 +3,34 @@
 #include <string.h>
 #include "player.h"
 
-void PlayerReset(PLAYER *player,char *name,int color,int type,int skill)
+void PlayerReset(PLAYER *player,char *name,int color,int type)
+// purpose : to reset a players attributes
+// returns : void
 {
-    player->color=color;
-    player->score=0;
-    player->type=type;
-    player->skill=skill;
     strcpy(player->name,name);
+    player->color=color;
+    player->type=type;
 }
 
-PLAYER *PlayerNew(char *name,int color,int type,int skill)
+PLAYER *PlayerNew(char *name,int color,int type)
+// purpose : to create a new player
+// returns : the player
 {
     PLAYER *ret=malloc(sizeof(PLAYER));
-    PlayerReset(ret,name,color,type,skill);
+    PlayerReset(ret,name,color,type);
     return ret;
 }
 
-void PlayerIncScore(PLAYER *player)
-{
-    (player->score)++;
-}
-
-void PlayerDecScore(PLAYER *player)
-{
-    (player->score)++;
-}
-
-void PlayerChangeScore(PLAYER *player,int amount)
-{
-    player->score+=amount;    
-}
-
-void PlayerChangeColor(PLAYER *player,int color)
-{
-    player->color+=color;
-}
-
-int PlayerGetColor(PLAYER *player)
-{
-    return (player->color);
-}
-
-int PlayerGetScore(PLAYER *player)
-{
-    return (player->score);
-}
-
-int PlayerGetType(PLAYER *player)
-{
-    return (player->type);
-}
-
-void PlayerSetType(PLAYER *player,int type)
-{
-    player->type=type;
-}
-
-char *PlayerGetName(PLAYER *player)
-{
-    return (player->name);
-}
-
-int PlayerGetSkill(PLAYER *player)
-{
-    return (player->skill);
-}
+int  PlayerGetColor(PLAYER *player) {return player->color;}
+void PlayerSetColor(PLAYER *player,int color) {player->color=color;}
+int  PlayerGetType(PLAYER *player) {return player->type;}
+void PlayerSetType(PLAYER *player,int type) {player->type=type;}
+char *PlayerGetName(PLAYER *player) {return player->name;}
+void PlayerSetName(PLAYER *player,char *name) {strcpy(player->name,name);}
 
 int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl)
+// purpose : to find the pid of player in the playergroup
+// returns : -1 if player not in group else index is returned
 {
     int x;
     for (x=0;x<pg->players;x++)
@@ -77,69 +38,38 @@ int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl)
     return -1; // not found
 }
 
-PLAYERGROUP *PlayerGroupNew(int players,int groupsize,...)
-// creates a new player group containing groupsize players, with players
-// players able to be active at any one time
-// ... is groupsize*{PLAYER *}
+PLAYERGROUP *PlayerGroupNew(int players,...)
+// purpose : creates a new player group containing players
+//           ... is players*{PLAYER *}
+// returns : the player group
 {
     va_list ap;
     int x;
     PLAYERGROUP *pg=malloc(sizeof(PLAYERGROUP));
-    pg->players=groupsize;
-    pg->player=malloc(groupsize*sizeof(PLAYER *));
-    pg->currentplayers=players;
-    pg->currentplayer=malloc(players*sizeof(int));
-    pg->current=0;
-    va_start(ap,groupsize);
-    for (x=0;x<groupsize;x++)
+    pg->players=players;
+    pg->player=malloc(players*sizeof(PLAYER *));
+    va_start(ap,players);
+    for (x=0;x<players;x++)
     {
         pg->player[x]=va_arg(ap,PLAYER *);
     }
     va_end(ap);
-    for (x=0;x<players;x++) pg->currentplayer[x]=x;
     return pg;
 }
 
-PLAYER *PlayerGroupPlayer(PLAYERGROUP *pg,int player)
-// returns the player'th player in the group
+PLAYER *PlayerGroupPlayer(PLAYERGROUP *pg,int index)
+// purpose : to return player in the at index in the group
+// returns : NULL if index out of range, else the player *
 {
-    return pg->player[player];
-}
-
-void PlayerGroupUseSet(PLAYERGROUP *pg,int pnum,int player)
-// sets the pmun player in use to player
-{
-    pg->currentplayer[pnum]=player;
-}
-
-PLAYER *PlayerGroupUseGet(PLAYERGROUP *pg,int pnum)
-// returns the pnum player in use
-{
-    return pg->player[pg->currentplayer[pnum]];
-}
-
-void PlayerGroupCurrentSet(PLAYERGROUP *pg,int pnum)
-// for a two player in use group, pnum = 0..1
-{
-    pg->current=pnum;    
-}
-
-void PlayerGroupCurrentNext(PLAYERGROUP *pg)
-{
-    if (pg->current>=pg->currentplayers-1)
-        pg->current=0;
-    else
-        pg->current+=1;
-}
-
-PLAYER *PlayerGroupCurrentGet(PLAYERGROUP *pg)
-{
-    return pg->player[pg->currentplayer[pg->current]];
+    if (index>=pg->players) return NULL;
+    return pg->player[index];
 }
 
 void PlayerGroupFree(PLAYERGROUP *pg)
+// purpose : to free memory allocated to the playergroup
+// returns : void
 {
     free(pg->player);
-    free(pg->currentplayer);    
+    free(pg);
 }
 

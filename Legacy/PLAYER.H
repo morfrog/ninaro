@@ -3,54 +3,48 @@
 
 enum {Computer,Human}; // Player type
 
-enum {Low,Medium,High}; // Skill Levels
-// Humans are 'rated' with a skill level too
-
 struct playerTag
 {
-        char name[20];
-        int color;  // 0..15
-        int score;  // 0..
-        int type;   // {Computer,Human}
-        int skill;  // {Low,Medium,High}
+    char name[20];
+    int color;  // 0..15
+    int type;   // {Computer,Human}
 };
-
 typedef struct playerTag PLAYER;
 
 struct playergroupTag
 {
     int players;        // number of players in group
     PLAYER **player;    // storage of the players
-    int currentplayers;// number of players who are in use 0..players-1
-    int *currentplayer;// storage of the players in use
-    int current;       // the current player of those in use; 0..currentplayers-1
 };
-// could have 7 players in group, if which 2 (3,4) are in use of which 0 (3)
+// could have 7 players in group, of which 2 (3,4) are in use of which 0 (3)
 // is the current player
-
 typedef struct playergroupTag PLAYERGROUP;
 
-PLAYER *PlayerNew(char *name,int color,int type,int skill);
-void PlayerIncScore(PLAYER *player);
-void PlayerDecScore(PLAYER *player);
-void PlayerChangeScore(PLAYER *player,int amount);
-void PlayerReset(PLAYER *player,char *name,int color,int type,int skill);
-void PlayerChangeColor(PLAYER *player,int color);
-int PlayerGetColor(PLAYER *player);
-int PlayerGetScore(PLAYER *player);
-char *PlayerGetName(PLAYER *player);
-int PlayerGetSkill(PLAYER *player);
-int PlayerGetType(PLAYER *player);
+PLAYER *PlayerNew(char *name,int color,int type);
+// purpose : to create a new player
+// returns : the player
+void PlayerReset(PLAYER *player,char *name,int color,int type);
+// purpose : to reset a players attributes
+// returns : void
+int  PlayerGetColor(PLAYER *player);
+void PlayerSetColor(PLAYER *player,int color);
+int  PlayerGetType(PLAYER *player);
 void PlayerSetType(PLAYER *player,int type);
+char *PlayerGetName(PLAYER *player);
+void PlayerSetName(PLAYER *player,char *name);
 
-PLAYERGROUP *PlayerGroupNew(int players,int groupsize,...);
-PLAYER *PlayerGroupPlayer(PLAYERGROUP *pg,int player);
-void PlayerGroupUseSet(PLAYERGROUP *pg,int pnum,int player);
-PLAYER *PlayerGroupUseGet(PLAYERGROUP *pg,int pnum);
-void PlayerGroupCurrentSet(PLAYERGROUP *pg,int pnum);
-void PlayerGroupCurrentNext(PLAYERGROUP *pg);
-PLAYER *PlayerGroupCurrentGet(PLAYERGROUP *pg);
+PLAYERGROUP *PlayerGroupNew(int players,...);
+// purpose : creates a new player group containing players
+//           ... is players*{PLAYER *}
+// returns : the player group
+PLAYER *PlayerGroupPlayer(PLAYERGROUP *pg,int index);
+// purpose : to return player in the at index in the group
+// returns : NULL if index out of range, else the player *
 int PlayerGroupFind(PLAYERGROUP *pg,PLAYER *pl);
+// purpose : to find the index of player in the playergroup
+// returns : -1 if player not in group else index is returned
 void PlayerGroupFree(PLAYERGROUP *pg);
+// purpose : to free memory allocated to the playergroup
+// returns : void
 
 #endif

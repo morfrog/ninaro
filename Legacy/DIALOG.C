@@ -801,7 +801,7 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 //           kg keys are left,right,up,down,select,cancel
 // returns : FALSE if cancelled, TRUE if OK'd
 {
-    int index,funcret,changed=FALSE;
+    int index,funcret,changed=FALSE,key,used;
     
     DialogStateGet(d,d->state);
     DialogCurrentSet(d,d->elems-1);
@@ -811,8 +811,22 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 
     for (;;)
     {
-        if (KeySysKey(d->ks,GetKey(),d,&funcret,&index))
-        // key was used
+        key=GetKey();
+        used=FALSE;
+        used=KeySysKey(d->ks,key,d,&funcret,&index);
+        if (!used) // provide extra functionality
+        {
+            switch (key)
+            {
+                case 'o' : // OK
+                case 'O' : DialogDefaultSet(d,0); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
+                case 'r' : // Reset
+                case 'R' : DialogDefaultSet(d,1); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
+                case 'c' : // Cancel
+                case 'C' : DialogDefaultSet(d,2); index=4; used=KeySysIKey(d->ks,index,d,&funcret); break;
+            }
+        }
+        if (used) // key is used, via extra functionality or keysys
         {
             switch (index)
             {
@@ -837,6 +851,8 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
         }
     }
 }
+
+
 /*
 void main()
 {
