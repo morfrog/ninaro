@@ -19,7 +19,7 @@ struct helpTag
 };
 typedef struct helpTag HELP;
 
-HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int textcol,int boldcol,int maxwidth);
+HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int *textcol,int *boldcol,int maxwidth);
 // purpose : to create a new help box
 // returns : the help box
 void HelpAddLine(HELP *help,char *string);

@@ -12,7 +12,7 @@ Updated        : 1 May 1998         ADDED TxtBoxFixedAddLine
 #include "screen.h"
 #include "txtbox.h"
 
-TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int boldcol,int maxwidth)
+TXTBOX *TextBoxNew(int lines,int bordercol,int *textcol,int *boldcol,int maxwidth)
 // purpose : creates a new text box, with lines viewable lines, border color
 //           bordercol (can be NOBORDER), the color of the text in the box,
 //           with maxwidth being the maximum length of a string in a line of
@@ -172,7 +172,7 @@ void TextBoxPrint(TXTBOX *tb)
     }
 }
 
-void TextBoxShow(TXTBOX *tb,VIEWPORT *vp)
+void TextBoxDisplay(TXTBOX *tb,VIEWPORT *vp)
 {
     int x;
     NODE *look=tb->start;
@@ -185,8 +185,8 @@ void TextBoxShow(TXTBOX *tb,VIEWPORT *vp)
 
     for (x=0;x<tb->lines;x++)
     {
-        if (look->string[0]=='~') {_setcolor(tb->boldcol); cp=look->string+1;}
-        else                      {_setcolor(tb->textcol); cp=look->string;}
+        if (look->string[0]=='~') {_setcolor(*(tb->boldcol)); cp=look->string+1;}
+        else                      {_setcolor(*(tb->textcol)); cp=look->string;}
         _grtext(vp->x1,at,cp);
         if (look->next==tb->head) // at end
             x=tb->lines;
@@ -204,7 +204,7 @@ void TextBoxShow(TXTBOX *tb,VIEWPORT *vp)
 }
 
 /*
-void TextBoxShow(TXTBOX *tb)
+void TextBoxDisplay(TXTBOX *tb)
 // purpose : draws the contents of the textbox in the current viewport,
 //           drawing a border if required by the textbox
 // returns : void
@@ -221,11 +221,11 @@ void TextBoxShow(TXTBOX *tb)
     _setcharsize_w(0.4*1.0/(double)tb->lines,char_width*0.2);
     _settextalign(_LEFT,_BOTTOM);
      
-    _setcolor(tb->textcol);
+    _setcolor(*(tb->textcol));
     for (x=0;x<tb->lines;x++)
     {
-        if (look->string[0]=='~') {_setcolor(tb->boldcol); cp=look->string+1;}
-        else                      {_setcolor(tb->textcol); cp=look->string;}
+        if (look->string[0]=='~') {_setcolor(*(tb->boldcol)); cp=look->string+1;}
+        else                      {_setcolor(*(tb->textcol)); cp=look->string;}
         _grtext_w(0.0,((x+1)*(1.0/((double)tb->lines)))-0.02,cp);
         if (look->next==tb->head) // at end
             x=tb->lines;
@@ -241,7 +241,7 @@ void TextBoxShow(TXTBOX *tb)
 */
 
 int TextBoxScrollHome(TXTBOX *tb)
-// purpose : scrolls textbox so that TextBoxShow shows lines from the top
+// purpose : scrolls textbox so that TextBoxDisplay shows lines from the top
 // returns : TRUE if scrolled, else FALSE
 {
     if (tb->start==tb->head) return FALSE;
@@ -250,7 +250,7 @@ int TextBoxScrollHome(TXTBOX *tb)
 }
 
 int TextBoxScrollEnd(TXTBOX *tb)
-// purpose : scrolls textbox so that TextBoxShow shows last tb->lines lines
+// purpose : scrolls textbox so that TextBoxDisplay shows last tb->lines lines
 //           of textbox
 // returns : TRUE if scrolled, else FALSE
 {
@@ -363,14 +363,14 @@ int TextBoxTextCol(TXTBOX *tb)
 // purpose : to get the textbox's text color
 // returns : the color
 {
-    return tb->textcol;
+    return *(tb->textcol);
 }
 
 int TextBoxBoldCol(TXTBOX *tb)
 // purpose : to get the textbox's bold color
 // returns : the color
 {
-    return tb->boldcol;
+    return *(tb->boldcol);
 }
 
 void TextBoxChangeLines(TXTBOX *tb,int lines)
@@ -387,15 +387,15 @@ void TextBoxChangeBorderCol(TXTBOX *tb,int bordercol)
     tb->bordercol=bordercol;
 }
 
-void TextBoxChangeTextCol(TXTBOX *tb,int textcol)
-// purpose : to set the text box's text color to textcol
+void TextBoxChangeTextCol(TXTBOX *tb,int *textcol)
+// purpose : to set the text box's text color to textcol *
 // returns : void
 {
     tb->textcol=textcol;
 }
 
-void TextBoxChangeBoldCol(TXTBOX *tb,int boldcol)
-// purpose : to set the text box's bold color to boldcol
+void TextBoxChangeBoldCol(TXTBOX *tb,int *boldcol)
+// purpose : to set the text box's bold color to boldcol *
 // returns : void
 {
     tb->boldcol=boldcol;

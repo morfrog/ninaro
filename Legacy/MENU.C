@@ -85,7 +85,7 @@ int MenuCancel(MENU *m)
     return TRUE;
 }
 
-MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background,KEYGROUP *kg)
+MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background,KEYGROUP *kg,int *hilite)
 // purpose : to create a new menu, nummenus menus are allocated memory
 //           so keep it at the real number,
 // returns : the menu
@@ -96,6 +96,7 @@ MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background,KEYGROUP *kg)
     menu->submenu=malloc(nummenus*sizeof(SUBMENU));
     menu->vp=vp;
     menu->background=background;
+    menu->hilite=hilite;
     menu->ks=KeySysNew(kg);
     KeySysIFunc(menu->ks,0,MenuLeft);   // LEFT
     KeySysIFunc(menu->ks,1,MenuRight);  // RIGHT
@@ -183,7 +184,7 @@ void MenuDisplayBar(MENU *menu,VIEWPORT *vp,int dropped)
     int width=vp->x2-vp->x1+1,height=vp->y2-vp->y1+1;
     int menuwidth=width/MenuSubs(menu);
 // the menu bar
-    BorderedBox(vp->x1,vp->y1,vp->x2,vp->y2,MENUBACK,MENUHILITE);
+    BorderedBox(vp->x1,vp->y1,vp->x2,vp->y2,MENUBACK,*(menu->hilite));
 // hilite selected
     _rectangle(dropped?_GBORDER:_GFILLINTERIOR,
         vp->x1+(MenuSub(menu)*menuwidth),vp->y1,
@@ -200,7 +201,7 @@ void MenuDisplayBar(MENU *menu,VIEWPORT *vp,int dropped)
     }
 }
 
-void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp)
+void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp,int hilite)
 // purpose : displays the submenu in the viewport
 // returns : void
 {
@@ -208,7 +209,7 @@ void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp)
     int width=vp->x2-vp->x1+1,height=vp->y2-vp->y1+1;
     int itemheight=height/sub->items;
 // the submenu
-    BorderedBox(vp->x1,vp->y1,vp->x2,vp->y2,MENUBACK,MENUHILITE);
+    BorderedBox(vp->x1,vp->y1,vp->x2,vp->y2,MENUBACK,hilite);
 // hilite item
     _settextalign(_LEFT,_TOP);
     _rectangle(_GFILLINTERIOR,
@@ -219,13 +220,13 @@ void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp)
     {
         if (sub->item[x].name==SEPARATOR)
         {
-            _setcolor(MENUHILITE);
+            _setcolor(hilite);
             _moveto(vp->x1,pos);
             _lineto(vp->x2,pos);
         }
         else
         {
-            if (sub->item[x].enabled==FALSE) _setcolor(MENUHILITE);
+            if (sub->item[x].enabled==FALSE) _setcolor(hilite);
             else                                    _setcolor(MENUTEXT);
             _grtext(vp->x1+2,pos,sub->item[x].name);
         }
@@ -251,27 +252,59 @@ void MenuDisplay(MENU *menu)
         menu->vp->x1+(width*MenuSub(menu)/MenuSubs(menu)),menu->vp->y1+30,
         menu->vp->x1+(width*(MenuSub(menu)+1)/MenuSubs(menu)),
         menu->vp->y1+30+(MenuSubItems(menu)*30));
-    MenuDisplaySub(&(menu->submenu[MenuSub(menu)]),&vp);
+    MenuDisplaySub(&(menu->submenu[MenuSub(menu)]),&vp,*(menu->hilite));
 }
 
-void SetMouseToMenuItem(MENU *menu,int submenu,int item)
-// sets the mousepos to the center of the item in the submenu of the menu
+void SetMouseMenuSub(MENU *menu,int y)
+// sets the mousepos to the center of the current item of the current submenu
 {
     int width=menu->vp->x2-menu->vp->x1+1;
     int smwidth=width/menu->submenus;
-    SetMousePos((submenu*smwidth)+(smwidth/2),31+(item*30));
+    SetMousePos((MenuSub(menu)*smwidth)+(smwidth/2),y);
 }
 
-int GetMouseMenuItem(MENU *menu,int submenu,int y)
-// returns the menuitem at mouse x,y, -1 == no item, -2 == menubar
+void SetMouseMenuItem(MENU *menu,int x)
+// sets the mousepos to the center of the current item of the current submenu
+{
+    SetMousePos(x,31+(MenuSubItem(menu)*30));
+}
+
+void SetMouseMenu(MENU *menu)
+{
+    int width=menu->vp->x2-menu->vp->x1+1;
+    int smwidth=width/menu->submenus;
+    SetMousePos((MenuSub(menu)*smwidth)+(smwidth/2),31+(MenuSubItem(menu)*30));
+    SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
+}
+
+int GetMouseMenuItem(MENU *menu,int y)
+// returns the mouse menuitem of the current submenu at y,
+// -2 if menubar, -1 if no item
 {
     int items;
-    if (y<=30) return -2;
-    items=menu->submenu[submenu].items;
-    if (y>(30+(items*30))) return -1;
-    return (y-30)/30;
+    if (y<=(menu->vp->y1+30)) return -2;
+    else
+    {
+        items=menu->submenu[menu->current].items;
+        if (y>(menu->vp->y1+30+(items*30)))
+        {
+            return -1;
+        }
+        else return (y-(menu->vp->y1+30))/30;
+    }
 }
 
+int GetMouseMenuSub(MENU *menu,int x)
+// returns the submenu mouse x, -1 if x out of viewport range
+{
+    int width;
+    if (x<menu->vp->x1) return -1;
+    if (x>menu->vp->x2) return -1;
+
+    width=menu->vp->x2-menu->vp->x1+1;
+    return (x*menu->submenus/width);
+}
+ 
 void MenuCall(MENU *menu,void (* help)(void))
 // purpose : calls the menu, runs help via F1 or H
 // returns : void
@@ -279,35 +312,62 @@ void MenuCall(MENU *menu,void (* help)(void))
     int funcret,index,key,used,mx,my,btn,newmenu,newitem;
     int width=menu->vp->x2-menu->vp->x1+1;
     
-    HideMouse();    
     if (menu->current>=menu->submenus) menu->current=0;
+
+    btn=GetMouseInput(&mx,&my);
+    SetMouseMenu(menu);
     MenuDisplay(menu);
     SwapPage();
 
     for (;;)
     {   
+        used=FALSE;
         btn=GetMouseInput(&mx,&my);
         switch (btn)
         {
             case LMB :
                 funcret=MenuSelect(menu);
-                used=TRUE;
-            break;
             case RMB :
+                SetYLimits(menu->vp->y1,menu->vp->y2);
                 return; // menu finished
-            break;
+                break;
             case NMB :
-                newmenu=(mx*menu->submenus)/width;
-                if (newmenu!=menu->current)
+                newmenu=GetMouseMenuSub(menu,mx);
+                if (newmenu>=0) // valid mouse pos
                 {
-                    menu->current=newmenu;
-                    index=-1; // dont allow mouse updates, as mouse used                    
-                    used=TRUE; funcret=TRUE;
+                    if (newmenu!=menu->current)
+                    {
+                        menu->current=newmenu;
+                        index=0; // left or right will be triggered,
+                                // and mouse y pos set to item
+                        funcret=TRUE;
+                        used=TRUE;
+                        SetYLimits(menu->vp->y1+30,menu->vp->y1+30+(MenuSubItems(menu)*30));
+                    }
+                    else // same menu, possibly different item
+                    {
+                        newitem=GetMouseMenuItem(menu,my);
+                        if ((newitem>=0) && (newitem<MenuSubItems(menu)))
+                        // valid mouse pos
+                        {
+//                            Buzz(400,500,2,6);
+                            if ((newitem!=MenuSubItem(menu))
+                            && (menu->submenu[menu->current].item[newitem].enabled))
+                            {
+                                menu->submenu[menu->current].current=newitem;
+                                index=2; // up or down
+                                funcret=TRUE;
+                                used=TRUE;
+                            }
+                        }
+                        
+                    }
                 }
-                else used=FALSE;
-            break;
+                // else mouse pos bad
+                break;
         }
-        if ((!used) && (kbhit()))
+
+        if (kbhit())
         {
             key=GetKey();
             used=KeySysKey(menu->ks,key,menu,&funcret,&index);
@@ -316,7 +376,7 @@ void MenuCall(MENU *menu,void (* help)(void))
                 switch (key)
                 {
                     case 'm' :    // cancel
-                    case ESC : return;
+                    case ESC : return; break;
                     case F1  :
                     case 'h' : help(); used=TRUE; funcret=TRUE; index=6; break;
                 }
@@ -329,8 +389,10 @@ void MenuCall(MENU *menu,void (* help)(void))
             switch (index)
             {
                 case 0 : case 1 : // left or right
-                    SetMouseToMenuItem(menu,MenuSub(menu),0); //MenuSubItem(menu));
-//                    SetMousePos((menu->current*smwidth)+(smwidth/2),0);
+                    if (funcret) SetMouseMenuSub(menu,my);
+                    break;
+                case 2 : case 3 : // up or down
+                    if (funcret) SetMouseMenuItem(menu,mx);
                     break;
                 case 4 : case 5 : // SELECT or CANCEL
                     if (funcret) return; // menu finished

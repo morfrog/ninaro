@@ -14,7 +14,6 @@ Updated        : 1 May 1998         MODIFIED so that MenuCall has help func
 
 #define SEPARATOR NULL
 #define MENUBACK LTGREY
-#define MENUHILITE RED
 #define MENUTEXT BLACK
 
 #define NONE -1
@@ -47,6 +46,7 @@ struct menuTag
     VIEWPORT *vp;        // the viewport of the menu system
     MEMPAGE *background;// the screen background behind the menu
     KEYSYS *ks;         // the menus key system
+    int *hilite;
 };
 typedef struct menuTag MENU;
 
@@ -68,7 +68,7 @@ int MenuSelect(MENU *m);
 int MenuCancel(MENU *m);
 // purpose : sends a cancel signal to the menu
 // returns : TRUE 
-MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background,KEYGROUP *kg);
+MENU *MenuNew(byte nummenus,VIEWPORT *vp,MEMPAGE *background,KEYGROUP *kg,int *hilite);
 // purpose : to create a new menu, nummenus menus are allocated memory
 //           so keep it at the real number,
 // returns : the menu
@@ -99,7 +99,7 @@ void MenuDisplayBar(MENU *menu,VIEWPORT *vp,int dropped);
 // purpose : displays the menu bar in the current viewport
 //           if dropped the menu name is not hilited
 // returns : void
-void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp);
+void MenuDisplaySub(SUBMENU *sub,VIEWPORT *vp,int hilite);
 // purpose : displays the submenu in the viewport
 // returns : void
 void MenuDisplay(MENU *menu);

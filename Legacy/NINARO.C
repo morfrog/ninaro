@@ -93,6 +93,8 @@ int goesfirst;
 int wentfirst;
 int ai_speed;
 int ai_delay; // milliseconds
+int hilite,back,text;
+
 
 int BothPlayerAI(void)
 {
@@ -355,13 +357,13 @@ void DisplayGameName(void)
 void DisplayMsgBox(void)
 {
     _setvieworg(0,0);
-    TextBoxShow(msgbox,CurrentViewport());
+    TextBoxDisplay(msgbox,CurrentViewport());
 }
 
 void DisplayStatusBox(void)
 {
     _setvieworg(0,0);
-    TextBoxShow(statusbox,CurrentViewport());
+    TextBoxDisplay(statusbox,CurrentViewport());
 }
 
 void DisplayP1Color(void) {DisplayPlayerColor(PlayerGroupPlayer(players,player_one));}
@@ -1038,14 +1040,6 @@ int HumanMove(GRID *grid)
     {
         switch (GetMouseInput(&mx,&my))
         {
-            case LMB :
-//                sprintf(bfg,"%d,%d",mx,my);
-//                TextBoxFixedAddLine(msgbox,bfg);
-//                ViewSysWindowChanged(vs,3,TRUE);
-//                ViewSysDisplay(vs,DisplayChanged); SwapPage();
-                if (ViewSysMouse(vs,mx,my))
-                    return keypos; 
-                break;
             case RMB : 
                 funcret=KeyUp(NULL);
                 ViewSysDisplay(vs,funcret);
@@ -1188,6 +1182,10 @@ void ProgInit() // initialises global variables
     p2keys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
     ResetScores();
 
+        hilite=GREEN;
+        text=WHITE;
+        back=BLACK;
+
     win=malloc(sizeof(WIN));
     if (!LoadCfg()) // no cfg file
     {
@@ -1204,14 +1202,14 @@ void ProgInit() // initialises global variables
     win->win=malloc(win->tokens*sizeof(TOKEN));
     win_occured=FALSE;
                 
-    msgbox=TextBoxNew(7,RED,WHITE,GREEN,30);
+    msgbox=TextBoxNew(7,RED,&text,&hilite,30);
     TextBoxFixedAddLine(msgbox,"Press F1 for HELP");
     TextBoxFixedAddLine(msgbox,"Press Esc for MENU");
     TextBoxFixedAddLine(msgbox,"Which uses arrow keys");
     TextBoxFixedAddLine(msgbox,"Press F10 to QUIT");
     TextBoxFixedAddLine(msgbox,"~Or begin playing...");
     
-    statusbox=TextBoxNew(3,NOBORDER,WHITE,GREEN,30);
+    statusbox=TextBoxNew(3,NOBORDER,&text,&hilite,30);
     TextBoxAddLine(statusbox," ",ATEND);
     TextBoxAddLine(statusbox," ",ATEND);
     TextBoxAddLine(statusbox," ",ATEND);
@@ -1235,6 +1233,17 @@ void ProgInit() // initialises global variables
                         3,"",50,""),
         "Connect",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
+/*
+    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",3,
+        "Background",TRUE,TRUE,ControlNew(List,Color,1,2,11,
+                        0,
+//         black or white
+        "Hilite"
+//         red,green,blue,yellow,white
+        
+        hilite color red
+        text color black
+*/
     optionsdialog=DialogNew(pkeys,NULL,"Player Options",2,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Player One",
@@ -1253,7 +1262,7 @@ void ProgInit() // initialises global variables
 /*        "Best Of",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
 0,"Infinity",3,"Three",5,"Five",11,"Eleven",25,"Twenty-Five",51,"Fifty-One"));
 */            
-    mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys);
+    mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys,&hilite);
     MenuNewSub(mainmenu,"Game",7,
         "New",      CN, NewGame,FALSE,
         "Load",   NONE, LoadGame,TRUE,
@@ -1261,6 +1270,7 @@ void ProgInit() // initialises global variables
         "End",      CE, EndGame,    TRUE,
         "Suggest Move",NONE,SuggestMove,TRUE,
         "Toggle Sound",NONE,ToggleSound,TRUE,
+//        "Options",NONE,GameOptions,TRUE,
         "Exit",     CX, ExitGame,   TRUE);
     MenuNewSub(mainmenu,"Board",3,
         "7x8x4",    NONE,GameSize7x8x4,      TRUE,
@@ -1284,9 +1294,9 @@ void ProgInit() // initialises global variables
     KeySysIFunc(ks,4,KeySelect);
     KeySysIFunc(ks,5,KeyCancel);
 
-    help=HelpNew("NINARO.HLP",pkeys,20,RED,WHITE,GREEN,60);
+    help=HelpNew("NINARO.HLP",pkeys,20,RED,&text,&hilite,60);
 
-    aboutgame=HelpNew(NULL,pkeys,3,LTBLUE,WHITE,GREEN,29);
+    aboutgame=HelpNew(NULL,pkeys,3,LTBLUE,&text,&hilite,29);
     HelpAddLine(aboutgame,"~Scroll Up/Down, Any Key OK's");
     HelpAddLine(aboutgame,"Project");
     HelpAddLine(aboutgame,"By the author");
@@ -1294,7 +1304,6 @@ void ProgInit() // initialises global variables
     HelpAddLine(aboutgame,"      Semester One 1998");
     HelpAddLine(aboutgame,"");
     HelpAddLine(aboutgame,"       Copyright 1998");
-
 }
 
 void ProgFree() // frees global variables

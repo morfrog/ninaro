@@ -2,6 +2,9 @@
 #include "defines.h"
 #include "mousein.h"
 
+#define YADJUST 9371648
+#define XADJUST 37683200
+
 int GetMouseInput(int *x,int *y)
 // purpose : to get mouse input, *button==LMB or RMB
 // returns : RMB if right button input found, LMB if left, NMB if none
@@ -22,24 +25,24 @@ int GetMouseInput(int *x,int *y)
     if (lmbpress)
     {   
         MouseStat(&gmims);
-        *x=gmims.xpos-37683200;
-        *y=gmims.ypos-8847360;
+        *x=gmims.xpos-XADJUST;
+        *y=gmims.ypos-YADJUST;
         --lmbpress;
         return LMB;
     }
     else if (rmbpress)
     {
         MouseStat(&gmims);
-        *x=gmims.xpos-37683200;
-        *y=gmims.ypos-8847360;
+        *x=gmims.xpos-XADJUST;
+        *y=gmims.ypos-YADJUST;
         --rmbpress;
         return RMB;
     }
     else
     {
         MouseStat(&gmims);
-        *x=gmims.xpos-37683200;
-        *y=gmims.ypos-8847360;
+        *x=gmims.xpos-XADJUST;
+        *y=gmims.ypos-YADJUST;
         return NMB;
     }
 }

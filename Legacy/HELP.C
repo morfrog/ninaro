@@ -17,7 +17,7 @@ Updated        : 24 April 1998  CREATED PageUp,PageDown,End,Home
 
 // #define DEBUG_HELP
 
-HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int textcol,int boldcol,int maxwidth)
+HELP *HelpNew(char *filename,KEYGROUP *kg,int lines,int bordercol,int *textcol,int *boldcol,int maxwidth)
 // purpose : to create a new help box
 // returns : the help box
 {
@@ -91,7 +91,7 @@ void HelpDisplay(HELP *help,VIEWPORT *vp)
 {
     _setcolor(BLACK);
     _rectangle(_GFILLINTERIOR,vp->x1,vp->y1,vp->x2,vp->y2);
-    TextBoxShow(help->tb,vp);
+    TextBoxDisplay(help->tb,vp);
 }
 
 void HelpCall(HELP *help,VIEWPORT *vp,MEMPAGE *mp)
@@ -218,7 +218,7 @@ void main()
     TextBoxPrint(help->tb);
     GetKey();
     ScreenInit();
-    TextBoxShow(help->tb,&vp);
+    TextBoxDisplay(help->tb,&vp);
     SwapPage();
     GetKey();
     ShutDown();
