@@ -1,8 +1,7 @@
 #ifndef SYS_H
 #define SYS_H
-
-#define FALSE 0
-#define TRUE  1
+#include <stdlib.h>
+enum {FALSE=0,TRUE};
 
 #define byte unsigned char
 

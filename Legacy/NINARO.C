@@ -17,6 +17,7 @@
 #include "screen.h"
 #include "grid.h"
 #include "player.h"
+#include "controls.h"
 #include "connectn.h"
 
 #define ColAdd 3
@@ -28,7 +29,7 @@
 // Nathan Neuro
 // Minny Maxx
 
-int numplayers;
+char buffer[40];    //  general use buffer for output
 int win_occured;
 WIN *win;
 int grid_cols;
@@ -36,19 +37,17 @@ int grid_rows;
 int keypos;     // the column at which the keys <- & -> place the token
 GRID *playgrid;
 GRID *entrygrid;
-PLAYER **players; // array of player *
-PLAYER *player_one; 
-PLAYER *player_two; 
-PLAYER *player_current;
+PLAYERGROUP *players;
 TXTBOX *msgbox;
 VIEWSYS *vs;
 MENU *mainmenu;
+DIALOG *playerdialog;
 
 void SetP1Current()
 {
-    int type=PlayerGetType(player_one);
-    player_current=player_one;
-
+    int type;
+    PlayerGroupCurrentSet(players,0);
+    type=PlayerGetType(PlayerGroupCurrentGet(players));
     // disable irrelevant keys
     ViewSysKeyEnableGroup(vs,DISABLE,4,0,1,2,3);
     if (type==Human) ViewSysKeyEnableGroup(vs,ENABLE,4,4,5,6,7);
@@ -58,8 +57,9 @@ void SetP1Current()
 
 void SetP2Current()
 {
-    int type=PlayerGetType(player_two);
-    player_current=player_two;
+    int type;
+    PlayerGroupCurrentSet(players,1);
+    type=PlayerGetType(PlayerGroupCurrentGet(players));
 
     // disable irrelevant keys
     ViewSysKeyEnableGroup(vs,DISABLE,4,4,5,6,7);
@@ -70,8 +70,24 @@ void SetP2Current()
 
 void NextPlayer()
 {
-    if (player_current==player_one) SetP2Current();
-    else                            SetP1Current();
+    if ((PlayerGroupUseGet(players,0))==(PlayerGroupCurrentGet(players)))
+        SetP2Current();
+    else
+        SetP1Current();
+}
+
+void ResetGameSize(int cols,int rows,int inarow)
+{
+    GridFree(playgrid);
+    GridFree(entrygrid);
+    grid_cols=cols;
+    grid_rows=rows;
+    keypos=(cols/2)+(cols%2);
+    win_occured=FALSE;
+    SetWinSize(win,inarow);
+    playgrid=NewGrid(grid_cols,grid_rows);
+    entrygrid=NewGrid(grid_cols,1);
+    InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
 }
 
 void DisplayHuman(int primary,int secondary)
@@ -171,29 +187,30 @@ void DisplayGameName(void)
 
 void DisplayMsgBox(void) {TextBoxShow(msgbox);}
 
-void DisplayP1Color(void) {DisplayPlayerColor(player_one);}
-void DisplayP1Type(void) {DisplayPlayerType(player_one);}
-void DisplayP1Name(void) {DisplayPlayerName(player_one);}
-void DisplayP1Score(void) {DisplayPlayerScore(player_one);}
-void DisplayP2Color(void) {DisplayPlayerColor(player_two);}
-void DisplayP2Type(void) {DisplayPlayerType(player_two);}
-void DisplayP2Name(void) {DisplayPlayerName(player_two);}
-void DisplayP2Score(void) {DisplayPlayerScore(player_two);}
+void DisplayP1Color(void) {DisplayPlayerColor(PlayerGroupUseGet(players,0));}
+void DisplayP1Type(void) {DisplayPlayerType(PlayerGroupUseGet(players,0));}
+void DisplayP1Name(void) {DisplayPlayerName(PlayerGroupUseGet(players,0));}
+void DisplayP1Score(void) {DisplayPlayerScore(PlayerGroupUseGet(players,0));}
+void DisplayP2Color(void) {DisplayPlayerColor(PlayerGroupUseGet(players,1));}
+void DisplayP2Type(void) {DisplayPlayerType(PlayerGroupUseGet(players,1));}
+void DisplayP2Name(void) {DisplayPlayerName(PlayerGroupUseGet(players,1));}
+void DisplayP2Score(void) {DisplayPlayerScore(PlayerGroupUseGet(players,1));}
 
 void ChangePlayerType(PLAYER *player)
 {
     if (PlayerGetType(player)==Human) PlayerSetType(player,Computer);
     else                              PlayerSetType(player,Human);
 }
+
 void IncPlayerColor(PLAYER *player) {PlayerChangeColor(player,1);}
 void DecPlayerColor(PLAYER *player) {PlayerChangeColor(player,-1);}
 
-void ChangeP1Type(void) {ChangePlayerType(player_one);}
-void ChangeP2Type(void) {ChangePlayerType(player_two);}
-void IncP1Color(void) {IncPlayerColor(player_one);}
-void IncP2Color(void) {IncPlayerColor(player_two);}
-void DecP1Color(void) {DecPlayerColor(player_one);}
-void DecP2Color(void) {DecPlayerColor(player_two);}
+void ChangeP1Type(void) {ChangePlayerType(PlayerGroupUseGet(players,0));}
+void ChangeP2Type(void) {ChangePlayerType(PlayerGroupUseGet(players,1));}
+void IncP1Color(void) {IncPlayerColor(PlayerGroupUseGet(players,0));}
+void IncP2Color(void) {IncPlayerColor(PlayerGroupUseGet(players,1));}
+void DecP1Color(void) {DecPlayerColor(PlayerGroupUseGet(players,0));}
+void DecP2Color(void) {DecPlayerColor(PlayerGroupUseGet(players,1));}
 
 void ClearScreen(void) {_clearscreen(_GCLEARSCREEN);}
 void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
@@ -224,21 +241,24 @@ int KeyRight(void)
 
 int KeyDown(void)
 {
-    switch(InsertTokenInCol(playgrid,keypos,player_current,win))
+    switch(InsertTokenInCol(playgrid,keypos,PlayerGroupCurrentGet(players),win))
     {
         case Success :
             RemoveTokenAtCR(entrygrid,keypos,0);
             NextPlayer();
-            InsertTokenAtCR(entrygrid,keypos,0,player_current);
+            InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
             return DisplayAll;
             break;
         case Win :
             PlayTune(4,100,50,300,50,500,100,400,5);
             win_occured=TRUE;
+            sprintf(buffer,"%s Wins",PlayerGetName(PlayerGroupCurrentGet(players)));
+            TextBoxAddLine(msgbox,buffer,ATEND);
+            TextBoxScrollEnd(msgbox);
             RemoveTokenAtCR(entrygrid,keypos,0);
             NextPlayer(); // should be removed from proper system, though
                           // could be used for loser goes first
-            InsertTokenAtCR(entrygrid,keypos,0,player_current);
+            InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
             return DisplayAll;
             break;
         case Failure :
@@ -261,7 +281,7 @@ void MsgGameN(void)
 void NewGame(void)
 {
     GridEmpty(playgrid); GridEmpty(entrygrid);
-    InsertTokenAtCR(entrygrid,keypos,0,player_current);
+    InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
     win_occured=FALSE; MsgGameN();
 }
 void EndGame(void) {NewGame();}
@@ -286,11 +306,29 @@ void GameStatus(void)
     TextBoxAddLine(msgbox,buffer,ATEND);
     sprintf(buffer,"%d Columns x %d Rows, Connect %d",grid_cols,grid_rows,win->tokens);
     TextBoxAddLine(msgbox,buffer,ATEND);
-    sprintf(buffer,"Player One is %s",PlayerGetName(player_one));
+    sprintf(buffer,"Player One is %s",PlayerGetName(PlayerGroupUseGet(players,0)));
     TextBoxAddLine(msgbox,buffer,ATEND);
-    sprintf(buffer,"Player Two is %s",PlayerGetName(player_two));
+    sprintf(buffer,"Player Two is %s",PlayerGetName(PlayerGroupUseGet(players,1)));
     TextBoxAddLine(msgbox,buffer,ATEND);
     TextBoxScrollEnd(msgbox);
+}
+
+void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
+void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
+
+void PlayerDialog(PLAYER *player)
+{
+    
+}
+
+void P1Dialog(void)
+{
+    ControlsDialogCall(&(vs->main),playerdialog,0.01);
+}
+
+void P2Dialog(void)
+{
+    ControlsDialogCall(&(vs->main),playerdialog,0.01);
 }
 
 VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
@@ -334,7 +372,6 @@ void ProgInit() // initialises global variables
     win=malloc(sizeof(WIN));
     win->tokens=4;
     win->win=malloc(win->tokens*sizeof(TOKEN));
-    numplayers=7;
     win_occured=FALSE;  
     grid_rows=8;
     grid_cols=7;
@@ -353,16 +390,14 @@ void ProgInit() // initialises global variables
 
     msgbox=TextBoxNew(8,RED,WHITE,40);
 
-    players=malloc(numplayers*sizeof(PLAYER *));
-    players[0]=PlayerNew("Player1",YELLOW,Human,Low);
-    players[1]=PlayerNew("Player2",RED,Human,Low);
-    players[2]=PlayerNew("Ronda Random",LTBLUE,Computer,Low);
-    players[3]=PlayerNew("Alfa B Prune",GREEN,Computer,Medium);
-    players[4]=PlayerNew("Nathan Neuro",BLUE,Computer,High);
-    players[5]=PlayerNew("Rodney Rule",ORANGE,Computer,Medium);
-    players[6]=PlayerNew("Minny Maxx",PURPLE,Computer,Medium);
-    player_one=players[0];
-    player_two=players[1];
+    players=PlayerGroupNew(2,7,
+        PlayerNew("Player1",YELLOW,Human,Low),
+        PlayerNew("Player2",RED,Human,Low),
+        PlayerNew("Ronda Random",LTBLUE,Computer,Low),
+        PlayerNew("Alfa B Prune",GREEN,Computer,Medium),
+        PlayerNew("Nathan Neuro",BLUE,Computer,High),
+        PlayerNew("Rodney Rule",ORANGE,Computer,Medium),
+        PlayerNew("Minny Maxx",PURPLE,Computer,Medium));
     SetP1Current();
 
     TextBoxAddLine(msgbox,"Player1 Arrives",ATEND);
@@ -373,7 +408,25 @@ void ProgInit() // initialises global variables
                 
     playgrid=NewGrid(grid_cols,grid_rows);
     entrygrid=NewGrid(grid_cols,1);
-    InsertTokenAtCR(entrygrid,keypos,0,player_current);
+    InsertTokenAtCR(entrygrid,keypos,0,PlayerGroupCurrentGet(players));
+
+    playerdialog=ControlsDialogNew(0.2,5,
+        TRUE,"Type",     2,  10, 0.1,
+            ControlsControlListNew(Radio,FALSE,2,Computer,"Computer",Human,"Human"),
+        TRUE,"Name",     2,  10, 0.3,
+            ControlsControlListNew(Radio,TRUE,5,2,PlayerGetName(PlayerGroupPlayer(players,2)),
+                                           3,PlayerGetName(PlayerGroupPlayer(players,3)),
+                                           4,PlayerGetName(PlayerGroupPlayer(players,4)),
+                                           5,PlayerGetName(PlayerGroupPlayer(players,5)),
+                                           6,PlayerGetName(PlayerGroupPlayer(players,6))),
+        FALSE,"Name",     2,  10, 0.3,
+            ControlsControlListNew(Radio,TRUE,2,0,PlayerGetName(PlayerGroupPlayer(players,0)),
+                                                1,PlayerGetName(PlayerGroupPlayer(players,1))),
+        TRUE,"Color",    5,  0,  0.2,
+            ControlsControlListNew(Color,TRUE,10,TRUE,1),
+        TRUE,"Skill",    1,  6,  0.2,
+            ControlsControlListNew(Value,TRUE,10,TRUE,1));
+    
     
     mainmenu=MenuNew(5,&(vs->main),ViewSysCurrent(vs));
     MenuNewSub(mainmenu,"Game",5,
@@ -383,12 +436,12 @@ void ProgInit() // initialises global variables
         SEPARATOR,
         "Exit",     CX, ExitGame,   ItemEnabled);
     MenuNewSub(mainmenu,"Board",3,
-        "7x8x4",    NONE,NULL,      ItemEnabled,
-        "12x13x6",  NONE,NULL,      ItemEnabled, 
+        "7x8x4",    NONE,GameSize7x8x4,      ItemEnabled,
+        "12x13x6",  NONE,GameSize12x13x6,      ItemEnabled, 
         "Custom...",NONE,NULL,      ItemEnabled);
     MenuNewSub(mainmenu,"Player",2,
-        "One...",   NONE,NULL,      ItemDisabled,
-        "Two...",   NONE,NULL,      ItemEnabled);
+        "One...",   NONE,P1Dialog,      ItemDisabled,
+        "Two...",   NONE,P2Dialog,      ItemEnabled);
     MenuNewSub(mainmenu,"Options",2,
         "Player",   NONE,NULL,      ItemEnabled,
         "Turn",     NONE,NULL,      ItemEnabled);

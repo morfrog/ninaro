@@ -5,6 +5,7 @@
 #include <conio.h>
 #include <time.h>
 #include <dos.h>
+#include <i86.h>
 #include <conio.h>
 #include <graph.h>
 #include "sys.h"

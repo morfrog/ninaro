@@ -1,11 +1,14 @@
 #ifndef CONTROLS_H
 #define CONTROLS_H
+#include "sys.h"
+#include "screen.h"
 
 #define CONTROLBACK GREY
 #define CONTROLTEXT BLACK
 #define CONTROLHILITE RED
 
-enum {Radio,Color,Button,Value};
+enum {Radio,Color,Button,Value,Name};
+// Name does not recieve input
 
 struct radioTag
 {
@@ -15,30 +18,12 @@ struct radioTag
 
 typedef struct radioTag RADIO;
 
-struct radiolistTag
-{
-    int current;   // the one which is selected
-    int rbs;       // how many radio buttons the are
-    RADIO *rb;     // array of radio buttons
-};
-
-typedef struct radiolistTag RADIOLIST;
-
 struct colorTag
 {
     int value;  // the value of the color
 };
 
 typedef struct colorTag COLOR;
-
-struct colorlistTag
-{
-    int current;    // the one which is selected
-    int colors;     // the size of the list
-    COLOR *color;   // the color list
-};
-
-typedef struct colorlistTag COLORLIST;
 
 struct buttonTag
 {
@@ -48,15 +33,6 @@ struct buttonTag
 
 typedef struct buttonTag BUTTON;
 
-struct buttonlistTag
-{
-    int current;    // the one which is selected
-    int buttons;    // how many buttons are in the list
-    BUTTON *button; // the list of buttons
-};
-
-typedef struct buttonlistTag BUTTONLIST;
-
 struct valueTag
 {
     int value;      // the value
@@ -64,22 +40,29 @@ struct valueTag
 
 typedef struct valueTag VALUE;
 
-struct valuelistTag
+struct nameTag
 {
-    int current;    // the one which is selected
-    int values;     // how many values there are
-    VALUE *value;   // the list of values
-    int names;      // how many names there are
-    char **name;    // array of the names
+    char *name;
 };
 
-typedef struct valuelistTag VALUELIST;
+typedef struct nameTag NAME;
+
+struct controllistTag
+{
+    int type;       // enum {Radio,Color,Button,Value,Name};
+    int current;    // which one is selected
+    int size;       // how many controls there are
+    void *store;    // the storage of the controls
+};
+
+typedef struct controllistTag CONTROLLIST;
 
 struct dialogelemTag
 {
-    int type; // enum {Radio,Color,Button,Value};
+    int enabled;    // only enabled elems displayed
     char *name;
-    void *elem; // are actually lists of above enum type
+    CONTROLLIST *cl;
+    int temp;   // saves current for reset if required
     int displaycols; // columns for display
     int displaychars; // max chars to display
     double displayfract; // fraction of 1.0 of viewport in which it is displayed
@@ -92,9 +75,21 @@ struct dialogTag
     int current;        // which control is currently selected
     int controls;       // how many controls there are
     DIALOGELEM *control; // array of the controls, includes 
-                         // automatic buttons OK,Reset,Cancel
+                         // automatic buttons - OK,Reset,Cancel
 };
 
 typedef struct dialogTag DIALOG;
 
+CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...);
+int ControlsControlListNext(CONTROLLIST *cl);
+int ControlsControlListPrev(CONTROLLIST *cl);
+void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int chars);
+int ControlsControlListSet(CONTROLLIST *cl,...);
+
+DIALOG *ControlsDialogNew(double fract,int controls,...);
+int ControlsDialogNext(DIALOG *dl);
+int ControlsDialogPrev(DIALOG *dl);
+void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,double gap);
+int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,double gap);
+int ControlsDialogSet(DIALOG *dl,int control,...);
 #endif

@@ -148,8 +148,9 @@ int MenuSubs(MENU *menu) {return menu->view->submenus;}
 int MenuSubItem(MENU *menu) {return menu->view->submenu[menu->view->current].current;}
 int MenuSubItems(MENU *menu) {return menu->view->submenu[menu->view->current].items;}
 
-void MenuDisplayBar(MENU *menu)
+void MenuDisplayBar(MENU *menu,int dropped)
 // displays the menu bar in the current viewport
+// if dropped the menu name is not hilited
 {
     int x;
     double pos=0.0;
@@ -157,8 +158,9 @@ void MenuDisplayBar(MENU *menu)
 // the menu bar
     BorderedBox(0.0,0.0,1.0,1.0,MENUBACK,MENUHILITE);
 // hilite selected
-    _rectangle_w(_GFILLINTERIOR,(double)MenuSub(menu)*menuwidth,0.0,
-                                (double)(MenuSub(menu)+1)*menuwidth,1.0);
+        _rectangle_w(dropped?_GBORDER:_GFILLINTERIOR,
+            (double)MenuSub(menu)*menuwidth,0.0,
+            (double)(MenuSub(menu)+1)*menuwidth,1.0);
 // write text
     _setcolor(MENUTEXT);
     for (x=0;x<MenuSubs(menu);x++)
@@ -214,7 +216,7 @@ void MenuDisplay(MENU *menu)
 // menu bar
     _setviewport(menu->view->vp->x1,menu->view->vp->y1,
                  menu->view->vp->x2,menu->view->vp->y1+30);
-    MenuDisplayBar(menu);
+    MenuDisplayBar(menu,TRUE);
 // submenu
     _setviewport(menu->view->vp->x1+(width*MenuSub(menu)/MenuSubs(menu)),
                  menu->view->vp->y1+31,
@@ -228,7 +230,7 @@ int MenuCall(MENU *menu)
 {
     int key,n;
 
-    menu->view->current=0;
+    if (menu->view->current>=menu->view->submenus) menu->view->current=0;
     MenuDisplay(menu);
     SwapPage();
 
