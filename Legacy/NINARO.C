@@ -467,23 +467,24 @@ void HelpAbout(void)
 }
 
 void HelpPlayerDialog(void)
-{HelpScrollString(help,"Player Dialog"); HelpContents();}
+{HelpHome(help); HelpScrollString(help,"~The Player Dialog"); HelpContents();}
 void HelpBoardDialog(void)
-{HelpScrollString(help,"Board Dialog"); HelpContents();}
+{HelpHome(help); HelpScrollString(help,"~The Custom Board Dialog"); HelpContents();}
 void HelpOptionsDialog(void)
-{HelpScrollString(help,"Player Options Dialog"); HelpContents();}
+{HelpHome(help); HelpScrollString(help,"~The Player Options Dialog"); HelpContents();}
 void HelpGameOptions(void)
-{HelpScrollString(help,"Game Options Dialog"); HelpContents();}
+{HelpHome(help); HelpScrollString(help,"~The Game Options Dialog"); HelpContents();}
 
 
 void HelpMenu(void)
 {
+    HelpHome(help); 
     switch (MenuSub(mainmenu))
     {
-        case 0 : HelpScrollString(help,"Game Menu"); HelpContents(); break;
-        case 1 : HelpScrollString(help,"Board Menu"); HelpContents(); break;
-        case 2 : HelpScrollString(help,"Player Menu"); HelpContents(); break;
-        case 3 : HelpScrollString(help,"Help Menu"); HelpContents(); break;
+        case 0 : HelpScrollString(help,"~The Game Menu"); HelpContents(); break;
+        case 1 : HelpScrollString(help,"~The Board Menu"); HelpContents(); break;
+        case 2 : HelpScrollString(help,"~The Player Menu"); HelpContents(); break;
+        case 3 : HelpScrollString(help,"~The Help Menu"); HelpContents(); break;
     }
 }
 
