@@ -8,6 +8,11 @@ void SetViewport(VIEWPORT *vp)
     _setviewport(vp->x1,vp->y1,vp->x2,vp->y2);
 }
 
+void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2)
+{
+    vp->x1=x1; vp->y1=y1; vp->x2=x2; vp->y2=y2;
+}
+
 void BorderedBox(double x1,double y1,double x2,double y2,int p,int s)
 {
     _setcolor(p);

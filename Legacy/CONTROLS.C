@@ -257,7 +257,8 @@ void DisplayCircleFilled(double x1,double y1,double x2,double y2,int filled)
     }
 }
 
-void DisplayScale(int range,int pos,int value,int chars)
+void DisplayScale(VIEWPORT *vp,int range,int pos,int value,int chars)
+// displays the scale in the vp viewport
 {
     int x;
     double width=0.8/(double)(range-1), 
@@ -265,8 +266,9 @@ void DisplayScale(int range,int pos,int value,int chars)
             at=0.1;
     char buffer[10];
     _settextalign(_CENTER,_HALF);
-    _setcharsize_w(0.07,0.4/(double)chars);
-    _setcharspacing_w(-0.02);
+    _setcharsize(2*(vp->y2-vp->y1)/5,(vp->x2-vp->x1)/(5*chars));
+    _setcharspacing(0);
+    SetViewport(vp);
     _setcolor(CONTROLHILITE);
     _moveto_w(all,0.5); _lineto_w(all,0.4);
     _rectangle_w(_GBORDER,all-0.1,0.4,all+0.1,0.0);
@@ -281,7 +283,9 @@ void DisplayScale(int range,int pos,int value,int chars)
     }
 }
 
-void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars)
+// must change to use a viewport parameter and setcharsize() instead of _w
+// for the algorithm to be correct on any sized viewport
+void ControlsControlListDisplay(VIEWPORT *vpt,CONTROLLIST *cl,int cols,int rows,int chars)
 // displays the control list in the current viewport, cols and chars,
 // if relevant, are used to display in cols columns with chars characters
 // in each column. If not relevant chars the value must be set to zero, the
@@ -297,27 +301,28 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars)
     char buffer[10];
     BUTTON *bp; VALUE *vp; RADIO *rp; COLOR *cp; NAME *np; RANGE *rnp;
 
+    SetViewport(vpt);
     _setcolor(CONTROLBACK);
     _rectangle_w(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
-
 
     switch (cl->type)
     {
         case Value :
             vp=(VALUE *)(cl->store);
-            DisplayScale(cl->size,cl->current,vp[cl->current].value,4);
+            DisplayScale(vpt,cl->size,cl->current,vp[cl->current].value,4);
         break;
         case Range :
             rnp=(RANGE *)(cl->store);
-            DisplayScale(rnp[0].max-rnp[0].min+1,cl->current-rnp[0].min,cl->current,4);
+            DisplayScale(vpt,rnp[0].max-rnp[0].min+1,cl->current-rnp[0].min,cl->current,4);
         break;
         case Radio :
             rp=(RADIO *)(cl->store);
             all=width/10.0; // circle section
             _settextalign(_LEFT,_HALF);
-            _setcharsize_w(0.08,0.4*width/(double)chars);
-            _setcharspacing_w(0.0);
+            _setcharsize(3*(vpt->y2-vpt->y1)/(rows*4),9*(vpt->x2-vpt->x1)/(10*cols*chars));
+            _setcharspacing(0);
             _setcolor(CONTROLTEXT);
+            SetViewport(vpt);
             for (x=0;x<cl->size;x++)
             {
                 DisplayCircleFilled(atx,aty,atx+all,aty+height,x==cl->current?TRUE:FALSE);
@@ -329,6 +334,7 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars)
         case Color :
             cp=(COLOR *)(cl->store);
             all=width/4.0;  // select section
+            SetViewport(vpt);
             for (x=0;x<cl->size;x++)
             {
                 if (x==cl->current)
@@ -348,9 +354,10 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars)
             np=(NAME *)(cl->store);
             all=width/2.0;  // text centered
             _settextalign(_CENTER,_HALF);
-            _setcharsize_w(height*0.10,0.4*width/(double)chars);
-            _setcharspacing_w(0.0);
+            _setcharsize(3*(vpt->y2-vpt->y1)/(rows*4),(vpt->x2-vpt->x1)/(2*cols*chars));
+            _setcharspacing(0);
             _setcolor(CONTROLTEXT);
+            SetViewport(vpt);
             atx=all;
             aty=text;
             for (x=0;x<cl->size;x++)
@@ -364,8 +371,9 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars)
             bp=(BUTTON *)(cl->store);
             all=width/2.0;  // text centered
             _settextalign(_CENTER,_HALF);
-            _setcharsize_w(height*0.15,0.4*width/(double)chars);
-            _setcharspacing_w(0.0);
+            _setcharsize(2*(vpt->y2-vpt->y1)/(rows*4),(vpt->x2-vpt->x1)/(2*cols*chars));
+            _setcharspacing(0);
+            SetViewport(vpt);
             for (x=0;x<cl->size;x++)
             {
                 if (x==cl->current)
@@ -385,7 +393,7 @@ void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars)
 
 int ControlsDialogGet(DIALOG *dl,int control)
 {
-    return dl->control[control].cl->current);
+    return dl->control[control].cl->current;
 }
 
 int ControlsDialogSet(DIALOG *dl,int control,...)
@@ -499,26 +507,30 @@ void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap)
     double height=(double)(vp->y2-vp->y1);
     int names=100;
     int wintop,winbot;
+    VIEWPORT i;
     
     for (x=0;x<dl->controls;x++)
     {
         if (dl->control[x].enabled==TRUE)
         {
-            _setviewport(0,0,639,349);
             fract=dl->control[x].displayfract;
             wintop=(int)(at*height);
             winbot=(int)((at+fract)*height);
             if (x==dl->current)
             {
+                SetViewport(vp);
+                _setvieworg(0,0); 
                 _setcolor(CONTROLHILITE);
                 _rectangle(_GFILLINTERIOR,vp->x1,wintop,vp->x2,winbot);
             }
             if (dl->control[x].name==NULL)
             {
-                _setviewport(vp->x1+gap,wintop+gap,vp->x2-2,winbot-gap);
+                ResetViewport(&i,vp->x1+gap,wintop+gap,vp->x2-2,winbot-gap);
             }
-            else
+            else // display control name
             {
+                SetViewport(vp);
+                _setvieworg(0,0);
                 _setcolor(CONTROLBACK);
                 _rectangle(_GFILLINTERIOR,vp->x1+gap,wintop+gap,vp->x1+names+gap,winbot-gap);
                 _settextalign(_LEFT,_TOP);
@@ -526,9 +538,9 @@ void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap)
                 _setcharspacing(-6);
                 _setcolor(CONTROLTEXT);
                 _grtext(vp->x1+gap+1,wintop+gap,dl->control[x].name);
-                _setviewport(vp->x1+gap+names,wintop+gap,vp->x2-2,winbot-gap);
+                ResetViewport(&i,vp->x1+gap+names,wintop+gap,vp->x2-2,winbot-gap);
             }
-            ControlsControlListDisplay(dl->control[x].cl,dl->control[x].displaycols,dl->control[x].displayrows,dl->control[x].displaychars);
+            ControlsControlListDisplay(&i,dl->control[x].cl,dl->control[x].displaycols,dl->control[x].displayrows,dl->control[x].displaychars);
             at+=fract;
         }
     }
@@ -570,19 +582,28 @@ int ControlsDialogCall(VIEWPORT *vp,DIALOG *dl,int gap)
 /*
 void main()
 {
-    VIEWPORT vp={100,0,500,300};
+    VIEWPORT vp={100,0,300,300};
 
-    DIALOG *dl=ControlsDialogNew(0.2,3,
-        "Name",     2,  10, 0.2,
-            ControlsControlListNew(Radio,4,0,"Matthew",1,"Mark",2,"Luke",3,"John"),
-        "Color",    5,  0,  0.4,
-            ControlsControlListNew(Color,15,TRUE,1),
-        "Skill",    1,  6,  0.2,
-            ControlsControlListNew(Value,100,TRUE,1));
-    
+    DIALOG *dl=ControlsDialogNew(0.2,4,
+        TRUE,NULL,      1,  1, 15,  0.1,
+            ControlsControlListNew(Name,TRUE,1,"Player Setup"),
+        TRUE,"Type",    2,  1,  10, 0.1,
+            ControlsControlListNew(Radio,FALSE,2,0,"Computer",1,"Human"),
+        TRUE,"Color",   10,  1,  0,  0.1,
+            ControlsControlListNew(Color,TRUE,10,TRUE,1),
+        TRUE,"Skill",   1,  1, 6,  0.2,
+            ControlsControlListNew(Range,TRUE,10,1));
+
 // name,displaycols,displaychars,type,controllist,...
     ScreenInit();
-    ControlsDialogCall(&vp,dl,0.01);
+    ControlsDialogDisplay(&vp,dl,2);
+    ResetViewport(&vp,0,0,100,100);
+    ControlsControlListDisplay(&vp,ControlsControlListNew(Range,TRUE,10,1),1,1,4);
+    ResetViewport(&vp,100,100,200,200);
+    ControlsControlListDisplay(&vp,ControlsControlListNew(Range,TRUE,20,1),1,1,4);
+
+    SwapPage();
+    GetKey();
     ShutDown();
 }
 */

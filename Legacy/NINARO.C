@@ -449,7 +449,7 @@ void ProgInit() // initialises global variables
             ControlsControlListNew(Name,TRUE,1,"Player Setup"),
         TRUE,"Type",    2,  1,  10, 0.1,
             ControlsControlListNew(Radio,FALSE,2,Computer,"Computer",Human,"Human"),
-        TRUE,"Name",    2,  3,  10, 0.3,
+        TRUE,"Name",    2,  3,  15, 0.3,
             ControlsControlListNew(Radio,TRUE,5,2,PlayerGetName(PlayerGroupPlayer(players,2)),
                                            3,PlayerGetName(PlayerGroupPlayer(players,3)),
                                            4,PlayerGetName(PlayerGroupPlayer(players,4)),

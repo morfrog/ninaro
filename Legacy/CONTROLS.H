@@ -90,7 +90,7 @@ typedef struct dialogTag DIALOG;
 CONTROLLIST *ControlsControlListNew(int type,int copy,int num,...);
 int ControlsControlListNext(CONTROLLIST *cl);
 int ControlsControlListPrev(CONTROLLIST *cl);
-void ControlsControlListDisplay(CONTROLLIST *cl,int cols,int rows,int chars);
+void ControlsControlListDisplay(VIEWPORT *vp,CONTROLLIST *cl,int cols,int rows,int chars);
 int ControlsControlListSetCurrent(CONTROLLIST *cl,...);
 
 DIALOG *ControlsDialogNew(double fract,int controls,...);
