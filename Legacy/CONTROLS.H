@@ -79,7 +79,10 @@ struct dialogelemTag
 {
     int type; // enum {Radio,Color,Button,Value};
     char *name;
-    void *elem; // are actually lists of above enum type 
+    void *elem; // are actually lists of above enum type
+    int displaycols; // columns for display
+    int displaychars; // max chars to display
+    double displayfract; // fraction of 1.0 of viewport in which it is displayed
 };
 
 typedef struct dialogelemTag DIALOGELEM;
@@ -88,7 +91,8 @@ struct dialogTag
 {
     int current;        // which control is currently selected
     int controls;       // how many controls there are
-    DIALOGELEM *control; // array of the controls
+    DIALOGELEM *control; // array of the controls, includes 
+                         // automatic buttons OK,Reset,Cancel
 };
 
 typedef struct dialogTag DIALOG;

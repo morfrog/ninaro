@@ -31,7 +31,9 @@ int ControlsRadioListNext(RADIOLIST *rl)
 { if (rl->current<rl->rbs-1) {rl->current+=1; return TRUE;} return FALSE;}
 
 int ControlsRadioListPrev(RADIOLIST *rl)
-{ if (rl->current>=0) {rl->current-=1; return TRUE;} return FALSE;}
+{ if (rl->current>0) {rl->current-=1; return TRUE;} return FALSE;}
+
+int ControlsRadioListValue(RADIOLIST *rl) {return rl->rb[rl->current].value;}
 
 void ControlsRadioListDisplay(RADIOLIST *rl,int cols,int chars)
 // displays the radio list in the current viewport using cols columns
@@ -91,7 +93,9 @@ int ControlsColorListNext(COLORLIST *cl)
 { if (cl->current<cl->colors-1) {cl->current+=1; return TRUE;} return FALSE;}
 
 int ControlsColorListPrev(COLORLIST *cl)
-{ if (cl->current>=0) {cl->current-=1; return TRUE;} return FALSE;}
+{ if (cl->current>0) {cl->current-=1; return TRUE;} return FALSE;}
+
+int ControlsColorListValue(COLORLIST *cl) {return cl->color[cl->current].value;}
 
 void ControlsColorListDisplay(COLORLIST *cl,int cols)
 // displays the color list in the current viewport
@@ -146,7 +150,7 @@ int ControlsButtonListNext(BUTTONLIST *bl)
 { if (bl->current<bl->buttons-1) {bl->current+=1; return TRUE;} return FALSE;}
 
 int ControlsButtonListPrev(BUTTONLIST *bl)
-{ if (bl->current>=0) {bl->current-=1; return TRUE;} return FALSE;}
+{ if (bl->current>0) {bl->current-=1; return TRUE;} return FALSE;}
 
 void ControlsButtonListDisplay(BUTTONLIST *bl,int cols,int chars)
 // displays the buttons list in the current viewport
@@ -161,7 +165,7 @@ void ControlsButtonListDisplay(BUTTONLIST *bl,int cols,int chars)
     _rectangle_w(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
     _setcolor(CONTROLTEXT);
     _settextalign(_CENTER,_HALF);
-    _setcharsize_w(height*0.25,0.4*width/(double)chars);
+    _setcharsize_w(height*0.15,0.4*width/(double)chars);
 
     for (x=0;x<bl->buttons;x++)
     {
@@ -218,7 +222,9 @@ int ControlsValueListNext(VALUELIST *vl)
 { if (vl->current<vl->values-1) {vl->current+=1; return TRUE;} return FALSE;}
 
 int ControlsValueListPrev(VALUELIST *vl)
-{ if (vl->current>=0) {vl->current-=1; return TRUE;} return FALSE;}
+{ if (vl->current>0) {vl->current-=1; return TRUE;} return FALSE;}
+
+int ControlsValueListValue(VALUELIST *vl) {return vl->value[vl->current].value;}
 
 void ControlsValueListDisplay(VALUELIST *vl,int chars)
 // Displays the value list in the current viewport
@@ -231,7 +237,7 @@ void ControlsValueListDisplay(VALUELIST *vl,int chars)
     double pos=width;
     double arrow=(double)(vl->current)*width;
 
-    _setcharsize_w(0.5*0.25,0.4/(double)(chars*vl->names));
+    _setcharsize_w(0.5*0.15,0.4/(double)(chars*vl->names));
     _setcolor(CONTROLBACK);
     _rectangle_w(_GFILLINTERIOR,0.0,0.0,1.0,1.0);
     _setcolor(CONTROLTEXT);
@@ -269,21 +275,130 @@ void ControlsValueListDisplay(VALUELIST *vl,int chars)
         
     
     _setcolor(CONTROLHILITE);
-    _moveto_w(arrow,0.0); _lineto_w(arrow,height-heightlong); // arrow line
-    _moveto_w(arrow,height-heightlong);
+    _rectangle_w(_GFILLINTERIOR,arrow+0.01,0.0,arrow-0.01,height-heightlong); // arrow line
+    _moveto_w(arrow-0.01,height-heightlong);
     _lineto_w(arrow-0.02,height-heightlong-heightshort);  // left head
-    _moveto_w(arrow,height-heightlong);
+    _moveto_w(arrow+0.01,height-heightlong);
     _lineto_w(arrow+0.02,height-heightlong-heightshort);    // right head
 }
 
+DIALOG *ControlsDialogNew(double fract,int controls,...)
+// fract is fraction (0.0<=fract<=1.0) if viewport for default buttons
+// ... is name,displaycols,displaychars,double displayfract,type,list,...
+// dialogs automatically get OK,Reset,Cancel Buttons.
+{
+    va_list ap;
+    char *cp;
+    int x;
+    DIALOG *dl=malloc(sizeof(DIALOG));
+    dl->controls=controls+1;
+    dl->control=malloc(dl->controls*sizeof(DIALOGELEM));
+    dl->current=0;
+    dl->control[controls].type=Button;
+    dl->control[controls].name=NULL;
+    dl->control[controls].elem=ControlsButtonListNew(3,"OK",NULL,"Reset",NULL,"Cancel",NULL);
+    dl->control[controls].displaycols=3;
+    dl->control[controls].displaychars=5;
+    dl->control[controls].displayfract=fract;
+
+    va_start(ap,controls);
+    for (x=0;x<controls;x++)
+    {
+        cp=va_arg(ap,char *);
+        dl->control[x].name=malloc((strlen(cp)+1)*sizeof(char));
+        strcpy(dl->control[x].name,cp);
+        dl->control[x].displaycols=va_arg(ap,int);
+        dl->control[x].displaychars=va_arg(ap,int);
+        dl->control[x].displayfract=va_arg(ap,double);
+        dl->control[x].type=va_arg(ap,int);
+        dl->control[x].elem=va_arg(ap,void *);
+    }
+    va_end(ap);
+    return dl;
+}
+
+void ControlsDialogReset(void) {}
+// used to reset values to original, if func== it
+
+void ControlsDialogCall(VIEWPORT *cp,DIALOG *dl,double gap,...)
+// ... is int *value,int *temp
+{
+    int x;
+    int **value=malloc(dl->controls*sizeof(int *));
+    int **temp=malloc(dl->controls*sizeof(int *));
+    va_list ap;
+    for (x=0;x<dl->controls;x++)
+    {
+        value[x]=va_arg(ap,int *);
+        temp[x]=value[x];
+    }
+}
+
+void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,double gap)
+// displays the dialog in the viewport vp
+// gap is amount to leave out of each window to separate them, is vertical gap only
+{
+    int x;
+    double fract;
+    double at=0.0;
+    double height=(double)(vp->y2-vp->y1);
+    
+    for (x=0;x<dl->controls;x++)
+    {
+        fract=dl->control[x].displayfract;
+        if (x==dl->current)
+        {
+            _setcolor(CONTROLHILITE);
+            _rectangle(_GFILLINTERIOR,vp->x1,(int)(at*height),vp->x2,(int)((at+fract)*height));
+        }
+        _setviewport(vp->x1+1,(int)((at+gap)*height),vp->x2-1,(int)((at+fract-gap)*height));
+        switch (dl->control[x].type)
+        {
+            case Radio :
+                ControlsRadioListDisplay((RADIOLIST *)(dl->control[x].elem),dl->control[x].displaycols,dl->control[x].displaychars);
+                break;
+            case Color :
+                ControlsColorListDisplay((COLORLIST *)(dl->control[x].elem),dl->control[x].displaycols);
+                break;
+            case Value :
+                ControlsValueListDisplay((VALUELIST *)(dl->control[x].elem),dl->control[x].displaychars);
+                break;
+            case Button :
+                ControlsButtonListDisplay((BUTTONLIST *)(dl->control[x].elem),dl->control[x].displaycols,dl->control[x].displaychars);
+                break;
+        }
+        at+=fract;
+    }
+}
+
+int ControlsDialogNext(DIALOG *dl)
+{ if (dl->current<dl->controls-1) {dl->current+=1; return TRUE;} return FALSE;}
+
+int ControlsDialogPrev(DIALOG *dl)
+{ if (dl->current>0) {dl->current-=1; return TRUE;} return FALSE;}
+
+/*
 void main()
 {
+    VIEWPORT vp={100,0,500,300};
     RADIOLIST *rl=ControlsRadioListNew(4,0,"Matthew",1,"Mark",
                                          2,"Luke",3,"John");
     COLORLIST *cl=ControlsColorListNew(16,TRUE,0);
-    BUTTONLIST *bl=ControlsButtonListNew(3,"OK",NULL,"Reset",NULL,"Cancel",NULL);
     VALUELIST *vl=ControlsValueListNew(TRUE,3,10,1,"Low","Med","High");
+    DIALOG *dl=ControlsDialogNew(0.2,3,
+        "Name",     2,  10, 0.2,    Radio,  rl,
+        "Color",    8,  0,  0.4,    Color,  cl,
+        "Skill",    0,  6,  0.2,    Value,  vl);
+
+
+// name,displaycols,displaychars,type,list,...
     ScreenInit();
+    ControlsDialogDisplay(&vp,dl,0.01);
+    SwapPage();
+    GetKey();
+}
+*/
+/*
     _setviewport(100,0,400,100);
     ControlsButtonListDisplay(bl,3,8);
     _setviewport(100,100,400,200);
@@ -294,8 +409,4 @@ void main()
     _setviewport(100,250,400,350);
     vl->current=4;
     ControlsValueListDisplay(vl,5);
-    SwapPage();
-    GetKey();
-}
-
-
+*/
