@@ -1108,6 +1108,9 @@ int HumanMove(GRID *grid)
                             RemoveTokenAtCR(entrygrid,keypos,0));
                         keypos=newpos;
                         ViewSysWindowChanged(vs,0,TRUE);
+                        sprintf(bfg,"%d",mx);
+                        TextBoxFixedAddLine(msgbox,bfg);
+                        ViewSysWindowChanged(vs,3,TRUE);
                         ViewSysDisplay(vs,DisplayChanged);
                         SwapPage();
                     }
@@ -1414,10 +1417,21 @@ void main()
                     {
                         waitesc=((ai_speed) || (!BothPlayerAI()));
                         if (waitesc)
-                            TextBoxFixedAddLine(msgbox,"~Press the ESC Key To Continue");
+                            TextBoxFixedAddLine(msgbox,"~Press Cancel To Continue");
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
                         NewGame();
-                        if (waitesc) do {} while (GetKey()!=ESC);
+                        if (waitesc)
+                        {
+                            for (;;)
+                            {
+                                if (kbhit())
+                                {
+                                    // find relevant cancel key/s
+                                    // or esc or RMB if p1=human
+                                    GetKey(); break;
+                                }
+                            }
+                        }
                         ViewSysDisplay(vs,DisplayAll); SwapPage();
                     }
                     else // just a normal move

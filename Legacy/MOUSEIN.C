@@ -2,6 +2,21 @@
 #include "defines.h"
 #include "mousein.h"
 
+int MouseX(int x)
+{
+    int ret;
+    if ((x<0) || (x>640)) {ret=(x)%640; if (ret<0) ret+=640; return ret;}
+    else {ret=x%640; if (ret<0) ret+=640; return ret;}
+}
+
+int MouseY(int y)
+{
+    int ret;
+    if ((y<0) || (y>350)) {ret=(y-60)%350; if (ret<0) ret+=350; return ret;}
+    else {ret=y%350; if (ret<0) ret+=350; return ret;}
+}
+
+
 int GetMouseInput(int *x,int *y)
 // purpose : to get mouse input, *button==LMB or RMB
 // returns : RMB if right button input found, LMB if left, NMB if none
@@ -22,24 +37,24 @@ int GetMouseInput(int *x,int *y)
     if (lmbpress)
     {   
         MouseStat(&gmims);
-        *x=gmims.xpos-XADJUST;
-        *y=gmims.ypos-YADJUST;
+        *x=MouseX(gmims.xpos);
+        *y=MouseY(gmims.ypos);
         --lmbpress;
         return LMB;
     }
     else if (rmbpress)
     {
         MouseStat(&gmims);
-        *x=gmims.xpos-XADJUST;
-        *y=gmims.ypos-YADJUST;
+        *x=MouseX(gmims.xpos);
+        *y=MouseY(gmims.ypos);
         --rmbpress;
         return RMB;
     }
     else
     {
         MouseStat(&gmims);
-        *x=gmims.xpos-XADJUST;
-        *y=gmims.ypos-YADJUST;
+        *x=MouseX(gmims.xpos);
+        *y=MouseY(gmims.ypos);
         return NMB;
     }
 }
