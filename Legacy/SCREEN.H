@@ -20,8 +20,15 @@ struct viewportTag
 typedef struct viewportTag VIEWPORT;
 
 void SetViewport(VIEWPORT *vp);
+void ClearViewport(VIEWPORT *vp);
 VIEWPORT *CurrentViewport();
 void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2);
+int PointInsideViewport(int x,int y,VIEWPORT *vp);
+// purpose : is point x,y inside viewport
+// returns : TRUE if is, else FALSE
+void ViewportFromViewport(VIEWPORT *new,VIEWWIN *vw,VIEWPORT *vp);
+// purpose : to create a new viewport as the viewwin section of vp
+// returns : void
 void BorderedBox(int x1,int y1,int x2,int y2,int p,int s);
 void ScreenInit();
 void DrawGrid(int x,int y);

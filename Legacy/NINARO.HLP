@@ -38,6 +38,15 @@ Select  Drops Token         Select Item     Select Button-
                                             OK,Reset,Cancel
 Cancel  Calls the menu      Cancel Menu     Cancels Dialog
 
+~The Mouse
+Only Player One has access to the mouse, left-click acts as
+Select while right-click acts as Cancel. Apart from a few
+minor differences, moving the mouse acts as moving keys.
+The differences are as follows : Moving the mouse in itself
+does nothing. Only Selecting while on a spot does anything.
+To enter a token move the mouse to the appropriate column
+in the grid and press Select (left-click).
+
 ~The Menus.
 The menus are the key way in Ninaro of changing things. The
 menu is accessable at almost anytime by pressing ESC, M for

@@ -10,17 +10,15 @@
 #include <graph.h>
 #include "sys.h"
 #include "sound.h"
+#include "screen.h"
 #include "mempage.h"
 #include "viewsys.h"
 
-VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
+VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,
         void (* background)(VIEWPORT *))
-// creates a new view system and returns it,
-// if getbkgrnd==TRUE the current screen is assumed to be the background
-// else the background is not set. It can be set using ViewSysSetBackground
-// which takes a MEMPAGE as a parameter which is the background.
-// this enables multiple view systems to have the same background thus saving
-// memory.
+// purpose : creates a new view system, which can contain up to maxwindows
+//           which uses background function for each windows background
+// returns : the viewsystem
 {
     VIEWSYS *viewsys=malloc(sizeof(VIEWSYS));
     viewsys->main.x1=x1;
@@ -29,10 +27,7 @@ VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
     viewsys->main.y2=y2;
     viewsys->maxwindows=maxwindows;
     viewsys->windows=0;
-    viewsys->maxkeys=maxkeys;
-    viewsys->keys=0;
     viewsys->window=malloc(maxwindows*sizeof(WINDOW));
-    viewsys->key=malloc(maxkeys*sizeof(KEYIN));
     viewsys->current=MemPageNew(&(viewsys->main));
     viewsys->background=background;
     viewsys->changed=0;
@@ -40,32 +35,17 @@ VIEWSYS *ViewSysNew(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys,
 }
 
 MEMPAGE *ViewSysCurrent(VIEWSYS *vs)
-// returns the current view of the viewsystem
+// purpose : to get the viewsys current view
+// returns : the current view of the viewsystem, a MEMPAGE
 {
     return vs->current;
 }
 
-int PointInsideViewport(int x,int y,VIEWPORT *vp)
-{
-    if (x>vp->x2) return FALSE;
-    if (x<vp->x1) return FALSE;
-    if (y>vp->y2) return FALSE;
-    if (y<vp->y1) return FALSE;
-    return TRUE;
-}
-
-void ViewportFromViewport(VIEWPORT *new,VIEWWIN *vw,VIEWPORT *vp)
-{
-    int width=(vp->x2)-(vp->x1), height=(vp->y2)-(vp->y1);
-    new->x1=vp->x1+(int)(vw->x1*(double)width);
-    new->y1=vp->y1+(int)(vw->y1*(double)height);
-    new->x2=vp->x1+(int)(vw->x2*(double)width);
-    new->y2=vp->y1+(int)(vw->y2*(double)height);
-}
-
 void ViewSysWindowNew(VIEWSYS *vs,double x1,double y1,double x2,double y2,
-                int active,int (* display)(void),char *help)
-// adds a window to the view system
+                int active,int (* display)(void),
+                int (* mouse)(int,int,int,int),char *help)
+// purpose : to add a window to the view system
+// returns : void
 {
     VIEWWIN vw;
     if (vs->windows>=vs->maxwindows-1) {printf("Exceeded Max Windows!!"); exit(0);}
@@ -74,40 +54,19 @@ void ViewSysWindowNew(VIEWSYS *vs,double x1,double y1,double x2,double y2,
     vw.x1=x1; vw.y1=y1; vw.x2=x2; vw.y2=y2;
     ViewportFromViewport(&(vs->window[vs->windows].vp),&vw,&(vs->main));
     vs->window[vs->windows].display=display;
-    vs->window[vs->windows].changed=NOCHANGE;
+    vs->window[vs->windows].mouse=mouse;
+    vs->window[vs->windows].changed=FALSE;
     vs->window[vs->windows].help=malloc((strlen(help)+1)*sizeof(char));
     strcpy(vs->window[vs->windows].help,help);
     ++(vs->windows);
 }
 
-void ViewSysKeyAdd(VIEWSYS *vs,int key,int (* func)(void),int enable)
-// adds a key to the view system, a key can have multiple functions run from
-// it, they are run in the order in which they are added to the system
-{
-    if (vs->keys==vs->maxkeys-1) {printf("Exceeded Max Keys!!"); exit(0);}
-    else
-    {
-        vs->key[vs->keys].key=key;
-        vs->key[vs->keys].keyfunc=func;
-        vs->key[vs->keys].enable=enable;
-        ++vs->keys;
-    }
-}
-
-void ViewSysClear(VIEWPORT *vp)
-// clears the vp viewport
-{
-    SetViewport(vp);
-    _setvieworg(0,0);
-    _clearscreen(_GVIEWPORT);
-}
-
 int ViewSysDisplay(VIEWSYS *vs,int mode)
-// mode==DisplayAll displays all active windows
-// mode==DisplayChanged displays only windows which have changed
-// mode==NoDisplay makes function have no effect
-// returns TRUE if display updated else FALSE
-// TODO - make more efficient, possibly by splitting DisplayAll & DisplayChanged
+// purpose : to display the viewsys, using mode
+//           mode==DisplayAll displays all active windows
+//           mode==DisplayChanged displays only windows which have changed
+//           mode==NoDisplay makes function have no effect
+// returns : TRUE if display updated else FALSE
 {
     WINDOW *wp;
     int n;
@@ -122,7 +81,7 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
                 {
                     SetViewport(&(wp->vp));
                     wp->display();
-                    wp->changed=NOCHANGE;
+                    wp->changed=FALSE;
                 }
             }
             MemPageGet(vs->current); // update current to reflect changes
@@ -139,7 +98,7 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
                         vs->background(&(wp->vp));
                         SetViewport(&(wp->vp));
                         wp->display();
-                        wp->changed=NOCHANGE;
+                        wp->changed=FALSE;
                     }
                 }
                 MemPageGet(vs->current); // update current to reflect changes
@@ -151,92 +110,63 @@ int ViewSysDisplay(VIEWSYS *vs,int mode)
     return TRUE;
 }
 
-int ViewSysKey(VIEWSYS *vs,int key,int *used)
-// *used=TRUE if the key was used else FALSE
-// if the key was used, it will request display using NoDisplay,DisplayAll
-// or DisplayChanged, which is returned, the maximum amount which can be
-// displayed will be, so if one function requests NoDisplay and another
-// requests DisplayAll, DisplayAll will be returned 
-{
-    int n,ret=NoDisplay;
-    *used=FALSE;
-    for (n=0;n<vs->keys;n++)
-        if ((key==vs->key[n].key) // key matches
-        &&  (vs->key[n].enable)  // key enabled  
-        &&  (vs->key[n].keyfunc!=NULL)) // key has a function
-        {
-            *used=TRUE;
-            switch(vs->key[n].keyfunc())
-            {
-                case DisplayAll :
-                    ret = DisplayAll; break;
-                case DisplayChanged :
-                    if (ret==NoDisplay) ret=DisplayChanged; break;
-            //  case NoDisplay is already set or over-ridden
-            }
-        }
-        // else try next key
-    return ret;
-}
-
-void ViewSysKeyEnable(VIEWSYS *vs,int enable,int n_key)
-// sets the n_key'th key created to enable state
-{
-    vs->key[n_key].enable=enable;
-}
-
-void ViewSysKeyEnableAll(VIEWSYS *vs,int enable,int key)
-// sets all keys which match key to enabled state
-{
-    int n;
-    for (n=0;n<vs->keys;n++)
-        if (vs->key[n].key==key) vs->key[n].enable=enable;
-}
-
-void ViewSysKeyEnableGroup(VIEWSYS *vs,int enable,int num,...)
-// sets the nth keys to enable, e.g. ViewSysEnableGroup(vs,ENABLE,3,0,1,2);
-{
-    int n,n_key;
-    va_list ap;
-
-    va_start(ap,num);
-    for (n=0;n<num;n++)
-    {
-        n_key=va_arg(ap,int);
-        vs->key[n_key].enable=enable;
-    }
-    va_end(ap);
-}
-
-int ViewSysKeyNum(VIEWSYS *vs,int keynum)
-{
-    return vs->key[keynum].key;
-}
-
 void ViewSysWindowChanged(VIEWSYS *vs,int window,int changed)
+// purpose : to register window from viewsys as changed
+// returns : void
 {
-    if ((vs->window[window].changed==CHANGED) && (changed==NOCHANGE))
+    if ((vs->window[window].changed==TRUE) && (changed==FALSE))
         vs->changed-=1;
-    else if ((vs->window[window].changed==NOCHANGE) && (changed==CHANGED))
+    else if ((vs->window[window].changed==FALSE) && (changed==TRUE))
         vs->changed+=1;
     vs->window[window].changed=changed;
 }       
 
-void ViewSysWindowActivate(VIEWSYS *vs,int window,int activity)
+void ViewSysWindowActivate(VIEWSYS *vs,int window,int active)
+// purpose : to register window from viewsys as active
+// returns : void
+// NOTE    : only active windows can be displayed or recieve input
 {
-    vs->window[window].active=activity;
+    vs->window[window].active=active;
 }
 
 char *ViewSysWindowHelp(VIEWSYS *vs,int window)
+// purpose : to get the help string associated with window in viewsys
+// returns : the string
 {
     return vs->window[window].help;
 }
 
+int ViewSysMouse(VIEWSYS *vs,int x,int y)
+// purpose : to send a mouse signal to the first relevant window in the viewsys
+// returns : FALSE if no window found at x,y
+//           TRUE if a window received the signal and ran its mouse func
+//           UNKNOWN if a window received the signal but had no mouse func
+{
+    WINDOW *wp;
+    VIEWPORT *vp;
+    int ax,ay,n;
+    for (n=0;n<vs->windows;n++)
+    {
+        wp=&(vs->window[n]);
+        vp=&(wp->vp);
+        if ((wp->active) && (PointInsideViewport(x,y,vp)))
+        {
+            if (wp->mouse==NULL) return UNKNOWN;
+            // else mouse has func
+            ax=x-(wp->vp.x1);   // viewport mouse funcs dont care exactly
+            ay=y-(wp->vp.y1);   // where viewport is, only how big it is
+            wp->mouse(ax,ay,vp->x2-vp->x1+1,vp->y2-vp->y1+1);
+            return TRUE; 
+        }
+    }
+    return FALSE;   // no window found at x,y
+}
 
 void ViewSysFree(VIEWSYS *vs)
+// purpose : to free memory allocated to the viewsys
+// returns : void
 {
     int n;
-    free(vs->key);
     for (n=0;n<vs->windows;n++)
         free(vs->window[n].help);
     free(vs->window);

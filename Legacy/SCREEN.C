@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <graph.h>
+#include "defines.h"
 #include "screen.h"
 
 VIEWPORT *currentvp; // for external use until viewsys properly reworked
@@ -12,6 +13,13 @@ void SetViewport(VIEWPORT *vp)
     currentvp=vp;
 }
 
+void ClearViewport(VIEWPORT *vp)
+{
+    SetViewport(vp);
+    _setvieworg(0,0);
+    _clearscreen(_GVIEWPORT);
+}
+
 VIEWPORT *CurrentViewport()
 {
     return currentvp;
@@ -20,6 +28,28 @@ VIEWPORT *CurrentViewport()
 void ResetViewport(VIEWPORT *vp,int x1,int y1,int x2,int y2)
 {
     vp->x1=x1; vp->y1=y1; vp->x2=x2; vp->y2=y2;
+}
+
+int PointInsideViewport(int x,int y,VIEWPORT *vp)
+// purpose : is point x,y inside viewport
+// returns : TRUE if is, else FALSE
+{
+    if (x>vp->x2) return FALSE;
+    if (x<vp->x1) return FALSE;
+    if (y>vp->y2) return FALSE;
+    if (y<vp->y1) return FALSE;
+    return TRUE;
+}
+
+void ViewportFromViewport(VIEWPORT *new,VIEWWIN *vw,VIEWPORT *vp)
+// purpose : to create a new viewport as the viewwin section of vp
+// returns : void
+{
+    int width=(vp->x2)-(vp->x1), height=(vp->y2)-(vp->y1);
+    new->x1=vp->x1+(int)(vw->x1*(double)width);
+    new->y1=vp->y1+(int)(vw->y1*(double)height);
+    new->x2=vp->x1+(int)(vw->x2*(double)width);
+    new->y2=vp->y1+(int)(vw->y2*(double)height);
 }
 
 void BorderedBox(int x1,int y1,int x2,int y2,int p,int s)

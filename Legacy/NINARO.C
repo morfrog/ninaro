@@ -17,6 +17,8 @@
 //        provide animation for computers
 //  DONE  possibly merge player color and type icons to expand score width
 //        if score too big - too many characters squash char width to fit.
+//        ERROR found - load saved game and cant drop tokens!!!
+//        hoping proper save/load will fix the error
 #include <stdlib.h>
 #include <stdio.h>
 #include <conio.h>
@@ -111,6 +113,11 @@ void NextPlayer()
     else                            SetP1Current();
 }
 
+void ResetScores(void)
+{
+    player_one_score=0;
+    player_two_score=0;
+}
 
 void PlayerSwap(void) // not in use
 {
@@ -327,7 +334,6 @@ void DecP1Color(void) {DecPlayerColor(PlayerGroupPlayer(players,player_one));}
 void DecP2Color(void) {DecPlayerColor(PlayerGroupPlayer(players,player_two));}
 
 void ClearScreen(void) {_clearscreen(_GCLEARSCREEN);}
-void ClearViewport(void) {_clearscreen(_GVIEWPORT);}
 
 void HelpContents(void)
 {
@@ -381,7 +387,7 @@ int KeyLeft(void *vp)
     if (MoveTokenAtCR(entrygrid,keypos,0,T_LEFT))
     {
         --keypos;
-        ViewSysWindowChanged(vs,0,CHANGED);
+        ViewSysWindowChanged(vs,0,TRUE);
         return DisplayChanged;
     }
     // 0 is entry grid
@@ -394,7 +400,7 @@ int KeyRight(void *vp)
     if (MoveTokenAtCR(entrygrid,keypos,0,T_RIGHT))
     {
         ++keypos;
-        ViewSysWindowChanged(vs,0,CHANGED);
+        ViewSysWindowChanged(vs,0,TRUE);
         return DisplayChanged;
     }
     // 0 is entry grid
@@ -497,15 +503,16 @@ void LoadGame(void)
         SetP1(p1);
         SetP2(p2);
         TextBoxAddLine(msgbox,"Game Loaded",ATEND);
+        win_occured=FALSE; MsgGameN();
     }
     TextBoxScrollEnd(msgbox);
-    win_occured=FALSE; MsgGameN();
 }
 
 void SaveGame(void)
 {
     int p1,p2;
-    if (PlayersInGrid(playgrid,&p1,&p2))
+    if (PlayersInGrid(playgrid,&p1,&p2)) // will change when implement save
+    // properly, can save any grid
     {
         GridSave(playgrid,players,"NINARO.SAV");
         TextBoxAddLine(msgbox,"Game Saved",ATEND);
@@ -606,29 +613,29 @@ void PlayerOptions(void)
     DialogCall(optionsdialog,&vp,vs->current,5,11,HelpOptionsDialog);
 }
 
-VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows,int maxkeys)
+VIEWSYS *ViewSysInit(int x1,int y1,int x2,int y2,int maxwindows)
 {
-    VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,maxkeys,ViewSysClear);
-    ViewSysWindowNew(vs,0.0,0.0,0.6,0.08,ACTIVE,
-        DisplayEntryGrid,"Enter Your Token Here");      // entrygrid is 0
-    ViewSysWindowNew(vs,0.0,0.09,0.6,1.0,ACTIVE,
-        DisplayPlayGrid,"Enter Your Token Here");       // playgrid is 1
-    ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,ACTIVE,
-        DisplayGameName,"Ninaro - By the author 1998");
-    ViewSysWindowNew(vs,0.61,0.1,1.0,0.6,ACTIVE,
-        DisplayMsgBox,"Messages appear here");          // msg box is 3
-    ViewSysWindowNew(vs,0.61,0.6,0.65,0.648,ACTIVE,
-        DisplayP1Type,"Player One's Type");
-    ViewSysWindowNew(vs,0.66,0.6,0.90,0.648,ACTIVE,
-        DisplayP1Name,"Player One's Name");
-    ViewSysWindowNew(vs,0.91,0.6,1.0,0.648,ACTIVE,
-        DisplayP1Score,"Player One's Score");
-    ViewSysWindowNew(vs,0.61,0.652,0.65,0.7,ACTIVE,
-        DisplayP2Type,"Player Two's Type");
-    ViewSysWindowNew(vs,0.66,0.652,0.90,0.7,ACTIVE,
-        DisplayP2Name,"Player Two's Name");
-    ViewSysWindowNew(vs,0.91,0.652,1.0,0.7,ACTIVE,
-        DisplayP2Score,"Player Two's Score");
+    VIEWSYS *vs=ViewSysNew(x1,y1,x2,y2,maxwindows,ClearViewport);
+    ViewSysWindowNew(vs,0.0,0.0,0.6,0.08,TRUE,
+        DisplayEntryGrid,NULL,"Enter Your Token Here");      // entrygrid is 0
+    ViewSysWindowNew(vs,0.0,0.09,0.6,1.0,TRUE,
+        DisplayPlayGrid,NULL,"Enter Your Token Here");       // playgrid is 1
+    ViewSysWindowNew(vs,0.61,0.0,1.0,0.1,TRUE,
+        DisplayGameName,NULL,"Ninaro - By the author 1998");
+    ViewSysWindowNew(vs,0.61,0.1,1.0,0.6,TRUE,
+        DisplayMsgBox,NULL,"Messages appear here");          // msg box is 3
+    ViewSysWindowNew(vs,0.61,0.6,0.65,0.648,TRUE,
+        DisplayP1Type,NULL,"Player One's Type");
+    ViewSysWindowNew(vs,0.66,0.6,0.90,0.648,TRUE,
+        DisplayP1Name,NULL,"Player One's Name");
+    ViewSysWindowNew(vs,0.91,0.6,1.0,0.648,TRUE,
+        DisplayP1Score,NULL,"Player One's Score");
+    ViewSysWindowNew(vs,0.61,0.652,0.65,0.7,TRUE,
+        DisplayP2Type,NULL,"Player Two's Type");
+    ViewSysWindowNew(vs,0.66,0.652,0.90,0.7,TRUE,
+        DisplayP2Name,NULL,"Player Two's Name");
+    ViewSysWindowNew(vs,0.91,0.652,1.0,0.7,TRUE,
+        DisplayP2Score,NULL,"Player Two's Score");
     return vs;
 }
 
@@ -654,7 +661,7 @@ void ProgInit() // initialises global variables
     grid_rows=8;
     grid_cols=7;
 
-    vs=ViewSysInit(0,0,639,349,20,20);
+    vs=ViewSysInit(0,0,639,349,20);
     
     msgbox=TextBoxNew(8,RED,WHITE,GREEN,30);
     
@@ -741,10 +748,11 @@ void ProgInit() // initialises global variables
         "7x8x4",    NONE,GameSize7x8x4,      TRUE,
         "12x13x6",  NONE,GameSize12x13x6,     TRUE, 
         "Custom...",NONE,GameSizeCustom,      TRUE);
-    MenuNewSub(mainmenu,"Player",3,
+    MenuNewSub(mainmenu,"Player",4,
         "One...",   NONE,P1Dialog,      FALSE,
         "Two...",   NONE,P2Dialog,      TRUE,
-        "Options...",NONE,PlayerOptions,       TRUE);
+        "Options...",NONE,PlayerOptions,TRUE,
+        "Reset Scores",NONE,ResetScores,TRUE);
 //        "Swap",     NONE,PlayerSwap,  TRUE);
     MenuNewSub(mainmenu,"Help",2,
         "Contents", NONE,HelpContents,TRUE,
@@ -832,7 +840,7 @@ void TitleScreen(void)
     PLAYER *pl;
     GRID *filegrid=GridLoad(players,"NINARO.TTL");
     int x;
-    int tokens=31*9;
+    int tokens;
     int scol,srow;  // source col & row
     int up=1,add=0;
     long sety,adds[3]={0x010100L,0x000101L,0x010001L};
@@ -840,10 +848,11 @@ void TitleScreen(void)
     long top=bottom+0x030303L;
 
     if (filegrid==NULL) return;
+    tokens=MaxTokensInGrid(filegrid);
    _remappalette(YELLOW,0x020202L);
    _remappalette(GREEN,0x040404L);
     StartRandom();
-    ResetGameSize(31,9,4);
+    ResetGameSize(GridCols(filegrid),GridRows(filegrid),4);
     SetViewport(&(vs->main));
     _setcolor(GREEN);
     DisplayGrid(playgrid,0.95);
