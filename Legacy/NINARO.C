@@ -323,12 +323,11 @@ void GameStatus(void)
     TextBoxScrollEnd(msgbox);
 }
 
-void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
-void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
-
 int MinOf(int a,int b) {if (a<b) return a; else return b;}
 int MaxOf(int a,int b) {if (a>b) return a; else return b;}
 
+void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
+void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
 void GameSizeCustom(void)
 {
     VIEWPORT vp={50,50,590,300};

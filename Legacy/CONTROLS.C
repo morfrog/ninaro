@@ -513,8 +513,7 @@ void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap)
 // gap is amount to leave out of each window to separate them, is vertical gap only
 {
     int x;
-    double fract;
-    double at=0.0;
+    double fract,at=0.0;
     double height=(double)(vp->y2-vp->y1);
     int names=100;
     int wintop,winbot;
@@ -528,8 +527,8 @@ void ControlsDialogDisplay(VIEWPORT *vp,DIALOG *dl,int gap)
         if (dl->control[x].enabled==TRUE)
         {
             fract=dl->control[x].displayfract;
-            wintop=(int)(at*height);
-            winbot=(int)((at+fract)*height);
+            wintop=vp->y1+(int)(at*height);
+            winbot=vp->y1+(int)((at+fract)*height);
             if (x==dl->current)
             {
                 SetViewport(vp);
