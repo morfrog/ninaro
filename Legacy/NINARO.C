@@ -85,6 +85,7 @@ MENU *mainmenu;
 DIALOG *playerdialog;
 DIALOG *boarddialog;
 DIALOG *optionsdialog;
+DIALOG *gameoptionsdialog;
 HELP *help;
 HELP *aboutgame;
 MEMPAGE *aboutmp;
@@ -166,6 +167,11 @@ void PlayerSwap(void) // not in use
 
 int MinOf(int a,int b) {if (a<b) return a; else return b;}
 int MaxOf(int a,int b) {if (a>b) return a; else return b;}
+
+void ModifyGameOptions(DIALOG *d,int last)
+{
+
+}
 
 void GameSize7x8x4(void) {ResetGameSize(7,8,4); GameStatus();}
 void GameSize12x13x6(void) {ResetGameSize(12,13,6); GameStatus();}
@@ -428,7 +434,10 @@ void HelpPlayerDialog(void)
 void HelpBoardDialog(void)
 {HelpScrollString(help,"Board Dialog"); HelpContents();}
 void HelpOptionsDialog(void)
-{HelpScrollString(help,"Options Dialog"); HelpContents();}
+{HelpScrollString(help,"Player Options Dialog"); HelpContents();}
+void HelpGameOptions(void)
+{HelpScrollString(help,"Game Options Dialog"); HelpContents();}
+
 
 void HelpMenu(void)
 {
@@ -644,7 +653,7 @@ int SaveCfg()
 {
     int ret,x;
     PLAYER *pl;
-    BINFILE *bf=BinFileNew((10+players->players)*sizeof(int));
+    BINFILE *bf=BinFileNew((12+players->players)*sizeof(int));
     BinFilePutInt(bf,grid_cols);
     BinFilePutInt(bf,grid_rows);
     BinFilePutInt(bf,win->tokens);
@@ -655,6 +664,8 @@ int SaveCfg()
     BinFilePutInt(bf,player_one);
     BinFilePutInt(bf,player_two);
     BinFilePutInt(bf,IsMute()?TRUE:FALSE);
+    BinFilePutInt(bf,back);
+    BinFilePutInt(bf,hilite);
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -668,6 +679,7 @@ int SaveCfg()
 int LoadCfg()
 {
     int ret,x,col;
+    CONTROL *c1=DialogControlGet(gameoptionsdialog,0); // background
     PLAYER *pl;
     BINFILE *bf=BinFileReadFull("NINARO.CFG",0);
     if (bf==NULL) return FALSE;
@@ -681,6 +693,16 @@ int LoadCfg()
     SetP1(BinFileGetInt(bf));
     SetP2(BinFileGetInt(bf));
     Mute(BinFileGetInt(bf));
+    back=BinFileGetInt(bf);
+    if (back==BLACK)
+    {
+        _remappalette(BLACK,_BLACK); _remappalette(WHITE,_WHITE);
+    }
+    else
+    {
+        _remappalette(BLACK,_BRIGHTWHITE); _remappalette(WHITE,_BLACK);
+    }
+    hilite=BinFileGetInt(bf);
     for (x=0;x<players->players;x++)
     {
         pl=PlayerGroupPlayer(players,x);
@@ -691,6 +713,7 @@ int LoadCfg()
     {
         col=PlayerGetColor(PlayerGroupPlayer(players,7));
         PlayerCopy(PlayerGroupPlayer(players,7),PlayerGroupPlayer(players,player_one));
+        PlayerSetColor(PlayerGroupPlayer(players,7),col);
     }
     else if (player_one==7)
     {
@@ -726,6 +749,39 @@ void GameSizeCustom(void)
         ResetGameSize(cbuf[1],cbuf[0],cbuf[2]);
         GameStatus();
     }
+}
+
+void GameOptions(void)
+{
+    VIEWPORT vp={50,50,590,300};
+    CONTROL *c1=DialogControlGet(gameoptionsdialog,0); // background
+    CONTROL *c2=DialogControlGet(gameoptionsdialog,1);// hilite
+
+    if (back==BLACK)
+    {
+        ControlElemSet(c1,0,BLACK,"");
+        ControlElemSet(c1,1,WHITE,"");
+        ControlCurrentSet(c1,0);
+    }
+    else
+    {
+        ControlElemSet(c1,0,WHITE,"");
+        ControlElemSet(c1,1,BLACK,"");
+        ControlCurrentSet(c1,1);
+    }
+    ControlCurrentSetTo(c2,hilite);
+    DialogCall(gameoptionsdialog,&vp,vs->current,5,11,HelpGameOptions);
+    if (ControlCurrentGet(c1)==0)
+    {
+        back=BLACK;
+        _remappalette(BLACK,_BLACK); _remappalette(WHITE,_WHITE);
+    }
+    else
+    {
+        back=WHITE;
+        _remappalette(BLACK,_BRIGHTWHITE); _remappalette(WHITE,_BLACK);
+    }
+    ControlValueGet(c2,ControlCurrentGet(c2),&hilite);
 }
 
 int PlayerDialog(int pnum)
@@ -904,9 +960,11 @@ int RuleMove(GRID *grid,int level,PLAYER *thisplayer,PLAYER *otherplayer)
         }
     }
     ret=RandomMoveFromList(cols,col);
+#ifdef TESTING
     sprintf(tmp,"%d %d %d %d %d %d %d",col[0],col[1],col[2],col[3],col[4],col[5],col[6]);
     TextBoxFixedAddLine(msgbox,tmp);
-    ViewSysWindowChanged(vs,3,TRUE);    
+    ViewSysWindowChanged(vs,3,TRUE);
+#endif    
     free(col);
     return ret;
 }
@@ -1056,7 +1114,7 @@ void SetMouseCol(int col)
     SetMousePos(vs->main.x1+(col*width)+(width/2),vs->main.y1);
 }
 
-int HumanMove(GRID *grid)
+int HumanMove(GRID *grid,int usemouse)
 // returns column, returns -1 if anything other than a move occurs
 {
     int key,index=0,funcret,mx,my,newpos,btn;
@@ -1094,53 +1152,56 @@ int HumanMove(GRID *grid)
             }
         }
 
-        btn=GetMouseInput(&mx,&my);
-        mx=mx%640;
-        if (mx<0) mx+=640;
-        switch (btn)
+        if (usemouse)
         {
-            case LMB :
-                return keypos;
-            case RMB :
-                funcret=KeyUp(NULL);
-                ViewSysDisplay(vs,funcret);
-                if (funcret!=NoDisplay) SwapPage();
-                return -1; // menu call
-                break;
-            case NMB :
-                newpos=GetMouseCol(mx);
-                if (newpos>=0) // valid column
-                {
-                    if (newpos!=keypos)
+            btn=GetMouseInput(&mx,&my);
+            mx=mx%640;
+            if (mx<0) mx+=640;
+            switch (btn)
+            {
+                case LMB :
+                    return keypos;
+                case RMB :
+                    funcret=KeyUp(NULL);
+                    ViewSysDisplay(vs,funcret);
+                    if (funcret!=NoDisplay) SwapPage();
+                    return -1; // menu call
+                    break;
+                case NMB :
+                    newpos=GetMouseCol(mx);
+                    if (newpos>=0) // valid column
                     {
-                        InsertTokenAtCR(entrygrid,newpos,0,
-                            RemoveTokenAtCR(entrygrid,keypos,0));
-                        keypos=newpos;
-                        ViewSysWindowChanged(vs,0,TRUE);
-//                        sprintf(bfg,"%d",mx);
-//                        TextBoxFixedAddLine(msgbox,bfg);
-//                        ViewSysWindowChanged(vs,3,TRUE);
-                        ViewSysDisplay(vs,DisplayChanged);
-                        SwapPage();
+                        if (newpos!=keypos)
+                        {
+                            InsertTokenAtCR(entrygrid,newpos,0,
+                                RemoveTokenAtCR(entrygrid,keypos,0));
+                            keypos=newpos;
+                            ViewSysWindowChanged(vs,0,TRUE);
+//                            sprintf(bfg,"%d",mx);
+//                            TextBoxFixedAddLine(msgbox,bfg);
+//                            ViewSysWindowChanged(vs,3,TRUE);
+                            ViewSysDisplay(vs,DisplayChanged);
+                            SwapPage();
+                        }
                     }
-                }
-//                else Buzz(200,300,4,20);
-                // else mouse pos bad
+//                  else Buzz(200,300,4,20);
+                    // else mouse pos bad
                 break;
-        } // switch
+            } // switch
+        }
     }
 }
 
 int P1Move(GRID *grid)
 {
     KeyGroupCopy(pkeys,p1keys);
-    return HumanMove(grid);
+    return HumanMove(grid,TRUE);
 }
 
 int P2Move(GRID *grid)
 {
     KeyGroupCopy(pkeys,p2keys);
-    return HumanMove(grid);
+    return HumanMove(grid,FALSE);
 }
 
 int AINoviceMove(GRID *grid)
@@ -1240,26 +1301,10 @@ void ProgInit() // initialises global variables
     p2keys=KeyGroupNew(6,KP4,KP6,KP8,KP2,ENTER,BKSP);
     ResetScores();
 
-        hilite=GREEN;
-        text=WHITE;
-        back=BLACK;
+    hilite=GREEN;
+    text=WHITE;
+    back=BLACK;
 
-    win=malloc(sizeof(WIN));
-    if (!LoadCfg()) // no cfg file
-    {
-        win->tokens=4;
-        grid_rows=8;
-        grid_cols=7;
-        SetP1(0);
-        SetP2(1);
-        goesfirst=GFSuccessive;
-        wentfirst=player_one;
-        ai_speed=2; // normal
-        ai_delay=500; // half a second
-    }
-    win->win=malloc(win->tokens*sizeof(TOKEN));
-    win_occured=FALSE;
-                
     msgbox=TextBoxNew(7,RED,&text,&hilite,30);
     TextBoxFixedAddLine(msgbox,"Press F1 for HELP");
     TextBoxFixedAddLine(msgbox,"Press Esc for MENU");
@@ -1272,8 +1317,6 @@ void ProgInit() // initialises global variables
     TextBoxAddLine(statusbox," ",ATEND);
     TextBoxAddLine(statusbox," ",ATEND);
     
-    playgrid=GridNew(grid_cols,grid_rows);
-    entrygrid=GridNew(grid_cols,1);
     playerdialog=DialogNew(pkeys,ModifyPlayer,"Player One",2,
         "Player",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         1,"Human",
@@ -1291,17 +1334,18 @@ void ProgInit() // initialises global variables
                         3,"",50,""),
         "Connect",TRUE,TRUE,ControlNew(Range,Slider,1,1,10,
                         3,"",MaxOf(grid_rows,grid_cols),""));
-/*
-    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",3,
-        "Background",TRUE,TRUE,ControlNew(List,Color,1,2,11,
-                        0,
+
+    gameoptionsdialog=DialogNew(pkeys,ModifyGameOptions,"Game Options",2,
+        "Background",TRUE,TRUE,ControlNew(List,Color,1,2,15,2,
+                        BLACK,"",WHITE,""),
 //         black or white
-        "Hilite"
+        "Hilite",TRUE,TRUE,ControlNew(List,Color,1,5,11,5,
+                        RED,"",GREEN,"",BLUE,"",YELLOW,"",ORANGE,""));
 //         red,green,blue,yellow,white
         
-        hilite color red
-        text color black
-*/
+//        hilite color red
+//        text color black
+
     optionsdialog=DialogNew(pkeys,NULL,"Player Options",2,
         "Goes First",TRUE,TRUE,ControlNew(List,Radio,3,2,13,6,
                         0,"Player One",
@@ -1321,14 +1365,14 @@ void ProgInit() // initialises global variables
 0,"Infinity",3,"Three",5,"Five",11,"Eleven",25,"Twenty-Five",51,"Fifty-One"));
 */            
     mainmenu=MenuNew(4,&(vs->main),ViewSysCurrent(vs),pkeys,&hilite);
-    MenuNewSub(mainmenu,"Game",7,
+    MenuNewSub(mainmenu,"Game",8,
         "New",      CN, NewGame,FALSE,
         "Load",   NONE, LoadGame,TRUE,
         "Save",   NONE, SaveGame,   TRUE,
         "End",      CE, EndGame,    TRUE,
         "Suggest Move",NONE,SuggestMove,TRUE,
         "Toggle Sound",NONE,ToggleSound,TRUE,
-//        "Options",NONE,GameOptions,TRUE,
+        "Options...",NONE,GameOptions,TRUE,
         "Exit",     CX, ExitGame,   TRUE);
     MenuNewSub(mainmenu,"Board",3,
         "7x8x4",    NONE,GameSize7x8x4,      TRUE,
@@ -1363,6 +1407,25 @@ void ProgInit() // initialises global variables
     HelpAddLine(aboutgame,"");
     HelpAddLine(aboutgame,"       Copyright 1998");
     HelpAddLine(aboutgame,"        Version 0.9b");
+
+    win=malloc(sizeof(WIN));
+    if (!LoadCfg()) // no cfg file
+    {
+        win->tokens=4;
+        grid_rows=8;
+        grid_cols=7;
+        SetP1(0);
+        SetP2(1);
+        goesfirst=GFSuccessive;
+        wentfirst=player_one;
+        ai_speed=2; // normal
+        ai_delay=500; // half a second
+    }
+    win->win=malloc(win->tokens*sizeof(TOKEN));
+    win_occured=FALSE;
+    playgrid=GridNew(grid_cols,grid_rows);
+    entrygrid=GridNew(grid_cols,1);
+    
 }
 
 void ProgFree() // frees global variables
@@ -1399,7 +1462,15 @@ void main()
     ViewSysDisplay(vs,DisplayAll);  // initialises viewsys current
     SwapPage();
     ResetPalette();
-    GetMouseInput(&mx,&my);            
+    if (back==BLACK)
+    {
+        _remappalette(BLACK,_BLACK); _remappalette(WHITE,_WHITE);
+    }
+    else
+    {
+        _remappalette(BLACK,_BRIGHTWHITE); _remappalette(WHITE,_BLACK);
+    }
+    GetMouseInput(&mx,&my); // first call inititalises
     for (;;)
     {
         while (ingame)
