@@ -1,6 +1,8 @@
 #ifndef BINFILE_H
 #define BINFILE_H
 
+#include <stdlib.h>
+#include <stdio.h>
 #include "sys.h"
 
 struct binfileTag
@@ -16,7 +18,7 @@ BINFILE *BinFileNew(int bytes);
 // purpose : creates a new bin file of size bytes, bytes should be bigger
 //           than required, as binfile size is static.
 // returns : the binfile
-BINFILE *BinFileRead(FILE *file,int size,int extras,int *read);
+BINFILE *BinFileRead(FILE *file,int size,int extras);
 // purpose : reads a binfile of size bytes from a file, mallocing
 //         : extras bytes more to the binfile
 // returns : the binfile

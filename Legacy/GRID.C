@@ -61,6 +61,22 @@ int InsertTokenAtCR(GRID *grid,int col,int row,PLAYER *player)
         return 0;
 }
 
+int ResetTokenAtCR(GRID *grid,int col,int row,PLAYER *player)
+// purpose : set token at cr to player
+// returns : FALSE if was empty, else TRUE
+{
+    if (grid->grid[col][row]==NULL)
+    {
+        InsertTokenAtCR(grid,col,row,player);
+        return FALSE;
+    }
+    else
+    {
+        grid->grid[col][row]=player;
+        return TRUE;
+    }
+}
+
 PLAYER *RemoveTokenAtCR(GRID *grid,int col,int row)
 // removes the token at RC and returns the player number who was there,
 // a zero return means the position was already empty.

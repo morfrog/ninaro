@@ -668,6 +668,16 @@ KEYGROUP *DialogKeyGroupGet(DIALOG *d)
     return KeySysGroupGet(d->ks);
 }
 
+int DialogStateSame(DIALOG *d,int *state)
+// purpose : to see if a state is the same as a dialog's state
+// returns : TRUE if same, else FALSE is returned
+{
+    int x;
+    for (x=0;x<d->elems;x++)
+        if (d->state[x]!=state[x]) return FALSE;
+    return TRUE;
+}
+
 int DialogStateGet(DIALOG *d,int *buffer) 
 // purpose : gets the current of each control in the dialog, into the int array buffer
 // returns : TRUE if all gotten successfully, else FALSE
@@ -802,6 +812,7 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
 //           state, cancel is assumed and FALSE is returned
 {
     int index,funcret,changed=FALSE,key,used;
+    int *newstate,same;
     
     DialogStateGet(d,d->state);
     DialogCurrentSet(d,d->elems-1);
@@ -836,9 +847,12 @@ int DialogCall(DIALOG *d,VIEWPORT *vp,MEMPAGE *mp,int namefract,int chars)
                 case 4 : // SELECT
                     if (funcret==TRUE) // dialog finished via ok
                     {
-//                        if (state is the same) break; 666
-//                        else
-                        return TRUE;
+                        newstate=malloc(d->elems*sizeof(int));
+                        DialogStateGet(d,newstate);
+                        same=DialogStateSame(d,newstate);
+                        free(newstate);
+                        if (!same) return TRUE;
+                        // else continue to cancel
                     }
                     else if (funcret==UNKNOWN) break;    // reset
                 case 5 : // CANCEL

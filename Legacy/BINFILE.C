@@ -15,7 +15,7 @@ BINFILE *BinFileNew(int bytes)
     return bf;
 }
 
-BINFILE *BinFileRead(FILE *file,int size,int extras,int *read)
+BINFILE *BinFileRead(FILE *file,int size,int extras)
 // purpose : reads a binfile of size bytes from a file, mallocing
 //         : extras bytes more to the binfile
 // returns : the binfile
@@ -30,11 +30,10 @@ BINFILE *BinFileReadFull(char *filename,int extras)
 // purpose : assumes file filename is a binfile, reads it
 // returns : the BINFILE, else NULL if does not exist
 {
-    int read;
     FILE *file=fopen(filename,"rb");
     BINFILE *bf;
     if (file==NULL) return NULL;
-    bf=BinFileRead(file,(int)FileSize(".",filename),extras,&read);
+    bf=BinFileRead(file,(int)FileSize(".",filename),extras);
     fclose(file);
     return bf;
 }
@@ -111,17 +110,17 @@ int     BinFileGet(BINFILE *bf,int bytes,char *element)
 int     BinFileGetTill(BINFILE *bf,int bytes,char *element,char till)
 // purpose : gets bytes from the binfile , stops after reading till character
 //           or bytes bytes are read.
-// returns : TRUE if successful else FALSE
+// returns : 0 if no bytes read, else the number of bytes read
 {
     int x;
-    if (BinFileRemain(bf)<bytes) return FALSE;
+    if (BinFileRemain(bf)<bytes) return 0;
     for (x=0;x<bytes;x++)
     {
         element[x]=bf->store[bf->bytes];
         bf->bytes+=1;
-        if (element[x]==till) return TRUE;
+        if (element[x]==till) return x+1;
     }
-    return TRUE;
+    return bytes;
 }
 
 int     BinFilePutInt(BINFILE *bf,int element)

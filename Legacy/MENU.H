@@ -6,7 +6,7 @@
 #include "screen.h"
 
 #define SEPARATOR NULL
-#define MENUBACK GREY
+#define MENUBACK LTGREY
 #define MENUHILITE RED
 #define MENUTEXT BLACK
 

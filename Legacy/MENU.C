@@ -181,6 +181,7 @@ void MenuDisplayBar(MENU *menu,VIEWPORT *vp,int dropped)
         vp->x1+((MenuSub(menu)+1)*menuwidth),vp->y2);
     _settextalign(_LEFT,_TOP);
     _setcharsize(height-4,menuwidth/12);
+    _setcharspacing(-1);
 // write text
     _setcolor(MENUTEXT);
     for (x=0;x<MenuSubs(menu);x++)

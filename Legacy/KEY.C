@@ -51,9 +51,9 @@ void KeyGroupCopy(KEYGROUP *dest,KEYGROUP *source)
 // returns : void
 {
     int x;
+    SetEmpty(dest->ingroup);
     for (x=0;x<dest->keys;x++)
     {
-        SetDel(dest->ingroup,dest->key[x]);
         dest->key[x]=source->key[x];
         SetAdd(dest->ingroup,dest->key[x]);
     }
@@ -135,6 +135,7 @@ KEYSYS *KeySysNew(KEYGROUP *kg)
     ret->kg=kg;
     ret->enabled=SetNew(kg->keys);
     ret->kf=malloc(kg->keys*sizeof(KEYFUNC));
+    
     return ret;
 }
 

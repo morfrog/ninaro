@@ -4,16 +4,25 @@
 #include "defines.h"
 #include "set.h"
 
+void SetEmpty(SET *set)
+// purpose : to empty the set, set all elements to false
+// returns : void
+{
+    int x;
+    int bytes=(set->size/CHAR_BITS)+(set->size%CHAR_BITS?1:0);
+    for (x=0;x<bytes;x++)
+        set->set[x]=0;
+}
+
 SET *SetNew(int size)
 // purpose : to create a new set of size elements
 // returns : the set
 {
-    int x,bytes=(size/CHAR_BITS)+(size%CHAR_BITS?1:0);
+    int bytes=(size/CHAR_BITS)+(size%CHAR_BITS?1:0);
     SET *set=malloc(sizeof(SET));
     set->size=size;
-    set->set=malloc(bytes);
-    for (x=0;x<bytes;x++)
-        set->set[x]=0;
+    set->set=malloc(bytes*sizeof(char));
+    SetEmpty(set);
     return set;
 }
 

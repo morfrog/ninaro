@@ -9,7 +9,7 @@ enum {List=0,Range}; // Control Type
 
 #define CONTROLTEXT BLACK
 #define CONTROLHILITE RED
-#define CONTROLBACK GREY
+#define CONTROLBACK LTGREY
 
 struct CListElemTag
 {
@@ -162,6 +162,9 @@ void DialogKeyGroupSet(DIALOG *d,KEYGROUP *kg);
 KEYGROUP *DialogKeyGroupGet(DIALOG *d);
 // purpose : gets the dialogs keygroup
 // returns : the keygroup
+int DialogStateSame(DIALOG *d,int *state);
+// purpose : to see if a state is the same as a dialog's state
+// returns : TRUE if same, else FALSE is returned
 int DialogStateGet(DIALOG *d,int *buffer);
 // purpose : gets the current of each control in the dialog, into the int array buffer
 // returns : TRUE if all gotten successfully, else FALSE

@@ -3,7 +3,7 @@
 
 /* color presets */
 enum {BLACK=0, RED,    YELLOW,   BLUE,   GREEN,  PURPLE,   ORANGE, WHITE,
-       CYAN,    LTRED,  LTYELLOW, LTBLUE, LTGREEN,LTPURPLE, GREY, LTWHITE};
+       CYAN,    LTRED,  LTYELLOW, LTBLUE, LTGREEN,LTPURPLE, GREY, LTGREY};
 
 struct viewwinTag
 {

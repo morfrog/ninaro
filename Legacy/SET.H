@@ -16,6 +16,9 @@ typedef struct setTag SET;
 SET *SetNew(int size);
 // purpose : to create a new set of size elements
 // returns : the set
+void SetEmpty(SET *s);
+// purpose : to empty the set, set all elements to false
+// returns : void
 void SetAdd(SET *set,int n);
 // purpose : set element n of the set to TRUE
 // returns : void

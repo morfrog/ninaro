@@ -23,6 +23,9 @@ GRID *NewGrid(int width,int height);
 void GridFree(GRID *grid);
 void DisplayGrid(GRID *grid);
 int InsertTokenAtCR(GRID *grid,int col,int row,PLAYER *player);
+int ResetTokenAtCR(GRID *grid,int col,int row,PLAYER *player);
+// purpose : set token at cr to player
+// returns : FALSE if was empty, else TRUE
 PLAYER *RemoveTokenAtCR(GRID *grid,int row,int col);
 int MoveTokenAtCR(GRID *grid,int col,int row,int direction);
 int StatusOfCR(GRID *grid,int col,int row);

@@ -4,11 +4,12 @@
 #include <string.h>
 #include "txtbox.h"
 
-TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int maxwidth)
-// creates a new text box, with lines viewable lines, border color border
-// col (can be NOBORDER), the color of the text in the box, with maxwidth
-// being the maximum length of a string in a line of the box
-// text boxes are lined 1..
+TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int boldcol,int maxwidth)
+// purpose : creates a new text box, with lines viewable lines, border color
+//           bordercol (can be NOBORDER), the color of the text in the box,
+//           with maxwidth being the maximum length of a string in a line of
+//           the box text boxes are lined 1..
+// returns : the text box
 {
     TXTBOX *ret=malloc(sizeof(TXTBOX));
     ret->size=0;
@@ -18,14 +19,17 @@ TXTBOX *TextBoxNew(int lines,int bordercol,int textcol,int maxwidth)
     ret->width=maxwidth;
     ret->bordercol=bordercol;
     ret->textcol=textcol;
+    ret->boldcol=boldcol;
     return ret;
 }
 
 int TextBoxAddLine(TXTBOX *tb,char *string,int afterline)
-// adds a string line to the text box after line afterline, can be
-// ATEND or ATSTART or any number. successful addition returns TRUE
-// else if the number is greater than the current end the line is
-// inserted at the end and FALSE is returned.
+// purpose : adds a string line to the text box after line afterline, can be
+//           ATEND or ATSTART or any number. the string must be terminated
+//           by a '/0' character.
+// returns : successful addition returns TRUE, else if the number is
+//           greater than the current end the line is inserted at the end
+//           and FALSE is returned.
 {
     int outside=(afterline>tb->size?TRUE:FALSE),x;
     NODE *look;
@@ -61,10 +65,11 @@ int TextBoxAddLine(TXTBOX *tb,char *string,int afterline)
 }
 
 int TextBoxDelLine(TXTBOX *tb,int line)
-// line line is deleted from the textbox, FALSE is returned if the line
-//  is not in the textbox, TRUE is returned upon successful deletion.
-// NOTE: the lines below scroll up to fill the gap. Use TextBoxSetLine to
-//       set a line to "" for emptying without scrolling; 
+// purpose : line line is deleted from the textbox,
+// returns : FALSE is returned if the line is not in the textbox, TRUE is
+//           returned upon successful deletion.
+// NOTE    : the lines below scroll up to fill the gap. Use TextBoxSetLine
+//           to set a line to "" for emptying without scrolling; 
 {
     int x;
     NODE *look;
@@ -93,24 +98,22 @@ int TextBoxDelLine(TXTBOX *tb,int line)
 }
 
 char *TextBoxLine(TXTBOX *tb,int line)
-// the contents of the text box at line line are returned. This is a copy
-// of the line, not the line itself, so should be freed after use.
-// if line>the lines in the box NULL is returned else the string is.
+// purpose : to get the contents of the text box at line line
+// returns : if line>the lines in the box NULL is returned else the string
+//           is returned
 {
     int x;
     NODE *look=tb->head;
-    char *ret=malloc((tb->width)*sizeof(char));
     
     if (line>tb->size) return NULL;
-    for (x=1;x<line;x++)
-        look=look->next;
-    strcpy(ret,look->string);
-    return ret;
+    for (x=1;x<line;x++) look=look->next;
+    return look->string;
 }
 
 int TextBoxSetLine(TXTBOX *tb,int line,char *string)
-// if the line is in the TXTBOX it is set to string and TRUE is returned
-// else FALSE is returned
+// purpose : to set the line of the textbox to string
+// returns : if the line is in the TXTBOX it is set to string and TRUE is
+//           returned else FALSE is returned
 {
     int x;
     NODE *look=tb->head;
@@ -122,8 +125,8 @@ int TextBoxSetLine(TXTBOX *tb,int line,char *string)
 }
 
 int TextBoxEmpty(TXTBOX *tb)
-// empties the contents of the txtbox, returns FALSE if was already empty
-// else TRUE upon successful emptying
+// purpose : to empty the contents of the txtbox
+// returns : FALSE if was already empty, else TRUE upon successful emptying
 {
     // inefficient but it works
     if (tb->size==0) return FALSE;
@@ -132,6 +135,8 @@ int TextBoxEmpty(TXTBOX *tb)
 }
 
 void TextBoxPrint(TXTBOX *tb)
+// purpose : to print the contents of the text box
+// returns : void
 {
     NODE *look=tb->start;
     int x;
@@ -146,11 +151,13 @@ void TextBoxPrint(TXTBOX *tb)
 }
 
 void TextBoxShow(TXTBOX *tb)
-// draws the contents of the textbox in the current viewport, drawing
-// a border if required.
+// purpose : draws the contents of the textbox in the current viewport,
+//           drawing a border if required by the textbox
+// returns : void
 {
     int x;
     NODE *look=tb->start;
+    char *cp;
     struct xycoord xyc1=_getviewcoord_w(0.0,0.0);
     struct xycoord xyc2=_getviewcoord_w(1.0,1.0);
     int pixels_line_height=(xyc2.ycoord-xyc1.ycoord)/tb->lines;
@@ -159,41 +166,51 @@ void TextBoxShow(TXTBOX *tb)
     _setcharspacing_w(-0.005);
     _setcharsize_w(0.4*1.0/(double)tb->lines,char_width*0.2);
     _settextalign(_LEFT,_BOTTOM);
-    if (tb->bordercol!=NOBORDER)
-    {
-        _setcolor(tb->bordercol);
-        _rectangle_w(_GBORDER,0.0,0.0,1.0,1.0);
-    }
-        
+     
     _setcolor(tb->textcol);
     for (x=0;x<tb->lines;x++)
     {
-        _grtext_w(0.0,((x+1)*(1.0/((double)tb->lines)))-0.02,look->string);
+        if (look->string[0]=='~') {_setcolor(tb->boldcol); cp=look->string+1;}
+        else                      {_setcolor(tb->textcol); cp=look->string;}
+        _grtext_w(0.0,((x+1)*(1.0/((double)tb->lines)))-0.02,cp);
         if (look->next==tb->head) // at end
             x=tb->lines;
         else
             look=look->next;
     }
+    if (tb->bordercol!=NOBORDER) // border is displayed last
+    {
+        _setcolor(tb->bordercol);
+        _rectangle_w(_GBORDER,0.0,0.0,1.0,1.0);
+    }
 }
 
-int TextBoxScrollEnd(TXTBOX *tb)
-// scrolls textbox so that TextBoxShow shows last tb->lines lines of textbox
+void TextBoxScrollHome(TXTBOX *tb)
+// purpose : scrolls textbox so that TextBoxShow shows lines from the top
+// returns : void
+{
+    tb->start=tb->head;    
+}
+
+void TextBoxScrollEnd(TXTBOX *tb)
+// purpose : scrolls textbox so that TextBoxShow shows last tb->lines lines
+//           of textbox
+// returns : void
 {
     int x;
     tb->start=tb->head->prev; //last;
     for (x=1;x<tb->lines;x++)
         if (tb->start==tb->head)    
-            x=tb->lines;
+            return;
         else
             tb->start=tb->start->prev;            
-    return 1;
 }
 
 int TextBoxScroll(TXTBOX *tb,int amount)
-// scrolls the textbox by amount. amount can be positive (scroll down)
-// or negative (scroll up). can scroll only to top or bottom of box,
-// not outside, amount==0 = scroll to top
-// returns TRUE if scrolled normally else FALSE if tried to scroll too far
+// purpose : scrolls the textbox by amount. amount can be positive (scroll
+//           down) or negative (scroll up). can scroll only to top or
+//           bottom of box, not outside, amount==0 = scroll to top
+// returns : TRUE if scrolled normally else FALSE if tried to scroll too far
 {
     int left=amount<0?amount*-1:amount; // a positive number
     if (amount==0)
@@ -219,53 +236,80 @@ int TextBoxScroll(TXTBOX *tb,int amount)
 }
 
 int TextBoxAtTop(TXTBOX *tb)
-// returns TRUE if the first displayable line is the first in the box
-// else returns FALSE
+// purpose : is the textbox at the top
+// returns : TRUE if the first displayable line is the first in the box
+//           else returns FALSE
 {
     return (tb->start==tb->head?TRUE:FALSE);
 }
 
 int TextBoxAtBottom(TXTBOX *tb)
-// returns TRUE is the last displayable line is the first in the box
-// else returns FALSE
+// purpose : is the textbox at the bottom
+// returns : TRUE if the last displayable line is the first in the box
+//           else returns FALSE
 {
     return (tb->start==tb->head->prev?TRUE:FALSE);
 }
 
 int TextBoxLines(TXTBOX *tb)
-// returns the number of viewable lines in the text box
+// purpose : to get the number of lines in the textbox
+// returns : the number
 {
     return tb->size;
 }
 
 int TextBoxBorderCol(TXTBOX *tb)
+// purpose : to get the textbox's border color
+// returns : the color
 {
     return tb->bordercol;
 }
 
 int TextBoxTextCol(TXTBOX *tb)
+// purpose : to get the textbox's text color
+// returns : the color
 {
     return tb->textcol;
 }
 
+int TextBoxBoldCol(TXTBOX *tb)
+// purpose : to get the textbox's bold color
+// returns : the color
+{
+    return tb->boldcol;
+}
+
 void TextBoxChangeLines(TXTBOX *tb,int lines)
-// sets the text box's number of viewable lines to lines
+// purpose : to set the text box's number of viewable lines to lines
+// returns : void
 {
     tb->lines=lines;
 }
 
 void TextBoxChangeBorderCol(TXTBOX *tb,int bordercol)
+// purpose : to set the text box's border color to bordercol
+// returns : void
 {
     tb->bordercol=bordercol;
 }
 
 void TextBoxChangeTextCol(TXTBOX *tb,int textcol)
+// purpose : to set the text box's text color to textcol
+// returns : void
 {
     tb->textcol=textcol;
 }
 
+void TextBoxChangeBoldCol(TXTBOX *tb,int boldcol)
+// purpose : to set the text box's bold color to boldcol
+// returns : void
+{
+    tb->boldcol=boldcol;
+}
+
 void TextBoxFree(TXTBOX *tb)
-// frees the memory allocated to a text box
+// purpose : to free the memory allocated to a text box
+// returns : void
 {
     TextBoxEmpty(tb);
     free(tb);        
