@@ -1,0 +1,50 @@
+:root {
+  --bg: #000000;
+  --text: #ffffff;
+  --muted: #aaaaaa;
+  --focus: #55ffff;
+  /* EGA 640x350 was shown on a 4:3 screen: pixels 1.37x taller than wide. */
+  --ega-pixel-aspect: 1.3714;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+main,
+.site-footer {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+a {
+  color: var(--focus);
+}
+
+/* The original's whole 640x350 EGA screen, corrected to a 4:3 shape. */
+.screen {
+  display: block;
+  width: 100%;
+  aspect-ratio: 640 / calc(350 * var(--ega-pixel-aspect));
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.note,
+.site-footer {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.site-footer {
+  margin-top: 16px;
+}

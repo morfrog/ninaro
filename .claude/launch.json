@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ninaro-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "WebApp", "run", "preview", "--", "--port", "4174", "--strictPort"],
+      "port": 4174
+    },
+    {
+      "name": "ninaro-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "WebApp", "run", "dev", "--", "--port", "5174", "--strictPort"],
+      "port": 5174
+    }
+  ]
+}
