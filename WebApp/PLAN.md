@@ -61,7 +61,10 @@ The order of preference:
 1. **Unit tests from reading the C** (always). Test win detection on all 4 angles, `InsertTokenTarget`, `WinPotential` arithmetic (integer division, as in C), `RandomMoveFromList` tie selection, and each rule level's column scores on small hand-made boards.
 2. **The golden-game harness** (`Tools/golden/`, built and run locally only). `build.bat` uses Visual Studio's MSVC (found with `vswhere`; `/J` makes `char` unsigned, as in Watcom). It compiles the unchanged `Legacy/GRID.C`, `CONNECTN.C`, `PLAYER.C` and `BINFILE.C`. `extract.py` copies `RuleMove` and `RandomMoveFromList` word for word out of `NINARO.C`. `stubs.c` supplies the seeded Watcom `rand()`, the two byte helpers from `SYS.C`, and empty drawing calls.
    It plays 1,600 seeded AI-vs-AI games: 8 boards × 5 × 5 AI levels × 8 seeds. It also loads `NINARO.TTL` with `GridLoadFull`, and writes everything to `WebApp/src/core/__golden__/games.json` (committed, about 300 KB, the same bytes on every run). This plays the role DOCO played for VTTSP.
-3. **Classic mode** (Phase 6). Play the original side by side to check layout, timing, colours and sounds.
+3. **Classic mode** (brought forward to Phase 2). Run the original in js-dos and compare frames:
+   - `window.saveReference(name)` on `classic.html` saves the emulator's exact 640×350 frame to `Temp/Reference/<name>.png` (git-ignored).
+   - `compare.html?name=<name>` draws the port's version of the same state beside it. `window.comparePixels()` reports differing pixels and ink boxes for each window.
+   - Both pages are dev-only: not build inputs, and the deploy guard checks for them.
 
 Watcom's `rand()` is taken to be the ANSI C example generator (`next = next*1103515245 + 12345; return (next >> 16) & 0x7FFF`, starting at 1). The harness and the port share this, so the golden games don't depend on it. Confirm it against the original in classic mode in Phase 6.
 
@@ -95,6 +98,9 @@ Found while porting. Behaviour is kept unless noted.
 | 9 | `CONNECTN.C UnBlockableWin` | Empty, with no return value. Never called. | Not ported |
 | 10 | `NINARO.C RuleMove` | Rule 3 checks the cell above the landing cell while the landing cell is still empty, so vertical lines through it are never counted. | Kept |
 | 11 | `NINARO.C BestOfResult` | "The Set is Drawn" is printed with an unused extra argument. | Harmless |
+| 12 | `TXTBOX.C TextBoxFixedAddLine` | Copies with `strncpy(…, width+1)`, which leaves no terminator for lines of `width` characters or more, so the box shows whatever follows in memory. | Lines cut to `width` |
+| 13 | `TXTBOX.C TextBoxSetLine` | `strcpy` with no length check: a line longer than `width` overruns the node's buffer. | No limit needed |
+| 14 | `VIEWSYS.C ViewSysDisplay` | `DisplayAll` clears each window's changed flag but not the count of changed windows, so the next `DisplayChanged` loops over the windows for nothing. | Count reset (no visible change) |
 
 ## Input mapping
 
@@ -121,15 +127,37 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
    - `Continuance`, `MoveAll`, `UnBlockableWin` and the `BINFILE` "encryption" were never used by the game, so they aren't ported.
    - Tests: 63 in 7 files. The golden replay (`golden.test.ts`) matches all 1,600 games (moves, result and winning cells) and the title picture. Breaking a rule on purpose (for example, removing the take-a-win bonus) fails it.
    - `Legacy/NINARO.HLP` is now the release's newer help (decision 2), with its About section redacted.
-2. **Renderer.** `palette.ts` (EGA indexes, `ResetPalette`, remapping), `screen.ts` (640×350 logical canvas with the device pixel ratio and 4:3 aspect, viewports, `_rectangle`/`_ellipse`/`_lineto` in pixel and window (`_w`) coordinates, fill masks for Suggest Move), `strokeFont.ts` (Hershey font with `_setcharsize`/`_setcharspacing`/`_settextalign`), `viewsys.ts` (windows, changed flags, hint text). Draw the board, discs, win highlight and player icons (`DisplayHuman`, `DisplayComputer`). *Check:* a static screen matching the layout table above.
+2. **Renderer.** ✅ Done. See "Phase 2 notes" below. Planned as: `palette.ts` (EGA indexes, `ResetPalette`, remapping), `screen.ts` (640×350 logical canvas with the device pixel ratio and 4:3 aspect, viewports, `_rectangle`/`_ellipse`/`_lineto` in pixel and window (`_w`) coordinates, fill masks for Suggest Move), `strokeFont.ts` (Hershey font with `_setcharsize`/`_setcharspacing`/`_settextalign`), `viewsys.ts` (windows, changed flags, hint text). Draw the board, discs, win highlight and player icons (`DisplayHuman`, `DisplayComputer`). *Check:* a static screen matching the layout table above.
 3. **Game loop.** The input queue and `sleep`, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", demo mode, `SuggestMove`, sound. *Check:* full games human vs AI and AI vs AI from the keyboard and the mouse, with the menu stubbed.
 4. **Menus, dialogs, help, title.** `textbox.ts`, `menu.ts` (4 menus as in `ProgInit`, enabling and disabling items as the C does), `dialog.ts`/`controls.ts` (Player, Custom Board with `GameSizeFit`, Player Options, Game Options), `help.ts` (scrolling, jump to heading, context help from menus and dialogs), the About box, and the title screen (TTL picture falling in, YELLOW cycling, "Hit Any Key To Continue...", the slide-off animation). Bundle `NINARO.HLP` and `NINARO.TTL` with `import.meta.glob(..., { query: '?raw' })`.
 5. **Storage.** `NINARO.CFG` becomes `localStorage['ninaro:v1:cfg']`, written on change and when leaving the page (`pagehide`). `NINARO.SAV` becomes `localStorage['ninaro:v1:save']`. Every access is guarded. Ctrl-F9 (delete config) is kept. *Optional:* import or export the original binary `.CFG`/`.SAV` files with the big-endian `BINFILE` layout.
 6. **Extras.**
-   - **Classic mode, development only.** Copy VTTSP's `dev/classicPlugin.ts` and `classic.html`: js-dos 8.5.3 from jsDelivr, files from git-ignored `Temp/Source/connect4/pack` (`ninaro.exe`, `DOS4GW.EXE`, `ninaro.hlp`, `ninaro.ttl`), or from `NINARO_ORIGINAL_DIR`. Never built or deployed: the pack's `read.me` contains the author's name, and DOS4GW is third-party. The pack has no `MODERN.FON`, so `_setfont` may fail in DOSBox and the text may be missing or in a default font. Check this first.
+   - **Classic mode, development only.** ✅ Done early, in Phase 2 (see its notes). Copy VTTSP's `dev/classicPlugin.ts` and `classic.html`: js-dos 8.5.3 from jsDelivr, files from git-ignored `Temp/Source/connect4/pack` (`ninaro.exe`, `DOS4GW.EXE`, `ninaro.hlp`, `ninaro.ttl`), or from `NINARO_ORIGINAL_DIR`. Never built or deployed: the pack's `read.me` contains the author's name, and DOS4GW is third-party. The pack has no `MODERN.FON`, so `_setfont` may fail in DOSBox and the text may be missing or in a default font. Check this first.
    - **AI tournament page.** Seeded round-robin of the 5 AIs on 7×8×4 and 12×13×6 (and custom sizes), run in a worker, with a win/draw table and a seed you can change. It works as a check (Genius should beat Random almost always) and as a demo.
 
 7. **Known bugs review (after Phase 6 is committed).** List every known bug (the running list is under "Known bugs" above): the original's bugs kept by decision 4 below, plus any found during the port. Give each one its file and function, what happens, and a suggested fix. The user picks some or all of them, and those are fixed in a separate commit on top of the faithful port. Each fix is listed under "Changes from the original", and the golden-game tests are updated where a fix changes moves.
+
+### Phase 2 notes
+
+- **Classic mode now, not in Phase 6.** `dev/classicPlugin.ts` packs the original from `Temp/Source/connect4/pack` with this computer's `C:\Windows\Fonts\MODERN.FON` (or `NINARO_FONT`), so the original shows its real text. Saved frames are the reference for every later screen.
+- **`src/render/graph.ts`** is the Watcom `graph.h` subset, measured against the original's frames:
+  - Viewports clip, and set the origin (`_setvieworg` moves only the origin).
+  - Window coordinates span the current viewport and are **truncated** (the grid lines then match to the pixel).
+  - `_setcharsize_w`/`_setcharspacing_w` sizes scale with the **whole screen** (×639, ×349), not the viewport.
+  - Text is **fixed pitch**: each character fills a cell of the set width, plus spacing. Capitals sit 0.1 of the cell down and are 0.7 of it tall.
+  - Drawing is in EGA pixels on a canvas scaled to the device, so lines are one EGA pixel thick (taller than wide) while text and discs stay smooth.
+- **`palette.ts`**: `ResetPalette` slots with Watcom's 6-bit `0x00BBGGRR` values, shown as DOSBox shows them (`v × 255 / 63`). The colours measured in the original's frames match (for example YELLOW `#fbfb51`).
+- **`hersheyFont.ts`** is generated once by `dev/make-font.mjs` from hersheytext 2.0.0 (MIT; Hershey Simplex Roman). The package isn't kept as a dependency, because its own dependencies are old.
+- **Other new modules:**
+  - `render/screen.ts`: `SCREEN.C` helpers, plus `Screen`, which sizes the canvas to the device and redraws on resize.
+  - `render/viewsys.ts`: `VIEWSYS.C`.
+  - `render/memPage.ts`: `MEMPAGE.C`, as a canvas copy.
+  - `ui/textbox.ts`: `TXTBOX.C`, as an array plus a start index.
+  - `game/state.ts`: `ProgInit`'s globals.
+  - `game/display.ts`: `ViewSysInit` and the `Display*` functions.
+- **Check against `main-human`:** the play grid matches pixel for pixel. Text, icons and discs are within 2 px of the original. Glyph shapes differ, since this is Hershey, not Modern.
+- **Change:** the credit's redacted "By the author" is split over two lines ("By the" / "author"), as the release split the name, so it fits its window.
+- **Tests:** 87 in 10 files.
 
 ## Decisions (agreed 2026-11-08)
 

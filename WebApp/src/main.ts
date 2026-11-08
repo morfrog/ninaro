@@ -1,31 +1,22 @@
-// Ninaro web port, phase 0: draws the empty default board (7 x 8) where the
-// original put it, to check the layout and the 4:3 scaling.
+// Ninaro web port. Phase 2: the game screen as the original drew it at the
+// start of a game (Human vs Human on the default 7 x 8 board, connect 4).
+// The game itself comes in phase 3.
 
-import { ENTRY_GRID, PLAY_GRID, SCREEN, type Viewport, viewportFromViewport } from './layout';
-
-const GREEN = '#00aa00'; // EGA green, Legacy GREEN
-
-/** Legacy DrawGrid: lines across and down a viewport in window coordinates. */
-function drawGrid(ctx: CanvasRenderingContext2D, vp: Viewport, cols: number, rows: number): void {
-  const w = vp.x2 - vp.x1;
-  const h = vp.y2 - vp.y1;
-  ctx.beginPath();
-  for (let row = 0; row <= rows; row++) {
-    const y = vp.y1 + Math.round((h * row) / rows) + 0.5;
-    ctx.moveTo(vp.x1, y);
-    ctx.lineTo(vp.x2 + 1, y);
-  }
-  for (let col = 0; col <= cols; col++) {
-    const x = vp.x1 + Math.round((w * col) / cols) + 0.5;
-    ctx.moveTo(x, vp.y1);
-    ctx.lineTo(x, vp.y2 + 1);
-  }
-  ctx.stroke();
-}
+import { gameViewSys } from './game/display';
+import { GameState } from './game/state';
+import { Display } from './render/viewsys';
+import { Screen } from './render/screen';
+import './devLink';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#screen')!;
-const ctx = canvas.getContext('2d')!;
-ctx.strokeStyle = GREEN;
-ctx.lineWidth = 1;
-drawGrid(ctx, viewportFromViewport(ENTRY_GRID, SCREEN), 7, 1);
-drawGrid(ctx, viewportFromViewport(PLAY_GRID, SCREEN), 7, 8);
+const screen = new Screen(canvas);
+const state = new GameState();
+state.resetGameSize(7, 8, 4);
+state.gameStatus();
+state.msgbox.fixedAddLine('Successive Player Goes First');
+state.msgbox.fixedAddLine('Currently Playing Game.');
+
+const vs = gameViewSys(screen.graph, canvas, state, { x1: 0, y1: 0, x2: 639, y2: 349 });
+const draw = () => vs.display(Display.DisplayAll);
+screen.onResize = draw;
+draw();

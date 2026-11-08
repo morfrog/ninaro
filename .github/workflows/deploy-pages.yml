@@ -34,12 +34,12 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
-      # The original 1998 NINARO.EXE (for the dev-only classic mode) must
-      # never be published. Fail if anything of it reached the build.
+      # The original 1998 NINARO.EXE (for the dev-only classic and compare
+      # pages) must never be published. Fail if anything of it reached the build.
       - name: Check no original program files are deployed
         run: |
-          found=$(find dist \( -iname '*.exe' -o -iname '*.jsdos' -o -iname '*.cfg' -o -iname '*.sav' -o -iname 'classic*' \) -print)
-          if [ -n "$found" ] || grep -rIl -e 'DOS4GW' -e 'js-dos' dist; then
+          found=$(find dist \( -iname '*.exe' -o -iname '*.jsdos' -o -iname '*.cfg' -o -iname '*.sav' -o -iname '*.fon' -o -iname 'classic*' -o -iname 'compare*' \) -print)
+          if [ -n "$found" ] || grep -rIl -e 'DOS4GW' -e 'js-dos' -e 'saveReference' dist; then
             echo "::error::Original program files found in dist: $found"
             exit 1
           fi

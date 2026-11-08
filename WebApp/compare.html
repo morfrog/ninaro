@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Ninaro Compare</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      .compare {
+        max-width: none;
+      }
+
+      .compare__pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .compare__pair figure {
+        margin: 0;
+      }
+
+      .compare__pair img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 640 / calc(350 * var(--ega-pixel-aspect));
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Development only: this page is not a build input and is never deployed. -->
+    <main id="compare" class="compare"></main>
+    <script type="module" src="/src/compare/page.ts"></script>
+  </body>
+</html>

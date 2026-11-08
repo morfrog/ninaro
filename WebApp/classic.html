@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Ninaro Classic</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      .classic h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.1rem, 3vw, 1.5rem);
+        color: #55ff55;
+      }
+
+      .classic__note {
+        color: var(--muted);
+        max-width: 75ch;
+        line-height: 1.4;
+      }
+
+      .classic__screen {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Development only: this page is not a build input and is never deployed. -->
+    <main id="classic" class="classic"></main>
+    <footer class="site-footer"><a href="./">Back to Ninaro</a></footer>
+    <script type="module" src="/src/classic/page.ts"></script>
+  </body>
+</html>
