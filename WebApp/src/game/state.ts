@@ -92,7 +92,7 @@ export class GameState {
   resetGameSize(cols: number, rows: number, inARow: number): void {
     this.gridCols = cols;
     this.gridRows = rows;
-    this.keypos = Math.trunc(cols / 2) + (cols % 2);
+    this.keypos = Math.trunc((cols - 1) / 2); // as Game's startColumn
     this.winOccurred = false;
     this.win = newWin(inARow);
     this.playgrid = new Grid(cols, rows);

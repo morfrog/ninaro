@@ -44,6 +44,15 @@ export const NO_UI: GameUi = {
   exit: async () => {},
 };
 
+/**
+ * Where the entry token starts: the middle column (the left of the two
+ * middle ones on an even board). The original started one column right of
+ * that on odd boards, except after loading a game (known bug 2, fixed).
+ */
+export function startColumn(cols: number): number {
+  return Math.trunc((cols - 1) / 2);
+}
+
 /** A file the game keeps (NINARO.SAV, NINARO.CFG). */
 export interface SavedFile {
   read(): Uint8Array | null;
@@ -223,7 +232,7 @@ export class Game {
     const s = this.state;
     s.gridCols = cols;
     s.gridRows = rows;
-    s.keypos = Math.trunc(cols / 2) + (cols % 2);
+    s.keypos = startColumn(cols);
     s.winOccurred = false;
     setWinSize(s.win, inARow);
     s.playgrid = new Grid(cols, rows);
@@ -463,7 +472,7 @@ export class Game {
         if (s.playerWinner === s.playerOne) this.setP2Current();
         else if (s.playerWinner === s.playerTwo) this.setP1Current();
         else if (this.rng.random(2) === 0) this.setP1Current();
-        // else SetP2Current; -- the original forgot the (), so nothing changes (known bug 1)
+        else this.setP2Current(); // the original forgot the () here (known bug 1, fixed)
         s.msgbox.fixedAddLine('Loser Goes First');
         break;
       case GoesFirst.Winner:
@@ -561,7 +570,7 @@ export class Game {
       return;
     }
     s.gridCols = loaded.grid.cols();
-    s.keypos = Math.trunc(s.gridCols / 2); // not ResetGameSize's position (known bug 2)
+    s.keypos = startColumn(s.gridCols);
     s.gridRows = loaded.grid.rows();
     setWinSize(s.win, loaded.size);
     s.playgrid = loaded.grid;
@@ -591,12 +600,11 @@ export class Game {
   }
 
   /**
-   * SuggestMove (F5): AI Genius moves the token where it would play. The C
-   * set SUGGEST_MASK to hatch the token, but in the original, running, the
-   * token stays solid (measured in classic mode), so no mask is set here
-   * (known bug 15).
+   * SuggestMove (F5): AI Genius moves the token where it would play,
+   * hatched. (The C set the hatching, but in the original, running, the
+   * token stayed solid: known bug 15, fixed.)
    */
-  async suggestMove(hatch = false): Promise<void> {
+  async suggestMove(hatch = true): Promise<void> {
     const s = this.state;
     const oldMask = this.g.getFillMask();
     if (hatch) this.g.setFillMask(SUGGEST_MASK);
@@ -708,9 +716,9 @@ export class Game {
       while (this.ingame && !this.stopped) {
         const col = await this.getMove(s.playerCurrent);
         if (this.mouseUsage && this.input.getMouseInput().button === RMB) await this.keyUp();
-        if (this.input.kbhit()) {
-          await this.extraFunctionality(await this.input.getKey());
-        } else if (col >= 0) {
+        // The original handled a key waiting here instead of the move,
+        // which was lost (known bug 16, fixed): the move goes in first.
+        if (col >= 0) {
           if (col !== s.keypos) await this.animateMove(col);
           s.keypos = col;
           if ((await this.dropToken()) !== InsertResult.Failure) {
@@ -718,6 +726,7 @@ export class Game {
             else this.vs.display(Display.DisplayChanged);
           }
         }
+        if (this.ingame && this.input.kbhit()) await this.extraFunctionality(await this.input.getKey());
         // Let the page breathe between moves, which matters when two AIs
         // play at the fastest speed.
         await sleep(0);

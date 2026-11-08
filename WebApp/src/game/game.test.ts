@@ -5,7 +5,7 @@ import { ESC, KP4 } from '../input/keys';
 import type { Graph } from '../render/graph';
 import { viewportFromViewport } from '../render/screen';
 import type { ViewSys } from '../render/viewsys';
-import { Game } from './game';
+import { Game, startColumn } from './game';
 import { GameState, GoesFirst } from './state';
 
 const SCREEN = { x1: 0, y1: 0, x2: 639, y2: 349 };
@@ -67,7 +67,7 @@ describe('the main loop', () => {
   it('moves and drops for a human from the keyboard', async () => {
     const { game, state, input } = makeGame();
     game.start(1);
-    // "Successive" on a new start: player two (keypad keys) first, token at column 4.
+    // "Successive" on a new start: player two (keypad keys) first, token in the middle (column 3).
     expect(state.playerCurrent).toBe(state.playerTwo);
     const run = game.run();
     input.pushKey(KP4);
@@ -75,7 +75,7 @@ describe('the main loop', () => {
     input.pushKey(13);
     await tick();
     await tick();
-    expect(state.playgrid.statusOfCR(3, 7)).toBe(state.player(1));
+    expect(state.playgrid.statusOfCR(2, 7)).toBe(state.player(1));
     expect(state.playerCurrent).toBe(state.playerOne);
     game.stopped = true;
     input.pushKey(0);
@@ -108,13 +108,13 @@ describe('the main loop', () => {
     const { game, state, input } = makeGame();
     game.start(1);
     state.goesFirst = GoesFirst.One;
-    // Player two drops four in column 4 while player one plays column 0.
+    // Player two drops four in column 3 while player one plays column 0.
     for (let i = 0; i < 3; i++) {
-      state.playgrid.insertTokenAtCR(4, 7 - i, state.player(1));
+      state.playgrid.insertTokenAtCR(3, 7 - i, state.player(1));
       state.playgrid.insertTokenAtCR(0, 7 - i, state.player(0));
     }
     const run = game.run();
-    input.pushKey(13); // player two drops in column 4 and wins
+    input.pushKey(13); // player two drops in column 3 and wins
     for (let i = 0; i < 5; i++) await tick();
     await new Promise((r) => setTimeout(r, 250)); // the win tune's length, muted: none
     expect(state.playerTwoScore).toBe(1);
@@ -132,7 +132,7 @@ describe('the main loop', () => {
 });
 
 describe('NewGame', () => {
-  it('keeps the current player for Loser goes first with no winner, when Random(2) is 1 (known bug 1)', () => {
+  it('picks at random for Loser goes first with no winner (known bug 1, fixed)', () => {
     const { game, state } = makeGame();
     state.goesFirst = GoesFirst.Loser;
     // Seed 1's first rand() is 16838: even, so 0 -> player one. Find a seed giving 1.
@@ -141,12 +141,14 @@ describe('NewGame', () => {
       game.rng.seed(seed);
       if (game.rng.random(2) === 1) break;
     }
-    game.rng.seed(seed);
-    state.playerCurrent = state.playerTwo;
-    game.newGame();
-    expect(state.playerCurrent).toBe(state.playerTwo);
+    // Random(2) is 1: player two goes first, whoever was current (the
+    // original's missing () left the current player).
     game.rng.seed(seed);
     state.playerCurrent = state.playerOne;
+    game.newGame();
+    expect(state.playerCurrent).toBe(state.playerTwo);
+    game.rng.seed(1); // Random(2) is 0: player one
+    state.playerCurrent = state.playerTwo;
     game.newGame();
     expect(state.playerCurrent).toBe(state.playerOne);
   });
@@ -173,8 +175,57 @@ describe('DemoMode', () => {
   });
 });
 
+describe('the starting column (known bug 2, fixed)', () => {
+  it('is the middle column, the left of the two middle ones on even boards', () => {
+    expect([3, 7, 8, 12, 50].map(startColumn)).toEqual([1, 3, 3, 5, 24]);
+  });
+
+  it('is the same for a new board and a loaded game', () => {
+    const { game, state } = makeGame();
+    game.start(1, { cols: 9, rows: 6, connect: 4 });
+    expect(state.keypos).toBe(4);
+    game.saveGame();
+    game.resetGameSize(9, 6, 4);
+    game.loadGame();
+    expect(state.keypos).toBe(4);
+  });
+});
+
+describe('a key waiting when a move is made (known bug 16, fixed)', () => {
+  it('drops the token, then handles the key', async () => {
+    const { game, state, input } = makeGame();
+    game.start(1);
+    const run = game.run();
+    input.pushKey(13); // player two drops...
+    input.pushKey(256 + 66); // ...with F8 (sound off) already waiting
+    for (let i = 0; i < 4; i++) await tick();
+    expect(state.playgrid.tokens()).toBe(1);
+    expect(state.mute).toBe(true);
+    game.stopped = true;
+    input.pushKey(0);
+    await run;
+  });
+});
+
+describe('Suggest Move (known bug 15, fixed)', () => {
+  it('hatches the token while it shows the suggestion', async () => {
+    const { game, state } = makeGame();
+    game.start(1);
+    state.aiSpeed = 0;
+    const masks: (readonly number[] | null)[] = [];
+    const set = game.g.setFillMask.bind(game.g);
+    game.g.setFillMask = (m) => {
+      masks.push(m);
+      set(m);
+    };
+    await game.suggestMove();
+    expect(masks[0]).not.toBeNull();
+    expect(masks.at(-1)).toBeNull();
+  });
+});
+
 describe('save and load (F2, F3)', () => {
-  it('restores the board and players, with the token at cols / 2 (known bug 2)', () => {
+  it('restores the board and players, with the token in the middle', () => {
     const { game, state } = makeGame();
     game.start(1);
     state.playgrid.insertTokenAtCR(2, 7, state.player(0));

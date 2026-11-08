@@ -74,8 +74,9 @@ export class NinaroUi implements GameUi {
       },
       { name: 'Color', enabled: true, selectable: true, store: Control.range(Show.Color, 1, 10, 5, 1, '', 7, '') },
     ]);
-    // The Connect slider's top is MaxOf(grid_rows, grid_cols), read before
-    // the configuration loaded them, so 0 (known bug 17).
+    // The Connect slider's top was MaxOf(grid_rows, grid_cols), read before
+    // the configuration loaded them, so 0 (known bug 17); gameSizeCustom
+    // now sets it from the board before filling the dialog in.
     this.boardDialog = new Dialog(g, pkeys, () => this.gameSizeFit(), 'Custom Board Size', hilite, [
       { name: 'Rows', enabled: true, selectable: true, store: Control.range(Show.Slider, 1, 1, 10, 3, '', 50, '') },
       { name: 'Columns', enabled: true, selectable: true, store: Control.range(Show.Slider, 1, 1, 10, 3, '', 50, '') },
@@ -286,6 +287,7 @@ export class NinaroUi implements GameUi {
     const { game } = this;
     const s = game.state;
     const d = this.boardDialog;
+    d.control(2).resetRange(3, '', Math.max(s.gridRows, s.gridCols), ''); // known bug 17, fixed
     d.stateSet([s.gridRows, s.gridCols, s.win.tokens, 0]);
     this.gameSizeFit();
     if (await this.runDialog(d, DIALOG_VP, 5, 8, '~The Custom Board Dialog')) {

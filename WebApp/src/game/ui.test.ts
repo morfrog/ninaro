@@ -37,18 +37,13 @@ async function typing<T>(input: Input, call: Promise<T>, ...keys: number[]): Pro
 }
 
 describe('the Custom Board dialog', () => {
-  it('shows Connect as 3 the first time, as the original did (known bug 17)', async () => {
+  it("shows the board's Connect the first time too (known bug 17, fixed)", async () => {
     const { ui, state, input } = makeUi();
     expect(state.win.tokens).toBe(4);
     const call = ui.gameSizeCustom();
     await new Promise((r) => setTimeout(r, 0));
-    expect(ui.boardDialog.control(2).current).toBe(3);
-    await typing(input, call, ESC);
-    // The second time the range is right, so it shows 4.
-    const again = ui.gameSizeCustom();
-    await new Promise((r) => setTimeout(r, 0));
     expect(ui.boardDialog.control(2).current).toBe(4);
-    await typing(input, again, ESC);
+    await typing(input, call, ESC);
   });
 
   it('changes the board on OK, keeping Connect within the larger side', async () => {

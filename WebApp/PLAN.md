@@ -83,12 +83,12 @@ Keep the behaviour unless it's a crash, and list every change under "Changes fro
 
 ## Known bugs (collected for Phase 7)
 
-Found while porting. Behaviour is kept unless noted.
+Found while porting. Behaviour is kept unless noted. The faithful port, with all of them, is tagged `webapp-v2.07-june1998`.
 
 | # | Where | What happens | Port |
 |---|---|---|---|
-| 1 | `NINARO.C NewGame` | Loser goes first: `else SetP2Current;` is missing `()`, so with no previous winner and `Random(2)==1` the first player doesn't change. | Kept (Phase 3) |
-| 2 | `NINARO.C` `ResetGameSize` / `LoadGame` | The token starts at column `cols/2 + cols%2` (right of centre on odd boards), but at `cols/2` after loading a game. | Kept (Phase 3) |
+| 1 | `NINARO.C NewGame` | Loser goes first: `else SetP2Current;` is missing `()`, so with no previous winner and `Random(2)==1` the first player doesn't change. | **Fixed (Phase 7)**: picks at random |
+| 2 | `NINARO.C` `ResetGameSize` / `LoadGame` | The token starts at column `cols/2 + cols%2` (right of centre on odd boards), but at `cols/2` after loading a game. | **Fixed (Phase 7)**: the middle column (left of the middle two on even boards), both ways |
 | 3 | `GRID.C NumsInDirection` | `istop` of -1 is documented as "infinity", but stops after 1 cell (`number >= -1`). Never called with -1. | Kept |
 | 4 | `CONNECTN.C InsertToken` | On a full column, `InsertTokenTarget` is -1 and `InsertTokenAtCR` reads `grid[col][-1]` (out of bounds). In practice this returned Failure. | Guarded: returns Failure |
 | 5 | `CONNECTN.C RemoveToken` | On an empty column it reads one past the end of the column. Only called on columns with tokens. | Guarded: returns null |
@@ -96,14 +96,14 @@ Found while porting. Behaviour is kept unless noted.
 | 7 | `PLAYER.C PlayerGroupPlayer` | Only checks the upper bound, so a bad saved-game player number below 0 reads outside the array. | Returns null |
 | 8 | `GRID.C MoveAll` | Recounts `tokensingrid` without resetting it first, so the count doubles. Only `Continuance` calls it, and nothing calls that. | Not ported |
 | 9 | `CONNECTN.C UnBlockableWin` | Empty, with no return value. Never called. | Not ported |
-| 10 | `NINARO.C RuleMove` | Rule 3 checks the cell above the landing cell while the landing cell is still empty, so vertical lines through it are never counted. | Kept |
+| 10 | `NINARO.C RuleMove` | Rule 3 checks the cell above the landing cell while the landing cell is still empty, so vertical lines through it are never counted. | Kept: the "fix" measured weaker (Phase 7) |
 | 11 | `NINARO.C BestOfResult` | "The Set is Drawn" is printed with an unused extra argument. | Harmless |
 | 12 | `TXTBOX.C TextBoxFixedAddLine` | Copies with `strncpy(…, width+1)`, which leaves no terminator for lines of `width` characters or more, so the box shows whatever follows in memory. | Lines cut to `width` |
 | 13 | `TXTBOX.C TextBoxSetLine` | `strcpy` with no length check: a line longer than `width` overruns the node's buffer. | No limit needed |
 | 14 | `VIEWSYS.C ViewSysDisplay` | `DisplayAll` clears each window's changed flag but not the count of changed windows, so the next `DisplayChanged` loops over the windows for nothing. | Count reset (no visible change) |
-| 15 | `NINARO.C SuggestMove` | Sets a fill mask to hatch the suggested token, but in the running original the token stays solid (checked frame by frame in classic mode). | Solid, as seen (`suggestMove(true)` would hatch) |
-| 16 | `NINARO.C main` | A key already waiting when a move is chosen is handled by `ExtraFunctionality` and the move is thrown away, so a drop followed instantly by another key is lost. Only automated input is that fast. | Kept |
-| 17 | `NINARO.C ProgInit` | The Custom Board dialog's Connect slider is made with a top of `MaxOf(grid_rows, grid_cols)` before `LoadCfg` has set them, so its range is 3..0. The first time the dialog opens, Connect can't be set to the board's 4 and shows 3 (seen in classic mode); after `GameSizeFit` it is right. | Kept |
+| 15 | `NINARO.C SuggestMove` | Sets a fill mask to hatch the suggested token, but in the running original the token stays solid (checked frame by frame in classic mode). | **Fixed (Phase 7)**: hatched |
+| 16 | `NINARO.C main` | A key already waiting when a move is chosen is handled by `ExtraFunctionality` and the move is thrown away, so a drop followed instantly by another key is lost. Only automated input is that fast. | **Fixed (Phase 7)**: the move goes in, then the key is handled |
+| 17 | `NINARO.C ProgInit` | The Custom Board dialog's Connect slider is made with a top of `MaxOf(grid_rows, grid_cols)` before `LoadCfg` has set them, so its range is 3..0. The first time the dialog opens, Connect can't be set to the board's 4 and shows 3 (seen in classic mode); after `GameSizeFit` it is right. | **Fixed (Phase 7)**: the range is set from the board first |
 
 ## Input mapping
 
@@ -138,7 +138,7 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
    - **Classic mode, development only.** ✅ Done early, in Phase 2 (see its notes). Copy VTTSP's `dev/classicPlugin.ts` and `classic.html`: js-dos 8.5.3 from jsDelivr, files from git-ignored `Temp/Source/connect4/pack` (`ninaro.exe`, `DOS4GW.EXE`, `ninaro.hlp`, `ninaro.ttl`), or from `NINARO_ORIGINAL_DIR`. Never built or deployed: the pack's `read.me` contains the author's name, and DOS4GW is third-party. The pack has no `MODERN.FON`, so `_setfont` may fail in DOSBox and the text may be missing or in a default font. Check this first.
    - **AI tournament page.** ✅ Done. See "Phase 6 notes" below. Planned as: seeded round-robin of the 5 AIs on 7×8×4 and 12×13×6 (and custom sizes), run in a worker, with a win/draw table and a seed you can change. It works as a check (Genius should beat Random almost always) and as a demo.
 
-7. **Known bugs review (after Phase 6 is committed).** List every known bug (the running list is under "Known bugs" above): the original's bugs kept by decision 4 below, plus any found during the port. Give each one its file and function, what happens, and a suggested fix. The user picks some or all of them, and those are fixed in a separate commit on top of the faithful port. Each fix is listed under "Changes from the original", and the golden-game tests are updated where a fix changes moves.
+7. **Known bugs review (after Phase 6 is committed).** ✅ Done. See "Phase 7 notes" below. List every known bug (the running list is under "Known bugs" above): the original's bugs kept by decision 4 below, plus any found during the port. Give each one its file and function, what happens, and a suggested fix. The user picks some or all of them, and those are fixed in a separate commit on top of the faithful port. Each fix is listed under "Changes from the original", and the golden-game tests are updated where a fix changes moves.
 
 ### Phase 2 notes
 
@@ -231,12 +231,28 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
 - **Watcom's `rand()`** is still not confirmed against the running original. Its seed comes from the clock, so a match would need the title screen's or a demo game's moves recorded and the seed searched for. The port and the golden harness share one generator, so nothing here depends on it; only the exact random choices differ from what a 1998 PC would have made, and those were never repeatable.
 - **Tests:** 163 in 20 files.
 
+### Phase 7 notes
+
+- **Before the fixes:** the faithful port (Phase 6) is tagged `webapp-v2.07-june1998`, after the Legacy tag `v2.07-june1998` whose C source it ports.
+- **Chosen:** bugs 1, 2, 10, 15, 16 and 17 could affect what a player sees. The others are already harmless in the port: out-of-bounds reads and overruns guarded (3-7, 12-14), unused code not ported (8, 9), and an unused argument (11).
+- **Changes from the original (bug fixes):**
+  - **1:** "Loser goes first" with no previous winner picks at random, as meant.
+  - **2:** the token starts in the middle column (`startColumn`: the left of the two middle ones on an even board) on a new board and after loading a game alike.
+  - **15:** Suggest Move's token is hatched, as the code meant (`suggestMove(false)` keeps it solid).
+  - **16:** a key already waiting when a move is chosen no longer loses the move: the token is dropped, then the key is handled.
+  - **17:** the Custom Board dialog's Connect range is set from the board before the dialog is filled in, so the first opening shows the right value.
+- **Bug 10 was left out, on measurement.**
+  - Putting the AI's token in the landing cell can't change the "-90, the opponent wins on top" check: the only line through the cell above that also passes through the landing cell is the vertical one, and the opponent can't win through the AI's token. It only changes the "-20" check, for the AI's own vertical lines, which makes the AI shy away from building its own threes.
+  - Head to head over 2,000 games each, with the first move alternating, the "fixed" AI lost to the original: Expert 873 to 1,098 (7×8×4) and 871 to 900 (12×13×6); Genius 853 to 1,147 and 825 to 1,159. So the 1998 rule stays.
+- **Unchanged:** the golden games still replay exactly, both through `ruleMove` and through the whole game loop, since none of the fixes touch the AI's choices.
+- **Tests:** 167 in 20 files.
+
 ## Decisions (agreed 2026-11-08)
 
 1. **Golden-game harness: yes.** Install a local C compiler (clang, gcc or zig) in Phase 1. The harness goes in `Tools/`, and its JSON output is committed as test data.
 2. **Help text: use the pack's newer `ninaro.hlp`** (June 1998, 15.7 KB, 48 headings) instead of `Legacy/NINARO.HLP` (11.9 KB, 38 headings). Its "About Ninaro" section names the author, the university, the course, email addresses, and the supervisor. In Phase 1, copy it into `Legacy/NINARO.HLP` with that section replaced by the redacted wording already used in the user manual ("written by the author in 1998, as a university project"). Grep the result before committing.
 3. **Font: Hershey stroke font**, drawn as strokes so `_setcharsize` stretching works as in the original.
-4. **Original bugs: keep them during the port** (Loser-goes-first included). Phase 7 lists them all once the port is committed, and the chosen fixes go in their own commit.
+4. **Original bugs: keep them during the port** (Loser-goes-first included). Phase 7 lists them all once the port is committed, and the chosen fixes go in their own commit. (Done: 1, 2, 15, 16 and 17 fixed; 10 measured and kept.)
 
 ## Personal details
 
