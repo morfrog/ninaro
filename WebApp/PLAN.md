@@ -101,6 +101,8 @@ Found while porting. Behaviour is kept unless noted.
 | 12 | `TXTBOX.C TextBoxFixedAddLine` | Copies with `strncpy(…, width+1)`, which leaves no terminator for lines of `width` characters or more, so the box shows whatever follows in memory. | Lines cut to `width` |
 | 13 | `TXTBOX.C TextBoxSetLine` | `strcpy` with no length check: a line longer than `width` overruns the node's buffer. | No limit needed |
 | 14 | `VIEWSYS.C ViewSysDisplay` | `DisplayAll` clears each window's changed flag but not the count of changed windows, so the next `DisplayChanged` loops over the windows for nothing. | Count reset (no visible change) |
+| 15 | `NINARO.C SuggestMove` | Sets a fill mask to hatch the suggested token, but in the running original the token stays solid (checked frame by frame in classic mode). | Solid, as seen (`suggestMove(true)` would hatch) |
+| 16 | `NINARO.C main` | A key already waiting when a move is chosen is handled by `ExtraFunctionality` and the move is thrown away, so a drop followed instantly by another key is lost. Only automated input is that fast. | Kept |
 
 ## Input mapping
 
@@ -128,7 +130,7 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
    - Tests: 63 in 7 files. The golden replay (`golden.test.ts`) matches all 1,600 games (moves, result and winning cells) and the title picture. Breaking a rule on purpose (for example, removing the take-a-win bonus) fails it.
    - `Legacy/NINARO.HLP` is now the release's newer help (decision 2), with its About section redacted.
 2. **Renderer.** ✅ Done. See "Phase 2 notes" below. Planned as: `palette.ts` (EGA indexes, `ResetPalette`, remapping), `screen.ts` (640×350 logical canvas with the device pixel ratio and 4:3 aspect, viewports, `_rectangle`/`_ellipse`/`_lineto` in pixel and window (`_w`) coordinates, fill masks for Suggest Move), `strokeFont.ts` (Hershey font with `_setcharsize`/`_setcharspacing`/`_settextalign`), `viewsys.ts` (windows, changed flags, hint text). Draw the board, discs, win highlight and player icons (`DisplayHuman`, `DisplayComputer`). *Check:* a static screen matching the layout table above.
-3. **Game loop.** The input queue and `sleep`, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", demo mode, `SuggestMove`, sound. *Check:* full games human vs AI and AI vs AI from the keyboard and the mouse, with the menu stubbed.
+3. **Game loop.** ✅ Done. See "Phase 3 notes" below. Planned as: the input queue and `sleep`, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", demo mode, `SuggestMove`, sound. *Check:* full games human vs AI and AI vs AI from the keyboard and the mouse, with the menu stubbed.
 4. **Menus, dialogs, help, title.** `textbox.ts`, `menu.ts` (4 menus as in `ProgInit`, enabling and disabling items as the C does), `dialog.ts`/`controls.ts` (Player, Custom Board with `GameSizeFit`, Player Options, Game Options), `help.ts` (scrolling, jump to heading, context help from menus and dialogs), the About box, and the title screen (TTL picture falling in, YELLOW cycling, "Hit Any Key To Continue...", the slide-off animation). Bundle `NINARO.HLP` and `NINARO.TTL` with `import.meta.glob(..., { query: '?raw' })`.
 5. **Storage.** `NINARO.CFG` becomes `localStorage['ninaro:v1:cfg']`, written on change and when leaving the page (`pagehide`). `NINARO.SAV` becomes `localStorage['ninaro:v1:save']`. Every access is guarded. Ctrl-F9 (delete config) is kept. *Optional:* import or export the original binary `.CFG`/`.SAV` files with the big-endian `BINFILE` layout.
 6. **Extras.**
@@ -158,6 +160,25 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
 - **Check against `main-human`:** the play grid matches pixel for pixel. Text, icons and discs are within 2 px of the original. Glyph shapes differ, since this is Hershey, not Modern.
 - **Change:** the credit's redacted "By the author" is split over two lines ("By the" / "author"), as the release split the name, so it fits its window.
 - **Tests:** 87 in 10 files.
+
+### Phase 3 notes
+
+- **Modules:**
+  - `input/keys.ts`: `KEY.C` codes, key groups and the key system, plus browser key → DOS `GetKey` code.
+  - `input/input.ts`: `kbhit`/`GetKey`/`GetMouseInput` over a queue, `wait()` in place of busy polling, and `sleep()` for `delay()`.
+  - `audio/sound.ts`: `Buzz`/`PlayTune` as a WebAudio square wave that lasts as long as the original did.
+  - `game/game.ts`: `main()`'s loop, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, the goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", `DemoMode`, `SuggestMove`, `SaveGame`/`LoadGame` (kept in memory until Phase 5), and the function keys.
+  - Menus, help and exit go through a `GameUi` interface that does nothing until Phase 4.
+- **Check:** `game.test.ts` replays golden games between two AIs through the whole loop (key handling, animation and drops), and they match the C move for move. Other tests drive human moves by keys, mouse and touch, and the Esc wait after a win.
+- **Played in the browser:** keyboard moves and drops for both players, a mouse-click win with the enlarged winning tokens, F6 demo (AI against AI with the token gliding at Normal speed), F5 Suggest Move, and F8 sound off.
+- **Changes from the original:**
+  - **Pointer column:** the pointer chooses the board column it is over. The original mapped the hidden mouse's x across the whole screen.
+  - **Pointer for both humans:** the original let only player one use the mouse. Here both can, so two people can share a touch screen.
+  - **Touch:** a tap on a column moves the token there, and a second tap drops it.
+  - **Continuing:** a click or tap continues after "Press ESC To Continue", as Esc does.
+  - **Keypad:** the keypad's keys always act as the DOS keypad with NumLock off (the manual asked players to turn NumLock off), and the arrow keys do too.
+  - **Calibration:** F9 (reset the mouse calibration) does nothing, since there is nothing to calibrate.
+- **Tests:** 108 in 13 files.
 
 ## Decisions (agreed 2026-11-08)
 

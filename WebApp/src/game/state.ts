@@ -54,6 +54,8 @@ export class GameState {
   playerTwoScore = 0;
   gamesPlayed = 0;
   playerWinner = -1;
+  /** Whose move function the copy slot (7) has: PlayerCopy copied getmove. */
+  copyOf: number = PLAYER_SLOTS.aiGenius;
 
   goesFirst: GoesFirst = GoesFirst.Successive;
   wentFirst: number = PLAYER_SLOTS.one;
