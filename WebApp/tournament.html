@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ninaro's five computer players play each other on any board, with a table of wins, draws and losses." />
+    <title>Ninaro AI Tournament</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main id="tournament" class="tournament">
+      <h1>AI Tournament</h1>
+      <p class="tournament__intro">
+        Ninaro's five computer players play each other: AI Random just picks a column, and each one up adds a rule:
+        Novice takes a win, Normal blocks the other player's win, Expert won't drop where the other player can then win
+        on top, and Genius also weighs how much room each column leaves to win. Every pairing plays the same number of
+        games, taking turns to go first, using the 1998 game's own rules and random numbers.
+      </p>
+      <form id="controls" class="tournament__controls">
+        <label>
+          Board
+          <select id="board">
+            <option value="7x8x4">7 columns, 8 rows, connect 4</option>
+            <option value="12x13x6">12 columns, 13 rows, connect 6</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <span id="custom" class="tournament__custom" hidden>
+          <label>Columns <input id="cols" type="number" min="3" max="50" value="9" /></label>
+          <label>Rows <input id="rows" type="number" min="3" max="50" value="9" /></label>
+          <label>Connect <input id="connect" type="number" min="3" max="50" value="5" /></label>
+        </span>
+        <label>Games per pairing <input id="games" type="number" min="2" max="1000" step="2" value="100" /></label>
+        <label>Seed <input id="seed" type="number" min="0" max="4294967295" value="1998" /></label>
+        <button id="run" class="btn btn--go" type="submit">Play</button>
+      </form>
+      <p id="status" class="tournament__status" role="status" aria-live="polite"></p>
+      <section id="results"></section>
+    </main>
+    <footer class="site-footer">
+      <a href="./">Play Ninaro</a> ·
+      <a href="https://github.com/morfrog/ninaro">Source on GitHub</a>
+    </footer>
+    <script type="module" src="/src/tournament/page.ts"></script>
+  </body>
+</html>

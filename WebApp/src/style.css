@@ -79,3 +79,133 @@ a {
 .screen {
   touch-action: none;
 }
+
+/* ---- AI tournament page ---- */
+
+.tournament h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.1rem, 3vw, 1.5rem);
+  color: #55ff55;
+}
+
+.tournament h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: #ffff55;
+}
+
+.tournament__intro,
+.tournament__note {
+  color: var(--muted);
+  max-width: 75ch;
+  line-height: 1.4;
+}
+
+.tournament__note {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.tournament__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+}
+
+.tournament__controls label,
+.tournament__custom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tournament select,
+.tournament input {
+  font: inherit;
+  color: var(--text);
+  background: #0000aa;
+  border: 2px solid #aaaaaa;
+  border-radius: 0;
+  padding: 6px 8px;
+  min-height: 40px;
+}
+
+.tournament input {
+  width: 7em;
+}
+
+.tournament select:focus-visible,
+.tournament input:focus-visible,
+.tournament__scroll:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.btn--go {
+  color: #ffff55;
+  font-weight: bold;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.tournament__status {
+  color: #55ff55;
+  min-height: 1.4em;
+}
+
+.tournament__status.is-bad {
+  color: #ff5555;
+}
+
+.tournament__table {
+  margin: 24px 0;
+}
+
+.tournament__scroll {
+  overflow-x: auto;
+  border: 2px solid #aaaaaa;
+}
+
+.tournament table {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: 0.9rem;
+}
+
+.tournament th,
+.tournament td {
+  padding: 4px 8px;
+  border: 1px solid #333;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tournament thead th {
+  color: #55ff55;
+  font-weight: normal;
+}
+
+.tournament tbody th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.tournament__score {
+  display: block;
+}
+
+.tournament__pct {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+[hidden] {
+  display: none !important;
+}

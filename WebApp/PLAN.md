@@ -134,9 +134,9 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
 3. **Game loop.** ✅ Done. See "Phase 3 notes" below. Planned as: the input queue and `sleep`, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", demo mode, `SuggestMove`, sound. *Check:* full games human vs AI and AI vs AI from the keyboard and the mouse, with the menu stubbed.
 4. **Menus, dialogs, help, title.** ✅ Done. See "Phase 4 notes" below. Planned as: `textbox.ts`, `menu.ts` (4 menus as in `ProgInit`, enabling and disabling items as the C does), `dialog.ts`/`controls.ts` (Player, Custom Board with `GameSizeFit`, Player Options, Game Options), `help.ts` (scrolling, jump to heading, context help from menus and dialogs), the About box, and the title screen (TTL picture falling in, YELLOW cycling, "Hit Any Key To Continue...", the slide-off animation). Bundle `NINARO.HLP` and `NINARO.TTL` with `import.meta.glob(..., { query: '?raw' })`.
 5. **Storage.** ✅ Done. See "Phase 5 notes" below. Planned as: `NINARO.CFG` becomes `localStorage['ninaro:v1:cfg']`, written on change and when leaving the page (`pagehide`). `NINARO.SAV` becomes `localStorage['ninaro:v1:save']`. Every access is guarded. Ctrl-F9 (delete config) is kept. *Optional:* import or export the original binary `.CFG`/`.SAV` files with the big-endian `BINFILE` layout.
-6. **Extras.**
+6. **Extras.** ✅ Done.
    - **Classic mode, development only.** ✅ Done early, in Phase 2 (see its notes). Copy VTTSP's `dev/classicPlugin.ts` and `classic.html`: js-dos 8.5.3 from jsDelivr, files from git-ignored `Temp/Source/connect4/pack` (`ninaro.exe`, `DOS4GW.EXE`, `ninaro.hlp`, `ninaro.ttl`), or from `NINARO_ORIGINAL_DIR`. Never built or deployed: the pack's `read.me` contains the author's name, and DOS4GW is third-party. The pack has no `MODERN.FON`, so `_setfont` may fail in DOSBox and the text may be missing or in a default font. Check this first.
-   - **AI tournament page.** Seeded round-robin of the 5 AIs on 7×8×4 and 12×13×6 (and custom sizes), run in a worker, with a win/draw table and a seed you can change. It works as a check (Genius should beat Random almost always) and as a demo.
+   - **AI tournament page.** ✅ Done. See "Phase 6 notes" below. Planned as: seeded round-robin of the 5 AIs on 7×8×4 and 12×13×6 (and custom sizes), run in a worker, with a win/draw table and a seed you can change. It works as a check (Genius should beat Random almost always) and as a demo.
 
 7. **Known bugs review (after Phase 6 is committed).** List every known bug (the running list is under "Known bugs" above): the original's bugs kept by decision 4 below, plus any found during the port. Give each one its file and function, what happens, and a suggested fix. The user picks some or all of them, and those are fixed in a separate commit on top of the faithful port. Each fix is listed under "Changes from the original", and the golden-game tests are updated where a fix changes moves.
 
@@ -218,6 +218,18 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
   - **Damaged files:** a damaged `.CFG` is ignored (the defaults stand), and a damaged `.SAV` gives "~Load Error!". The original read whatever was there.
   - **Original files:** importing or exporting the original's `.CFG`/`.SAV` files (the plan's optional extra) isn't done. The stored bytes use the same layout, so it could be added.
 - **Tests:** 156 in 19 files.
+
+### Phase 6 notes
+
+- **`tournament.html`, `src/tournament/`** (linked from the game's footer):
+  - Every AI plays every AI (itself included) on the 7×8×4 or 12×13×6 board, or a custom one with the Custom Board dialog's limits.
+  - Each pairing plays the chosen number of games, taking turns to go first, with seed + game number as each game's seed, so a run can be repeated.
+  - It runs in a Web Worker, falling back to the page, with progress, standings (against the other four AIs) and a 5×5 table.
+- **`runner.ts`'s `playGame`** is the golden harness's loop. Its test replays all 1,600 golden games exactly, and checks that AI Genius beats AI Random over 90% of the time.
+- **On 7×8×4, 100 games a pairing, seed 1998:** Genius 96% of games won, Expert 65%, Normal 55%, Novice 26%, Random 8%. That's 2,500 games in about 0.1 s, ranked exactly by how many rules each AI uses.
+- **Classic mode** was done in Phase 2 (and `?cfg=fresh` in Phase 4).
+- **Watcom's `rand()`** is still not confirmed against the running original. Its seed comes from the clock, so a match would need the title screen's or a demo game's moves recorded and the seed searched for. The port and the golden harness share one generator, so nothing here depends on it; only the exact random choices differ from what a 1998 PC would have made, and those were never repeatable.
+- **Tests:** 163 in 20 files.
 
 ## Decisions (agreed 2026-11-08)
 

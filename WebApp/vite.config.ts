@@ -18,6 +18,7 @@ export default defineConfig({
       // classic.html and compare.html are deliberately not listed: never built.
       input: {
         main: resolve(__dirname, 'index.html'),
+        tournament: resolve(__dirname, 'tournament.html'),
       },
     },
   },
