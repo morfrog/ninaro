@@ -48,3 +48,34 @@ a {
 .site-footer {
   margin-top: 16px;
 }
+
+/* Buttons for players without a keyboard. */
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn {
+  font: inherit;
+  color: var(--text);
+  background: #0000aa;
+  border: 2px solid #aaaaaa;
+  border-radius: 0;
+  padding: 6px 16px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #5555ff;
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.screen {
+  touch-action: none;
+}

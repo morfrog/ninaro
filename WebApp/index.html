@@ -10,7 +10,14 @@
   <body>
     <main id="app">
       <canvas id="screen" class="screen" width="640" height="350" role="img" aria-label="Ninaro screen"></canvas>
-      <p class="note">The web port is being built: the game plays (player one: A D to move, S or E to drop; player two: arrow keys and Enter; or click a column), but the menus come later.</p>
+      <div class="controls">
+        <button type="button" id="menu-button" class="btn">Menu</button>
+        <button type="button" id="help-button" class="btn">Help</button>
+      </div>
+      <p class="note">
+        Player one: A and D move, S or E drops, W or Q opens the menu. Player two: the arrow keys, Enter drops,
+        Backspace opens the menu. Or click (tap) a column. Esc or M: menu. F1 or H: help.
+      </p>
     </main>
     <footer class="site-footer">
       Web port of Ninaro v2.07, a 1998 DOS game.

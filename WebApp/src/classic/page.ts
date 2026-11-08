@@ -71,7 +71,7 @@ async function start(): Promise<void> {
   try {
     await Promise.all([load('link', `${JS_DOS}/js-dos.css`), load('script', `${JS_DOS}/js-dos.js`)]);
     window.Dos!(screen, {
-      url: `${base}classic/ninaro.jsdos`,
+      url: `${base}classic/ninaro.jsdos${location.search}`, // ?cfg=fresh: a default NINARO.CFG
       pathPrefix: `${JS_DOS}/emulators/`,
       autoStart: true,
       kiosk: true,

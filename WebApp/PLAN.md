@@ -103,6 +103,7 @@ Found while porting. Behaviour is kept unless noted.
 | 14 | `VIEWSYS.C ViewSysDisplay` | `DisplayAll` clears each window's changed flag but not the count of changed windows, so the next `DisplayChanged` loops over the windows for nothing. | Count reset (no visible change) |
 | 15 | `NINARO.C SuggestMove` | Sets a fill mask to hatch the suggested token, but in the running original the token stays solid (checked frame by frame in classic mode). | Solid, as seen (`suggestMove(true)` would hatch) |
 | 16 | `NINARO.C main` | A key already waiting when a move is chosen is handled by `ExtraFunctionality` and the move is thrown away, so a drop followed instantly by another key is lost. Only automated input is that fast. | Kept |
+| 17 | `NINARO.C ProgInit` | The Custom Board dialog's Connect slider is made with a top of `MaxOf(grid_rows, grid_cols)` before `LoadCfg` has set them, so its range is 3..0. The first time the dialog opens, Connect can't be set to the board's 4 and shows 3 (seen in classic mode); after `GameSizeFit` it is right. | Kept |
 
 ## Input mapping
 
@@ -131,7 +132,7 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
    - `Legacy/NINARO.HLP` is now the release's newer help (decision 2), with its About section redacted.
 2. **Renderer.** ✅ Done. See "Phase 2 notes" below. Planned as: `palette.ts` (EGA indexes, `ResetPalette`, remapping), `screen.ts` (640×350 logical canvas with the device pixel ratio and 4:3 aspect, viewports, `_rectangle`/`_ellipse`/`_lineto` in pixel and window (`_w`) coordinates, fill masks for Suggest Move), `strokeFont.ts` (Hershey font with `_setcharsize`/`_setcharspacing`/`_settextalign`), `viewsys.ts` (windows, changed flags, hint text). Draw the board, discs, win highlight and player icons (`DisplayHuman`, `DisplayComputer`). *Check:* a static screen matching the layout table above.
 3. **Game loop.** ✅ Done. See "Phase 3 notes" below. Planned as: the input queue and `sleep`, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", demo mode, `SuggestMove`, sound. *Check:* full games human vs AI and AI vs AI from the keyboard and the mouse, with the menu stubbed.
-4. **Menus, dialogs, help, title.** `textbox.ts`, `menu.ts` (4 menus as in `ProgInit`, enabling and disabling items as the C does), `dialog.ts`/`controls.ts` (Player, Custom Board with `GameSizeFit`, Player Options, Game Options), `help.ts` (scrolling, jump to heading, context help from menus and dialogs), the About box, and the title screen (TTL picture falling in, YELLOW cycling, "Hit Any Key To Continue...", the slide-off animation). Bundle `NINARO.HLP` and `NINARO.TTL` with `import.meta.glob(..., { query: '?raw' })`.
+4. **Menus, dialogs, help, title.** ✅ Done. See "Phase 4 notes" below. Planned as: `textbox.ts`, `menu.ts` (4 menus as in `ProgInit`, enabling and disabling items as the C does), `dialog.ts`/`controls.ts` (Player, Custom Board with `GameSizeFit`, Player Options, Game Options), `help.ts` (scrolling, jump to heading, context help from menus and dialogs), the About box, and the title screen (TTL picture falling in, YELLOW cycling, "Hit Any Key To Continue...", the slide-off animation). Bundle `NINARO.HLP` and `NINARO.TTL` with `import.meta.glob(..., { query: '?raw' })`.
 5. **Storage.** `NINARO.CFG` becomes `localStorage['ninaro:v1:cfg']`, written on change and when leaving the page (`pagehide`). `NINARO.SAV` becomes `localStorage['ninaro:v1:save']`. Every access is guarded. Ctrl-F9 (delete config) is kept. *Optional:* import or export the original binary `.CFG`/`.SAV` files with the big-endian `BINFILE` layout.
 6. **Extras.**
    - **Classic mode, development only.** ✅ Done early, in Phase 2 (see its notes). Copy VTTSP's `dev/classicPlugin.ts` and `classic.html`: js-dos 8.5.3 from jsDelivr, files from git-ignored `Temp/Source/connect4/pack` (`ninaro.exe`, `DOS4GW.EXE`, `ninaro.hlp`, `ninaro.ttl`), or from `NINARO_ORIGINAL_DIR`. Never built or deployed: the pack's `read.me` contains the author's name, and DOS4GW is third-party. The pack has no `MODERN.FON`, so `_setfont` may fail in DOSBox and the text may be missing or in a default font. Check this first.
@@ -180,6 +181,30 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
   - **Calibration:** F9 (reset the mouse calibration) does nothing, since there is nothing to calibrate.
 - **Tests:** 108 in 13 files.
 
+### Phase 4 notes
+
+- **Modules:**
+  - `ui/menu.ts`: `MENU.C`, the bar and its drop-down menus.
+  - `ui/dialog.ts`: `DIALOG.C`'s controls (list or range, shown as radio buttons, colour swatches, sliders, names or buttons) and dialogs with OK / Reset / Cancel. `CONTROLS.C` was an older version that the game never linked, so it isn't ported.
+  - `ui/help.ts`: `HELP.C`, reading `NINARO.HLP` as `HelpNew` did.
+  - `game/ui.ts`: `ProgInit`'s menus and dialogs, and `P1Dialog`/`P2Dialog`, `ModifyPlayer`, `GameSizeCustom`/`GameSizeFit`, `PlayerOptions`, `GameOptions` (the white background swaps the BLACK and WHITE palette slots), `HelpAbout`, and context help.
+  - `game/title.ts`: `TitleScreen`.
+  - `render/graph.ts` gained `_setlinestyle` (the dotted control frames).
+- **Classic mode:** `classic.html?cfg=fresh` swaps in a default `NINARO.CFG` (Human v Human, Normal speed, mouse configured), because the release's own `.CFG` starts a fastest-speed AI demo. Reference frames saved: the title, the four menus, About, help, and the Board, Player Options and Game Options dialogs. js-dos's `screenshot()` lags a change behind with this program's page flipping, so wait for the frame to settle before saving.
+- **Checked against the frames:** the menus, help, About and the three dialogs match in layout and colour, including bug 17. The Player dialog was built from the code.
+- **Title timing:** the original filled the picture as fast as the PC allowed (under a second in DOSBox), stepping the background colour each time round. Here one time round is one display frame: about 5 seconds to fill, with a pulse about once a second. A key, click or tap continues. The slide-off animation and mouse calibration only ran when the mouse wasn't yet calibrated, so they don't apply.
+- **Exit (F10, Game > Exit):** the original saved its settings and quit to DOS. Here the program starts again: the title, then a new game with the ProgInit messages.
+- **Changes from the original:**
+  - **Credit:** at the author's request, the credit reads "By Drew", in the game name window, the About box and the help's About section. The release had the full name; the redacted source had "By the author".
+  - **Menus and the pointer:** hovering highlights, as the hidden mouse did. Clicking an item runs it, clicking a menu name opens that menu, and clicking elsewhere (or a right click) closes the menu. The original ran the highlighted item on any click.
+  - **Dialogs and the pointer:** clicking a control's item chooses it, and clicking OK, Reset or Cancel presses it. The original's hidden mouse changed values just by moving.
+  - **Help without a keyboard:** the mouse wheel or a finger drag scrolls, and a click or tap closes it.
+  - **Board clicks:** during a move, a click outside the board does nothing. The original dropped the token on a click anywhere.
+  - **Page buttons:** Menu and Help buttons under the screen send Esc and F1.
+  - **Resizing:** the window can be resized with a menu, dialog or help open; it is redrawn.
+  - **Help line endings:** git stores `NINARO.HLP` with LF line endings, so the help reader turns them back into CR LF first.
+- **Tests:** 144 in 17 files.
+
 ## Decisions (agreed 2026-11-08)
 
 1. **Golden-game harness: yes.** Install a local C compiler (clang, gcc or zig) in Phase 1. The harness goes in `Tools/`, and its JSON output is committed as test data.
@@ -189,7 +214,7 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
 
 ## Personal details
 
-Keep the author's name, institution and student number out of the app and out of commits (see the VTTSP memory note). The repo already uses "By the author" in source and the About box. The pack's `read.me` and executable aren't redacted, so they stay in git-ignored `Temp/`. Before each commit, grep for the name, the institution, and `n[0-9]{7}`.
+Keep the author's surname, institution, course, student number, email addresses and the supervisor's name out of the app and out of commits. At the author's request, the app credits him by first name: "By Drew". The `Legacy` C source keeps its redacted "By the author". The pack's `read.me` and executable aren't redacted, so they stay in git-ignored `Temp/`. Before each commit, grep for the name, the institution, and `n[0-9]{7}`.
 
 ## Development
 

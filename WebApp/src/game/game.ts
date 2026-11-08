@@ -9,7 +9,7 @@ import { ruleMove } from '../core/ai';
 import { InsertResult, gameLoad, gameSave, insertTokenInCol, setWinSize } from '../core/connect';
 import { Direction, Grid } from '../core/grid';
 import { PlayerType, type Player } from '../core/player';
-import { WatcomRandom, startRandomSeed } from '../core/random';
+import { WatcomRandom } from '../core/random';
 import { Speaker } from '../audio/sound';
 import { Input, LMB, NMB, RMB, sleep } from '../input/input';
 import {
@@ -61,6 +61,8 @@ export class Game {
   ui: GameUi = NO_UI;
   /** Stops run() (for tests). */
   stopped = false;
+  /** Redraws whatever is open over the game screen (menu, dialog, help), after a resize. */
+  readonly overlays: (() => void)[] = [];
 
   constructor(
     readonly state: GameState,
@@ -74,6 +76,22 @@ export class Game {
     this.ks.iFunc(3, () => this.keyDown());
     this.ks.iFunc(4, () => this.keyDown()); // KeySelect
     this.ks.iFunc(5, () => this.keyUp()); // KeyCancel
+  }
+
+  /** Runs a menu, dialog or help call with `redraw` as its overlay. */
+  async withOverlay<T>(redraw: () => void, call: () => Promise<T>): Promise<T> {
+    this.overlays.push(redraw);
+    try {
+      return await call();
+    } finally {
+      this.overlays.pop();
+    }
+  }
+
+  /** The whole screen again (after a resize): the game, then what is open over it. */
+  redrawAll(): void {
+    this.vs.display(Display.DisplayAll);
+    this.overlays.at(-1)?.();
   }
 
   // ---- Players ----
@@ -304,7 +322,7 @@ export class Game {
    * HumanMove: the column chosen, or -1 if anything else happened (the menu,
    * a function key). Player keys move and drop; the pointer (for either
    * human here; only player one in the original) moves over the board,
-   * and a click drops. On a touch screen the first tap on a column moves
+   * and a click on the board drops. On a touch screen the first tap on a column moves
    * the token there and a second tap drops it.
    */
   async humanMove(useMouse: boolean): Promise<number> {
@@ -334,7 +352,10 @@ export class Game {
         const m = this.input.getMouseInput();
         if (m.button === LMB) {
           const col = this.mouseCol(m.x, m.y);
-          if (col >= 0 && col !== s.keypos) {
+          // The original dropped on a click anywhere; with the pointer visible,
+          // only a click on the board does.
+          if (col < 0) continue;
+          if (col !== s.keypos) {
             this.moveEntryTo(col);
             this.vs.display(Display.DisplayChanged);
             if (m.pointerType === 'touch') continue; // tap again to drop
@@ -618,12 +639,15 @@ export class Game {
 
   // ---- The main loop ----
 
-  /** StartRandom (the title screen did this) and the first game, as main() did. */
-  start(seed = startRandomSeed()): void {
+  /**
+   * The first game, as main() started it after the title screen. The title
+   * screen seeds the random numbers (StartRandom); without it, pass a seed.
+   */
+  start(seed?: number, size = { cols: this.state.gridCols, rows: this.state.gridRows, connect: this.state.win.tokens }): void {
     const s = this.state;
-    this.rng.seed(seed);
+    if (seed !== undefined) this.rng.seed(seed);
     this.speaker.muted = s.mute;
-    this.resetGameSize(s.gridCols, s.gridRows, s.win.tokens);
+    this.resetGameSize(size.cols, size.rows, size.connect);
     this.newGame();
     s.gameStatus();
     this.vs.display(Display.DisplayAll);

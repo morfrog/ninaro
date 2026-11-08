@@ -69,16 +69,40 @@ export function originalStatus(dir: string, repoRoot: string, fontPath: string):
 }
 
 /**
- * Every file in `dir` (paths relative to it, upper case as DOS saw them),
- * the font if `dir` has none, and the DOSBox settings.
+ * A NINARO.CFG as SaveCfg wrote it (big-endian ints): ProgInit's defaults,
+ * Human v Human, with the mouse marked as configured so the original skips
+ * its mouse calibration screen. For starting the original in a known state.
  */
-export function buildBundle(dir: string, fontPath: string): Uint8Array {
+export function freshConfig(): Uint8Array {
+  const ints = [
+    7, 8, 4, // columns, rows, connect
+    4, 0, // goes first (Successive), went first (player one)
+    2, 500, // AI speed (Normal), AI delay
+    0, 1, // player one, player two
+    0, // mute
+    0, 4, // background BLACK, hilite GREEN
+    2, 0, // mouse use (Full), best of (infinity)
+    1, 0, 0, // mouse configured, x and y adjust
+    2, 1, 6, 4, 3, 2, 5, 4, // the 8 players' colours, as in ProgInit
+  ];
+  const out = new Uint8Array(ints.length * 4);
+  ints.forEach((v, i) => new DataView(out.buffer).setInt32(i * 4, v));
+  return out;
+}
+
+/**
+ * Every file in `dir` (paths relative to it, upper case as DOS saw them),
+ * the font if `dir` has none, and the DOSBox settings. With `fresh`, the
+ * folder's NINARO.CFG is replaced by freshConfig().
+ */
+export function buildBundle(dir: string, fontPath: string, fresh = false): Uint8Array {
   const files: Zippable = { '.jsdos/dosbox.conf': strToU8(DOSBOX_CONF) };
   for (const path of listFiles(dir)) {
     const name = relative(dir, path).replace(/\\/g, '/').toUpperCase();
     files[name] = readFileSync(path);
   }
   if (!hasFont(dir) && existsSync(fontPath)) files['MODERN.FON'] = readFileSync(fontPath);
+  if (fresh) files['NINARO.CFG'] = freshConfig();
   return zipSync(files);
 }
 
@@ -125,7 +149,8 @@ export function classicPlugin(options: { repoRoot: string; base: string }): Plug
           res.end(`Temp/Reference/${name}.png`);
         });
       });
-      server.middlewares.use(`${prefix}/ninaro.jsdos`, (_req, res) => {
+      server.middlewares.use(`${prefix}/ninaro.jsdos`, (req, res) => {
+        const fresh = /[?&]cfg=fresh\b/.test(req.url ?? '');
         const status = originalStatus(dir, options.repoRoot, fontPath);
         if (!status.available) {
           res.statusCode = 404;
@@ -134,7 +159,7 @@ export function classicPlugin(options: { repoRoot: string; base: string }): Plug
         }
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Cache-Control', 'no-store');
-        res.end(buildBundle(dir, fontPath));
+        res.end(buildBundle(dir, fontPath, fresh));
       });
     },
   };

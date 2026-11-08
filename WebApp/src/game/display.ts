@@ -85,11 +85,10 @@ export function displayPlayerScore(g: Graph, score: number, gamesPlayed: number)
 }
 
 /**
- * The credit's three lines. The release had the author's name over the
- * first two; the redacted source has "By the author" on the first, which
- * runs off the window, so it is split over the two as the release was.
+ * The credit's three lines. The release had the author's full name over the
+ * first two; the web port credits the author by first name only.
  */
-const CREDIT = ['By the', ' author', '   1998  '];
+const CREDIT = ['By Drew', '', '   1998  '];
 
 /** DisplayGameName: "Ninaro" in red with a green shadow, and the credit. */
 export function displayGameName(g: Graph): void {

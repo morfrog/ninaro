@@ -49,6 +49,27 @@ const HERSHEY_CAP = 21;
 const CAP_TOP = 0.1;
 const CAP_HEIGHT = 0.7;
 
+/** A _setlinestyle mask as canvas dash lengths: runs of on and off bits from the high bit. */
+export function lineDash(mask: number): number[] {
+  const bits = mask & 0xffff;
+  if (bits === 0xffff) return [];
+  const runs: number[] = [];
+  let on = true; // canvas dashes start with a drawn run
+  let run = 0;
+  for (let b = 15; b >= 0; b--) {
+    const set = ((bits >> b) & 1) === 1;
+    if (set === on) run++;
+    else {
+      runs.push(run);
+      on = !on;
+      run = 1;
+    }
+  }
+  runs.push(run);
+  if (runs.length % 2) runs.push(0);
+  return runs;
+}
+
 interface Rect {
   x1: number;
   y1: number;
@@ -65,6 +86,7 @@ export class Graph {
   private originY = 0;
   private color = 15;
   private fillMask: readonly number[] | null = null;
+  private lineDash: number[] = [];
   private posX = 0;
   private posY = 0;
   private charHeight = 8;
@@ -129,6 +151,11 @@ export class Graph {
     return this.fillMask;
   }
 
+  /** _setlinestyle: a 16-pixel on/off pattern, high bit first (0xffff is solid). */
+  setLineStyle(mask: number): void {
+    this.lineDash = lineDash(mask);
+  }
+
   private fillStyle(): string | CanvasPattern {
     const css = this.palette.css(this.color);
     if (!this.fillMask) return css;
@@ -181,6 +208,7 @@ export class Graph {
       } else {
         ctx.strokeStyle = this.palette.css(this.color);
         ctx.lineWidth = 1;
+        ctx.setLineDash(this.lineDash);
         ctx.strokeRect(x1 + 0.5, y1 + 0.5, x2 - x1, y2 - y1);
       }
     });
@@ -248,7 +276,8 @@ export class Graph {
     this.clipped((ctx) => {
       ctx.strokeStyle = this.palette.css(this.color);
       ctx.lineWidth = 1;
-      ctx.lineCap = 'square';
+      ctx.lineCap = this.lineDash.length ? 'butt' : 'square';
+      ctx.setLineDash(this.lineDash);
       ctx.beginPath();
       ctx.moveTo(fromX + 0.5, fromY + 0.5);
       ctx.lineTo(x + 0.5, y + 0.5);

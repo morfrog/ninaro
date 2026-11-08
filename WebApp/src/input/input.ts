@@ -28,6 +28,8 @@ export class Input {
   private moved = false;
   private pointerType = 'mouse';
   private waiters: (() => void)[] = [];
+  /** Lines to scroll, from the mouse wheel or a vertical drag (positive is down). */
+  private wheelLines = 0;
 
   /** Adds a key as if typed (for buttons on the page, and tests). */
   pushKey(key: number): void {
@@ -52,6 +54,19 @@ export class Input {
     this.moved = true;
     this.pointerType = pointerType;
     this.wake();
+  }
+
+  /** Scroll by this many lines (down if positive). */
+  pushWheel(lines: number): void {
+    this.wheelLines += lines;
+    this.wake();
+  }
+
+  /** The lines scrolled since last asked. */
+  takeWheel(): number {
+    const lines = this.wheelLines;
+    this.wheelLines = 0;
+    return lines;
   }
 
   private wake(): void {
@@ -96,6 +111,7 @@ export class Input {
     this.lmb = false;
     this.rmb = false;
     this.moved = false;
+    this.wheelLines = 0;
   }
 
   /** Resolves when the next key, button or movement arrives. */
@@ -118,15 +134,39 @@ export class Input {
       e.preventDefault();
       this.pushKey(key);
     });
+    // A finger dragged up or down scrolls (help) instead of tapping.
+    let dragY: number | null = null;
+    let dragged = false;
+    canvas.addEventListener('pointerdown', (e) => {
+      dragY = toScreen(e.clientX, e.clientY).y;
+      dragged = false;
+    });
     canvas.addEventListener('pointermove', (e) => {
       const p = toScreen(e.clientX, e.clientY);
+      if (dragY !== null && e.pointerType === 'touch') {
+        const lines = Math.trunc((dragY - p.y) / 12);
+        if (lines !== 0) {
+          dragged = true;
+          dragY -= lines * 12;
+          this.pushWheel(lines);
+        }
+      }
       this.pushMove(p.x, p.y, e.pointerType);
     });
     canvas.addEventListener('pointerup', (e) => {
-      if (e.button !== 0) return;
+      dragY = null;
+      if (e.button !== 0 || dragged) return;
       const p = toScreen(e.clientX, e.clientY);
       this.pushButton(LMB, p.x, p.y, e.pointerType);
     });
+    canvas.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        this.pushWheel(e.deltaY > 0 ? 3 : -3);
+      },
+      { passive: false },
+    );
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const p = toScreen(e.clientX, e.clientY);

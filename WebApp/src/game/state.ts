@@ -72,10 +72,16 @@ export class GameState {
   readonly statusbox = new TextBox(3, NOBORDER, () => this.text, () => this.hilite, 30);
 
   constructor() {
+    this.resetMessages();
+    for (let i = 0; i < 3; i++) this.statusbox.addLine(' ', -1);
+  }
+
+  /** The message box as ProgInit filled it. */
+  resetMessages(): void {
+    this.msgbox.empty();
     for (const line of ['Press F1 for HELP', 'Press Esc for MENU', 'Which uses arrow keys', 'Press F10 to QUIT', '~Or begin playing...']) {
       this.msgbox.fixedAddLine(line);
     }
-    for (let i = 0; i < 3; i++) this.statusbox.addLine(' ', -1);
   }
 
   player(slot: number) {

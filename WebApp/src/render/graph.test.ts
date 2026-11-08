@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BORDER, FILL, Graph, HAlign, VAlign } from './graph';
+import { BORDER, FILL, Graph, HAlign, VAlign, lineDash } from './graph';
 import { Palette } from './palette';
 
 /** A canvas context stand-in that records path points and fills. */
@@ -37,6 +37,7 @@ function recorder() {
     strokeRect(...args: number[]) {
       calls.push({ op: 'strokeRect', args, style: ctx.strokeStyle });
     },
+    setLineDash() {},
     ellipse(...args: number[]) {
       calls.push({ op: 'ellipse', args });
     },
@@ -124,5 +125,14 @@ describe('text', () => {
     g.grText(0, 100, 'H');
     const ys = calls.filter((c) => c.op === 'lineTo').map((c) => c.args[1]);
     expect(Math.max(...ys)).toBeCloseTo(100, 5);
+  });
+});
+
+describe('line styles', () => {
+  it('turn a 16-pixel mask into dashes, from the high bit', () => {
+    expect(lineDash(0xffff)).toEqual([]);
+    expect(lineDash(0x5555)).toEqual([0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]);
+    expect(lineDash(0x1111)).toEqual([0, 3, 1, 3, 1, 3, 1, 3, 1, 0]);
+    expect(lineDash(0xff00)).toEqual([8, 8]);
   });
 });
