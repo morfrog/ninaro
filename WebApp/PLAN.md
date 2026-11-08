@@ -247,6 +247,19 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
 - **Unchanged:** the golden games still replay exactly, both through `ruleMove` and through the whole game loop, since none of the fixes touch the AI's choices.
 - **Tests:** 167 in 20 files.
 
+### After Phase 7: Genius's double-threat rule
+
+- **The weakness (not in the bugs table: the 1998 code does what it was written to do).** Genius looks one move ahead: it takes a win, blocks a three, and avoids dropping under the other player's winning cell. It never asks what the other player's next move could set up. So a move that looks aimless, like leaving a gap (`...O.O.` on the bottom row), lets the player drop in the gap next and have two places to win, and Genius can only block one. Played against a weak, mostly random opponent and checked six moves ahead, 47 of Genius's 51 losing moves allowed exactly this.
+- **The rule (`ai.ts`, `allowsDoubleThreat`):** at level 4, for each column, drop Genius's token, then try each reply. If a reply leaves the other player two columns to win in, and Genius has no win of its own to take first, the column loses `DOUBLE_THREAT_PENALTY` (50, more than win potential can add). It's skipped when the other player can already win, so blocking still comes first. Genius only: Expert and below are unchanged.
+- **Measured (the first move alternating):**
+  - New Genius against 1998 Genius: 1,069 to 931 of 2,000 (7×8×4), 223 to 173 of 400 (12×13×6, 4 drawn), 338 to 262 of 600 (9×9×5).
+  - Genius's losses to Expert: 197 → 79 of 2,000 (7×8×4), 14 → 7 of 400 (12×13×6), 25 → 9 of 600 (9×9×5).
+  - Against a player that plays for double threats (wins, blocks, sets up two wins when it can, else plays like Normal): it lost 144 of 1,000 to the 1998 Genius and 19 to the new one (7×8×4); 18 of 300 and 0 (12×13×6).
+  - Tournament, 7×8×4, 100 games a pairing, seed 1998: Genius 99% (was 96%). The others are unchanged by the rule; with Genius stronger they now read Expert 64%, Normal 54%, Novice 25%, Random 8%.
+  - Speed: about 14 ms a move on a 50×50 board.
+- **The 1998 rules are kept as `RULES_1998`.** The golden games are replayed with them, through `ruleMove`, the tournament's `playGame` and the whole game loop (`Game.aiRules`). The game and the tournament page use `RULES_FIXED`.
+- **Tests:** 172 in 20 files.
+
 ## Decisions (agreed 2026-11-08)
 
 1. **Golden-game harness: yes.** Install a local C compiler (clang, gcc or zig) in Phase 1. The harness goes in `Tools/`, and its JSON output is committed as test data.

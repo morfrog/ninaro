@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ruleMove } from './ai';
+import { RULES_1998, ruleMove } from './ai';
 import { BinFile } from './binfile';
 import { InsertResult, insertTokenInCol, newWin } from './connect';
 import { Grid } from './grid';
@@ -36,7 +36,7 @@ function play(g: GoldenGame) {
   let result = 'draw';
   let last: InsertResult = InsertResult.Success;
   for (;;) {
-    const col = ruleMove(game, playgrid, g.levels[current], p[current], p[1 - current], rng);
+    const col = ruleMove(game, playgrid, g.levels[current], p[current], p[1 - current], rng, RULES_1998);
     if (col < 0) {
       result = 'nomove';
       break;

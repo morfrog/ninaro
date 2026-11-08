@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { RULES_1998 } from '../core/ai';
 import golden from '../core/__golden__/games.json';
 import { Input } from '../input/input';
 import { ESC, KP4 } from '../input/keys';
@@ -45,6 +46,7 @@ describe('the main loop', () => {
     const picks = (golden.games as unknown as GoldenGame[]).filter((g) => g.cols === 7 && g.first === 1 && g.levels[0] !== g.levels[1]).slice(0, 6);
     for (const g of picks) {
       const { game, state } = makeGame();
+      game.aiRules = RULES_1998; // the golden games are the original's rules
       state.aiSpeed = 0; // Fastest: no "Press ESC" between AI games
       state.playerOne = 2 + g.levels[0];
       state.playerTwo = 2 + g.levels[1];

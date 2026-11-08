@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AiLevel, randomMoveFromList, ruleMove, ruleScores } from './ai';
+import { AiLevel, DOUBLE_THREAT_PENALTY, RULES_1998, allowsDoubleThreat, randomMoveFromList, ruleMove, ruleScores, winningCols } from './ai';
 import { newWin } from './connect';
 import { Grid } from './grid';
 import type { Rng } from './random';
@@ -63,5 +63,48 @@ describe('ruleScores', () => {
 
   it('adds win potential (level 4)', () => {
     expect(scores(new Grid(7, 8), 4, AiLevel.Genius)).toEqual([101, 101, 101, 102, 101, 101, 101]);
+  });
+
+  it('plays the 1998 rules when asked (no double-threat rule)', () => {
+    const g = board('.......', '.......', '.......', '.......', '.......', '.......', '...X...', '...O.O.');
+    const old = ruleScores({ playgrid: g, win: newWin(4) }, g, AiLevel.Genius, x, o, RULES_1998)!;
+    // The original stacks on its own token in column 3, the highest score.
+    expect(old.indexOf(Math.max(...old))).toBe(3);
+  });
+});
+
+describe('the double-threat rule (Genius, added in 2026)', () => {
+  // O has 3 and 5 on the bottom row. If X doesn't play 4 (or 2 or 6), O
+  // plays 4 and has 2 and 6 to win in: X can only block one.
+  const setup = () => board('.......', '.......', '.......', '.......', '.......', '.......', '...X...', '...O.O.');
+
+  it('sees which drops let the opponent set up two wins', () => {
+    const g = setup();
+    expect(allowsDoubleThreat(g, 4, 3, x, o)).toBe(true);
+    expect(allowsDoubleThreat(g, 4, 4, x, o)).toBe(false);
+    expect(allowsDoubleThreat(g, 4, 2, x, o)).toBe(false);
+    expect(allowsDoubleThreat(g, 4, 6, x, o)).toBe(false);
+    // The grid is left as it was.
+    expect(g).toEqual(setup());
+  });
+
+  it('takes the penalty off those columns, so Genius blocks', () => {
+    const g = setup();
+    const fixedScores = scores(g, 4, AiLevel.Genius)!;
+    const old = ruleScores({ playgrid: g, win: newWin(4) }, g, AiLevel.Genius, x, o, RULES_1998)!;
+    expect(fixedScores[3]).toBe(old[3] - DOUBLE_THREAT_PENALTY);
+    expect(fixedScores[4]).toBe(old[4]);
+    expect([2, 4, 6]).toContain(fixedScores.indexOf(Math.max(...fixedScores)));
+  });
+
+  it('is only Genius: Expert scores are unchanged', () => {
+    const g = setup();
+    expect(scores(g, 4, AiLevel.Expert)).toEqual(ruleScores({ playgrid: g, win: newWin(4) }, g, AiLevel.Expert, x, o, RULES_1998));
+  });
+
+  it("doesn't apply when the opponent can already win (blocking comes first)", () => {
+    const g = board('.......', '.......', '.......', '.......', '.......', '.......', '...X...', '.OOO.O.');
+    expect(winningCols(g, 4, o)).toBe(2);
+    expect(scores(g, 4, AiLevel.Genius)).toEqual(ruleScores({ playgrid: g, win: newWin(4) }, g, AiLevel.Genius, x, o, RULES_1998));
   });
 });

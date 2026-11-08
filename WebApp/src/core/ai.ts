@@ -2,7 +2,7 @@
 // AI*Move functions). Each column starts at 100 (0 if full); each rule level
 // adds to or takes from the columns, and a random best column is chosen.
 
-import { checkForWin, insertTokenTarget, winPotential, type Win } from './connect';
+import { InsertResult, checkForWin, insertTokenInCol, insertTokenTarget, newWin, removeToken, winPotential, type Win } from './connect';
 import type { Grid } from './grid';
 import type { Player } from './player';
 import type { Rng } from './random';
@@ -21,6 +21,21 @@ export interface AiGame {
   playgrid: Grid;
   win: Win;
 }
+
+/**
+ * Which rules the AIs play by. The 1998 rules are kept for the golden games;
+ * the game and the tournament play with `doubleThreat` on (a fix added in
+ * 2026, not in the original).
+ */
+export interface AiRules {
+  /** Genius: avoid moves that let the opponent set up two wins at once. */
+  doubleThreat: boolean;
+}
+export const RULES_1998: AiRules = { doubleThreat: false };
+export const RULES_FIXED: AiRules = { doubleThreat: true };
+
+/** How much the double-threat rule takes off a column: more than win potential can add. */
+export const DOUBLE_THREAT_PENALTY = 50;
 
 /** RandomMoveFromList: index of a random one of the highest values. */
 export function randomMoveFromList(list: readonly number[], rng: Rng): number {
@@ -49,10 +64,11 @@ export function randomMoveFromList(list: readonly number[], rng: Rng): number {
  * RuleMove: the column to play, or -1 if the board is full. Levels:
  * 0 random; 1 take a win; 2 block the opponent's win (+50); 3 don't drop
  * where the opponent can then win above (-90) or be blocked (-20);
- * 4 add the win potential (0..40).
+ * 4 add the win potential (0..40) and, with RULES_FIXED (not in the
+ * original), avoid letting the opponent set up two wins at once.
  */
-export function ruleMove(game: AiGame, grid: Grid, level: number, thisPlayer: Player, otherPlayer: Player, rng: Rng): number {
-  const col = ruleScores(game, grid, level, thisPlayer, otherPlayer);
+export function ruleMove(game: AiGame, grid: Grid, level: number, thisPlayer: Player, otherPlayer: Player, rng: Rng, rules: AiRules = RULES_FIXED): number {
+  const col = ruleScores(game, grid, level, thisPlayer, otherPlayer, rules);
   return col === null ? -1 : randomMoveFromList(col, rng);
 }
 
@@ -60,7 +76,14 @@ export function ruleMove(game: AiGame, grid: Grid, level: number, thisPlayer: Pl
  * The column scores RuleMove chooses from (the list its TESTING build
  * printed), or null if every column is full.
  */
-export function ruleScores(game: AiGame, grid: Grid, level: number, thisPlayer: Player, otherPlayer: Player): number[] | null {
+export function ruleScores(
+  game: AiGame,
+  grid: Grid,
+  level: number,
+  thisPlayer: Player,
+  otherPlayer: Player,
+  rules: AiRules = RULES_FIXED,
+): number[] | null {
   const { playgrid, win } = game;
   const cols = grid.cols();
   const rows = grid.rows();
@@ -112,8 +135,48 @@ export function ruleScores(game: AiGame, grid: Grid, level: number, thisPlayer: 
             col[x] += winPotential(playgrid, win.tokens, x, insertTokenTarget(playgrid, x), thisPlayer, otherPlayer, 40);
           }
         }
+        if (rules.doubleThreat && winningCols(playgrid, win.tokens, otherPlayer) === 0) {
+          for (let x = 0; x < cols; x++) {
+            if (col[x] && allowsDoubleThreat(playgrid, win.tokens, x, thisPlayer, otherPlayer)) col[x] -= DOUBLE_THREAT_PENALTY;
+          }
+        }
         break;
     }
   }
   return col;
+}
+
+/** How many columns `player` could win in with their next drop. */
+export function winningCols(grid: Grid, size: number, player: Player): number {
+  const win = newWin(size);
+  let n = 0;
+  for (let x = 0; x < grid.cols(); x++) {
+    if (grid.inCol(x) < grid.rows() && checkForWin(grid, size, x, insertTokenTarget(grid, x), win, player)) n++;
+  }
+  return n;
+}
+
+/**
+ * The double-threat rule (2026, not in the original): if `me` drops in col,
+ * can `other` answer with a drop that leaves them two columns to win in,
+ * when `me` has no win of their own to take first? Only one can be blocked.
+ */
+export function allowsDoubleThreat(grid: Grid, size: number, col: number, me: Player, other: Player): boolean {
+  const win = newWin(size);
+  const r = insertTokenInCol(grid, col, me, win);
+  if (r === InsertResult.Failure) return false;
+  if (r === InsertResult.Win) {
+    removeToken(grid, col);
+    return false;
+  }
+  let found = false;
+  for (let y = 0; y < grid.cols() && !found; y++) {
+    if (grid.inCol(y) >= grid.rows()) continue;
+    if (insertTokenInCol(grid, y, other, win) === InsertResult.Success) {
+      found = winningCols(grid, size, other) >= 2 && winningCols(grid, size, me) === 0;
+    }
+    removeToken(grid, y);
+  }
+  removeToken(grid, col);
+  return found;
 }

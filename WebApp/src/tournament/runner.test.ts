@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import golden from '../core/__golden__/games.json';
+import { RULES_1998 } from '../core/ai';
 import { BOARDS, playGame, runTournament, totals, validBoard } from './runner';
 
 interface GoldenGame {
@@ -16,7 +17,7 @@ interface GoldenGame {
 describe('playGame', () => {
   it('plays every golden game exactly as the 1998 code did', () => {
     for (const g of golden.games as unknown as GoldenGame[]) {
-      const r = playGame({ cols: g.cols, rows: g.rows, connect: g.connect }, g.levels, g.seed, g.first);
+      const r = playGame({ cols: g.cols, rows: g.rows, connect: g.connect }, g.levels, g.seed, g.first, [RULES_1998, RULES_1998]);
       expect({ moves: r.moves.join(' '), result: r.result }).toEqual({ moves: g.moves, result: g.result });
     }
   });

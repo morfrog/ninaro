@@ -5,7 +5,7 @@
 // here the same code awaits the input queue and sleep(). Menus, dialogs,
 // help and the title screen come in phase 4, through GameUi.
 
-import { ruleMove } from '../core/ai';
+import { RULES_FIXED, ruleMove, type AiRules } from '../core/ai';
 import { InsertResult, gameLoad, gameSave, insertTokenInCol, setWinSize } from '../core/connect';
 import { Direction, Grid } from '../core/grid';
 import { PlayerType, type Player } from '../core/player';
@@ -93,6 +93,8 @@ const SUGGEST_MASK = [0xa2, 0x15, 0xa2, 0x10, 0xa2, 0x10, 0xa2, 0x15];
 
 export class Game {
   readonly rng = new WatcomRandom();
+  /** The AIs' rules: the fixed ones, or RULES_1998 to play exactly as the original. */
+  aiRules: AiRules = RULES_FIXED;
   readonly speaker = new Speaker();
   readonly pkeys = new KeyGroup(KP4, KP6, KP8, KP2, ENTER, BKSP);
   readonly p1keys = new KeyGroup(...'adwseq'.split('').map((c) => c.charCodeAt(0)));
@@ -443,7 +445,7 @@ export class Game {
 
   /** The AI*Move functions: RuleMove with this many rules. */
   aiMove(level: number): number {
-    return ruleMove(this.state, this.state.playgrid, level, this.currentPlayer(), this.otherPlayer(), this.rng);
+    return ruleMove(this.state, this.state.playgrid, level, this.currentPlayer(), this.otherPlayer(), this.rng, this.aiRules);
   }
 
   /** The player's getmove function, by player group slot. */

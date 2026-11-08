@@ -2,7 +2,7 @@
 // game loop of NINARO.C main() for two AIs at the fastest speed (the same
 // loop as the golden-game harness, Tools/golden/harness.c).
 
-import { AI_NAMES, ruleMove } from '../core/ai';
+import { AI_NAMES, RULES_FIXED, ruleMove, type AiRules } from '../core/ai';
 import { InsertResult, insertTokenInCol, newWin } from '../core/connect';
 import { Grid } from '../core/grid';
 import { PlayerType, playerNew } from '../core/player';
@@ -16,8 +16,17 @@ export interface Board {
 
 export type Result = 'one' | 'two' | 'draw';
 
-/** One game between AI levels (0 Random .. 4 Genius); `first` is 0 or 1. */
-export function playGame(board: Board, levels: readonly [number, number], seed: number, first: 0 | 1): { result: Result; moves: number[] } {
+/**
+ * One game between AI levels (0 Random .. 4 Genius); `first` is 0 or 1.
+ * Each player can be given its own rules (both play the fixed rules unless told).
+ */
+export function playGame(
+  board: Board,
+  levels: readonly [number, number],
+  seed: number,
+  first: 0 | 1,
+  rules: readonly [AiRules, AiRules] = [RULES_FIXED, RULES_FIXED],
+): { result: Result; moves: number[] } {
   const p = [playerNew('One', 1, PlayerType.Computer), playerNew('Two', 2, PlayerType.Computer)];
   const rng = new WatcomRandom(seed);
   const playgrid = new Grid(board.cols, board.rows);
@@ -26,7 +35,7 @@ export function playGame(board: Board, levels: readonly [number, number], seed: 
   const moves: number[] = [];
   let current: number = first;
   for (;;) {
-    const col = ruleMove(game, playgrid, levels[current], p[current], p[1 - current], rng);
+    const col = ruleMove(game, playgrid, levels[current], p[current], p[1 - current], rng, rules[current]);
     if (col < 0) return { result: 'draw', moves };
     const r = insertTokenInCol(playgrid, col, p[current], win);
     moves.push(col);
