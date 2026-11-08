@@ -10,6 +10,15 @@ connect-4 still apply. It is still a two player game, one
 feature of Ninaro being that you can play computer
 opponents, known as AI's (Artificial Intelligences).
 
+~How To Use Help
+Press ESC or F1 to exit help. If you used the menu to get
+help, the keys you used in the menu work here. Otherwise
+you used F1 or H to get help, and the arrow keys work here.
+Please ensure that NumLock is off (by pressing the NumLock
+key on the numerical keypad to the right of your keyboard
+until the NumLock light is off). The table below shows what
+these keys do.
+
 ~Table of Help Keys
 Key         Function
 Left        Scrolls UP a page
@@ -21,27 +30,24 @@ PageDown    Scrolls DOWN a page
 Home        Scrolls to the top of help
 End         Scrolls to the end of help
 
-~How To Play
-
+~How To Play 
 The aim of the game is to connect a number of tokens in the
 grid while stopping your opponent from doing so. The first
-player to make the connection wins. The number of tokens
-you must connect to win is shown at the top right of the
-screen, under the Connect heading. Connections can take
-place in four different ways, being vertical, horizontal,
-and the two diagonals. A connection occurs when a token is
-next to a token of the same type. A win occurs when a
-number of tokens are connected in this way. When a win
-occurs, the game prompts you to press Cancel to continue.
+player to make the connection wins. The number of tokens you
+must connect to win is shown at the top right of the screen,
+under the Connect heading. Connections can take place in
+four different ways, being vertical, horizontal, and the two
+diagonals. A connection occurs when a token is next to a
+token of the same type. A win occurs when a number of tokens
+are connected in this way. When a win occurs, the game
+prompts you to press ESC to continue.
 
 ~Controlling Ninaro
-
 Ninaro is controlled with either the keyboard or the mouse.
-Only player one can use the mouse while in the game, any
+Only Player One can use the mouse while in the game, any
 player can use the mouse in the menus or dialogs.
 
 ~Player's Keys
-
 Each player has a set of keys, consisting of Left, Right,
 Up, Down, Select and Cancel. The table below shows these
 keys.
@@ -55,16 +61,15 @@ Down            S               Keypad 2
 Select          E               ENTER
 Cancel          Q               BackSpace
 
-The keypad keys can be used as either the grey arrow keys
-or the numbered keys on the numerical keypad for which
-numlock must be off.
+The keypad keys can be used as either the grey arrow keys or
+the numbered keys on the numerical keypad for which numlock
+must be off.
 
 ~What The Keys Do.
-
 Depending on where you are in the program, the keys do
 different things, though they are quite similar. The table
 below shows the functionality of the keys at each location
-on the program.
+in the program.
 
 ~Table of Key Functionality
 Key/Location    Playing A Game  Using Menu    Using Dialogs
@@ -77,9 +82,17 @@ Select          Drops Token     Select item   Select Button-
 Cancel          Calls the menu  Cancel Menu   Cancels Dialog
 
 ~The Mouse
-
 Only Player One has access to the mouse while playing a
-game. The following table shows mouse functionality.
+game. The following table shows mouse functionality.  To
+enter a token move the mouse to the appropriate column in
+the grid and press Select (left-click). Obviously using the
+right mouse button as Cancel calls the menu. At times other
+than when playing a game, the mouse is accessible to all.
+When there is no mouse configuration, a mouse configuration
+screen is displayed. The mouse must be clicked when the
+pointer is at the very top left of the screen. If this is
+not done the mouse may behave strangely. You also have the
+option of pressing a key to not use the mouse.
 
 ~Table of Mouse Functionality
 Key     Mouse Action
@@ -89,39 +102,50 @@ Up      Move mouse up
 Down    Move mouse down
 Select  Press Left Mouse Button
 Cancel  Press Right Mouse Button
-
-To enter a token move the mouse to the appropriate column
-in the grid and press Select (left-click). Obviously using
-the right mouse button as Cancel calls the menu.
+ 
+~Other Keys
+F1,H    Calls for help
+F2      Saves the game
+F3      Loads the game
+F4      Toggle between playing and not playing a game
+F5      Suggests a move to make. AI Genius suggests the move
+F6      Sets AI vs AI, at random, starts game
+F7      Sets Human vs Human, starts game
+F8      Toggles the sound
+F9      Reset the mouse configuration, when game next loaded
+        mouse is initialised.
+CTRL-F9 Delete the configuration file, NINARO.CFG.
+F10,
+CTRL-X,
+CTRL-Q,
+ALT-F4  Quits the game
+ESC,M   Calls the menu, menu keys are player two's keys.
 
 ~The Menus
-
 The menus are the key way in Ninaro of changing things. The
 menu is accessible at almost anytime by pressing ESC, M for
 menu, or your appropriate player key.
 
 ~The Game Menu
-
-The game menu lets you control the game.
-
-New     starts a new game
-Load    loads the saved game, Load Error appears if no save
+The game menu lets you control the game. 
+New     Starts a new game
+Load    Loads the saved game, Load Error appears if no save
         file found
-Save    saves the game, there is only one saved game
-End     ends the current game, when no game is on all menu
-        options are accessible (e.g. player one and two)
-        dialogs.
-Suggest suggests a move to make. The move is suggested by
-Move    AI Genius.
-Toggle  toggles the sound On and Off
+Save    Saves the game, there is only one saved game
+End     Ends the current game, when no game is on all menu
+        options are accessible (e.g. player one and two
+        dialogs).
+Suggest Suggests a move to make. AI Genius suggests the  
+Move    move.
+Toggle  Toggles the sound On and Off
 Sound
 Options Allows you to change the background and hilite
-        colours
-Exit    exits the game. 
+        colours, and how much use you wish to make of the
+        mouse.
+Exit    Exits the game.
 
 
 ~The Board Menu
-
 The board menu lets you change the board attributes
 
 7x8x4   Changes the board to 7 Columns, 8 Rows,Connect 4
@@ -129,7 +153,6 @@ The board menu lets you change the board attributes
 Custom  Changes the board via The Custom Board Dialog
 
 ~The Player Menu
-
 The player menu lets you change the player attributes
 
 One...  Changes the attributes of player one
@@ -142,29 +165,25 @@ Reset   resets both player's scores to zero.
 Scores
 
 ~The Help Menu
-
 The help menu provides all your help needs, via this screen.
 Help is available at anytime by pressing either F1 or H.
 
 Contents    Brings up the help screen, scrolled to the top
 About       Brings up the about window
 
-
-~The Dialogs
-
+~The Dialogs 
 Dialogs help you choose from a group of options. In the
-dialogs C cancels, R resets and O ok's. Pressing Select
-at any time while in the dialog results on the hilited
-button (OK,Reset,Cancel) being used, while pressing cancel
-cancels the dialog. The options chosen in a dialog only
-take effect if the OK button is pressed. This means that
-any number of changes can be made while inside a dialog,
-but none of these changes will take effect if the Cancel
-button is pressed.  Reset resets the dialog to have the
-values it had when the dialog was first opened.
+dialogs C cancels, R resets and O ok's. Pressing Select at
+any time while in the dialog results on the hilited button
+(OK,Reset,Cancel) being used, while pressing cancel cancels
+the dialog. The options chosen in a dialog only take effect
+if the OK button is pressed. This means that any number of
+changes can be made while inside a dialog, but none of these
+changes will take effect if the Cancel button is pressed.
+Reset resets the dialog to have the values it had when the
+dialog was first opened.
 
 ~The Custom Board Dialog
-
 The custom board dialog allows you to change the size of
 the board and/or the number of tokens which must be
 connected to win a game. You will notice that an incorrect
@@ -172,7 +191,6 @@ value can never be selected, as the game size automatically
 resizes when the number of columns or rows is changed.
 
 ~The Player Dialog
-
 The player dialog allows you to change a player's colour
 and/or name. If a player's name is changed, a new game is
 started (as a new player has entered the game). If however
@@ -184,35 +202,46 @@ colour to something else, then you may change to be the
 colour which is now free.
 
 ~The Player Options Dialog
-
-The player options dialog allows the game to be customized
+The player options dialog allows the game to be customised
 to suit your needs. There are six ways that a player may be
-chosen by to start the game, and the AI speed may also be
-adjusted to suit your needs. If both players are AI's and
-the AI speed is set to fastest, the games will proceed
-without prompting the user to hit escape to continue when a
-game is run. In this way the game can be set on demo mode.
+chosen by to start the game. Players One or Two may always
+go first, the Loser or Winner of the previous game may go
+first, the player who went second last game may go first
+this game (Successive), or a player may be chosen at Random
+to go first. The AI speed may also be adjusted to suit your
+needs. If both players are AI's and the AI speed is set to
+fastest, the games will proceed without prompting the user
+to hit escape to continue when a game is run. In this way
+the game can be set on demo mode. You can also play a set
+of best of games, the winner being the player who has won
+the most games of the set. On a setting of infinity there
+is no winner, you can play as many games as you want and no
+winner will be declared.
 
 ~The Game Options Dialog
-
-The game options dialog allows you to customize some of the
+The game options dialog allows you to customise some of the
 colours used in the game. The background colour can be set
 as either black or white, and the hilite colour can be
-selected from a list of colour alternatives.
+selected from a list of colour alternatives. The mouse usage
+can also be configured here. If you are uncomfortable using
+the mouse, you can set its use to None. The Partial option
+allows mouse usage only when making a move. The Full option
+allows the mouse to be used when making a move, and in the
+menu and dialogs.
 
-~Troubleshooting
+~Troubleshooting 
 
 ~I don't want to be YELLOW anymore.
 You can change your colour via the Player Options Dialog,
 which is accessed through the menu from the Player Menu.
-Should you wish to be the colour that you opponent has,
-see the next heading.
+Should you wish to be the colour that you opponent has, see
+the next heading.
 
 ~My opponent is RED and I want to be RED.
 You have two options, convince the other player to be
 another colour and then choose RED, or choose another
 colour. AI opponents can be very easily convinced, just
-change their colour.
+change their colour. 
 
 ~I want to play someone else.
 If you are currently playing a game, Call the menu and use
@@ -221,6 +250,12 @@ selecting the opponent (If you are player one, select player
 two and visa versa). Change the name to someone else, and
 press OK. Call the menu again and use Game->New.
 
+~I feel voyeuristic, I just want to watch (A demo, that is).
+You can press F6 to change the players to AI vs AI. The
+players, chosen at random, will play each other. You could
+also change the players to players of your choice via the
+menu.
+
 ~I want the loser to go first always.
 Call the menu, use Player->Options, and change the Goes
 First to loser.
@@ -228,33 +263,57 @@ First to loser.
 ~I don't know which move to make, help me decide!
 If you are unsure about which move to make, call the menu
 and use Game->Suggest Move. AI Genius will then move the
-token to the column in which it would make a move.
+token to the column in which it would make a move. You
+could also have pressed F5. 
 
-~I am too good, who else can I play?
-You can either play a harder AI, play a human, or wait for
-the next version which will have better AI's.
+~I want to play another person, is there a quick way to do
+~this?
+Yes, you can simply press F7 to change to Human vs Human.
 
 ~The sound is really bugging me, can I turn it off?
 The sound can be toggled by Game->Toggle Sound. The current
 status of the sound can be seen at the top right of the
 screen under the heading 'Sound'. If it is On, toggle the
-sound to off.
+sound to off. Pressing F8 also toggles the sound.
 
 ~Someone made the hilite RED, I prefer GREEN!
 The hilite colour can be changed via Game->Options. Change
 the hilite from RED to GREEN via the dialog which is
 presented.
 
-~The configuration is bad, I prefered the default one.
+~Some really strange things are happening!!
+The mouse may have been configured incorrectly. You can use
+Game->Options to turn the mouse usage to Partial or None.
+You could alternatively press F9 to have the mouse
+reconfigured when you next load the game.
+
+~Why can't I use the mouse?
+If a mouse driver is not installed, the mouse will be
+unusable. The mouse usage may be set on None, Change it to
+something else. Also your mouse configuration may be wrong,
+press F9, Quit and run the game again to configure it.
+
+~The configuration is really bad, I preferred the default
+~one.
 Simply delete the NINARO.CFG file which is in the game
-directory. When ninaro finds no configuration file,
-it creates a default one.
+directory. When Ninaro finds no configuration file, it
+creates a default one. An easier way to do this is to press
+CTRL-F9 while in the game.
+
+~This black screen is too dull, can I brighten it?
+Yes, you can. You can use Game->Options to change the
+Background color to white.
+
+~I want to print a screenshot, but there is too much black!
+You can use Game->Options to change the Background color to
+white. Make your screenshot (hit the Print Screen key under
+Windows (tm)), and then change it back to black.
 
 ~The computer is too slow, can I speed it up?
 If the computer is too slow, call the menu and use
 Player->Options. Change the AI speed to the desired setting.
 
-~The computer is too fast, can I slow it down?
+~The computer is too fast, can I slow it down? 
 If the computer is too fast, call the menu and use
 Player->Options. Change the AI speed to the desired setting.
 
@@ -263,58 +322,54 @@ This is probably because you win enough games to make it
 worthwhile. Make the game harder, refer to the paragraph
 below for more information. If this is still not a solution,
 then as the creator of this game I have won!!! Wait for the
-next version which will have harder opponents.
+next version which will have harder opponents. 
 
 ~I am totally undefeated, the game is no challenge.
-Try changing some of the following :-
+Try changing some of the following :- 
 Player->Options->Goes First as Loser
 Board->Custom->(Change the connect size). Higher levels of
-connection are harder to obtain.
+    connection are harder to obtain.
 Board->Custom->(Change the row or column size). Different
-boards can have different strategies.
+    boards can have different strategies. Change your
+    opponent, possibly to an AI.
 Play a human. Humans are better in some areas of strategy
-than AI's. Humans learn from their mistakes.
+    than AI's. Humans learn from their mistakes. 
 
-~Tutorial
-
+~Tutorial 
 An important concept about the game is that you need to be
 in a game to play. If you are in a game you can end it by
 using Game->End. This then gives you full access to all
-menu items(except End), meaning you can change both players.
-Once you are ready to start a game with the options you have
-selected, use Game->New.
+menu items (except End), meaning you can change both
+players. Once you are ready to start a game with the
+options you have selected, use Game->New. The F4 key can be
+used to move between these two states, F4 while in a game
+ends the game, F4 while not in a game starts the game. 
 
-~Typical Game.
-
+~Typical Game 
 Gavin and Ronda would like to play a game.  The game is
 currently configured as Player One vs AI Genius.  They are
 playing a game. Ronda calls up the menu by pressing ESC,
 uses Game->End. She then calls up the menu and uses
 Player->Two. She changes the player to Human and presses OK.
-She then calls up the menu and uses Game->New. The game is
-on.
-Orville walks into the room, and Ronda asks him to play
-for her. Gavin agrees. Orville looks at the screen, Gavin
-is GREEN and Ronda is Red. He says -'all the tokens are the
-same colour!!'. Gavin, realising that Orville is RED-GREEN
-colour blind, calls up the menu and uses Player->Two. He
-changes Orville's colour to ORANGE. The then proceeds as
-though nothing had happened. All the RED tokens are now
-ORANGE.
-Later on, Orville realises the reason he is losing is
-because Ronda was losing when he took over. He calls Gavin's
-attention to this, and the call up the menu and use
-Player->Reset Scores. The now have zero games each won, and
-can fairly play again. Gavin Wins a game. Orville, seeing
-where the connection had occurred, presses Cancel and they
-continue.
+She then calls up the menu and uses Game->New (She could
+have simply pressed F7). The game is on. Orville walks into
+the room, and Ronda asks him to play for her. Gavin agrees.
+Orville looks at the screen, Gavin is GREEN and Ronda is
+RED. He says -'all the tokens are the same colour!!'. Gavin,
+realising that Orville is RED-GREEN colour blind, calls up
+the menu and uses Player->Two. He changes Orville's colour
+to ORANGE. They then proceeds as though nothing had 
+happened. All the RED tokens are now ORANGE, but the game
+is still going. Later on, Orville realises the reason he is
+losing is because Ronda was losing when he took over. He
+calls Gavin's attention to this, and then calls up the menu
+and uses Player->Reset Scores. They now have zero games each
+won, and can fairly play again. Gavin Wins a game. Orville,
+seeing where the connection had occurred, presses ESC and
+they continue.
 
-~About Ninaro
+~About Ninaro 
+Ninaro was written by the author in 1998, as a
+university project.
 
-Ninaro was written by the author in 1998.
-
-
-________________________________________________________
---------------------------------------------------------
-
-
+~Ninaro User Manual Ninaro User Manual Ninaro User Manual

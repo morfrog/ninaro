@@ -58,12 +58,12 @@ About 9,600 lines in 45 files. The help text (`NINARO.HLP`) is plain text in whi
 
 The order of preference:
 
-1. **Unit tests from reading the C** (always). Test win detection on all 4 angles at board edges, `InsertTokenTarget`, `Continuance`, `MoveAll`, `WinPotential` arithmetic (integer division, as in C), `RandomMoveFromList` tie selection, and each rule level on small hand-made boards.
-2. **A golden-game harness** (recommended, local only). Compile `GRID.C`, `CONNECTN.C`, `PLAYER.C` and `RuleMove`/`RandomMoveFromList` (copied out of `NINARO.C`) with a modern C compiler, using a stub screen and a seeded copy of Watcom's `rand()`. Play thousands of seeded AI-vs-AI games on several board sizes, and write each move list to JSON under `WebApp/src/core/__golden__/`. The TS port must replay every one exactly.
-   No C compiler is installed now, so this needs one installed locally (clang, gcc or zig). The harness lives in `Tools/` and is not part of the web build. This plays the role DOCO played for VTTSP.
+1. **Unit tests from reading the C** (always). Test win detection on all 4 angles, `InsertTokenTarget`, `WinPotential` arithmetic (integer division, as in C), `RandomMoveFromList` tie selection, and each rule level's column scores on small hand-made boards.
+2. **The golden-game harness** (`Tools/golden/`, built and run locally only). `build.bat` uses Visual Studio's MSVC (found with `vswhere`; `/J` makes `char` unsigned, as in Watcom). It compiles the unchanged `Legacy/GRID.C`, `CONNECTN.C`, `PLAYER.C` and `BINFILE.C`. `extract.py` copies `RuleMove` and `RandomMoveFromList` word for word out of `NINARO.C`. `stubs.c` supplies the seeded Watcom `rand()`, the two byte helpers from `SYS.C`, and empty drawing calls.
+   It plays 1,600 seeded AI-vs-AI games: 8 boards × 5 × 5 AI levels × 8 seeds. It also loads `NINARO.TTL` with `GridLoadFull`, and writes everything to `WebApp/src/core/__golden__/games.json` (committed, about 300 KB, the same bytes on every run). This plays the role DOCO played for VTTSP.
 3. **Classic mode** (Phase 6). Play the original side by side to check layout, timing, colours and sounds.
 
-Watcom's `rand()` needs checking. It is believed to be `seed = seed*1103515245 + 12345; return (seed >> 16) & 0x7FFF`. Confirm it against the original in classic mode, or a Watcom runtime listing, before the golden files are made.
+Watcom's `rand()` is taken to be the ANSI C example generator (`next = next*1103515245 + 12345; return (next >> 16) & 0x7FFF`, starting at 1). The harness and the port share this, so the golden games don't depend on it. Confirm it against the original in classic mode in Phase 6.
 
 ## Fidelity notes found while reading
 
@@ -77,6 +77,24 @@ Keep the behaviour unless it's a crash, and list every change under "Changes fro
 - `AnimateMove` steps one column every `ai_speed*ai_delay/dist` ms. `ai_delay` is 500 ms, and `ai_speed` runs 0 (Fastest) to 4 (Slowest).
 - With two AIs at Fastest, `waitesc` is false, so games repeat with no prompt (demo mode). Browsers need a yield between games (`await sleep(0)`) to stay responsive.
 - F9 resets the mouse calibration. That has no meaning on the web, so drop it, along with the "Mouse Use: None/Partial/Full" sensitivity warning. Keep the option itself (Partial = mouse only during a move).
+
+## Known bugs (collected for Phase 7)
+
+Found while porting. Behaviour is kept unless noted.
+
+| # | Where | What happens | Port |
+|---|---|---|---|
+| 1 | `NINARO.C NewGame` | Loser goes first: `else SetP2Current;` is missing `()`, so with no previous winner and `Random(2)==1` the first player doesn't change. | Kept (Phase 3) |
+| 2 | `NINARO.C` `ResetGameSize` / `LoadGame` | The token starts at column `cols/2 + cols%2` (right of centre on odd boards), but at `cols/2` after loading a game. | Kept (Phase 3) |
+| 3 | `GRID.C NumsInDirection` | `istop` of -1 is documented as "infinity", but stops after 1 cell (`number >= -1`). Never called with -1. | Kept |
+| 4 | `CONNECTN.C InsertToken` | On a full column, `InsertTokenTarget` is -1 and `InsertTokenAtCR` reads `grid[col][-1]` (out of bounds). In practice this returned Failure. | Guarded: returns Failure |
+| 5 | `CONNECTN.C RemoveToken` | On an empty column it reads one past the end of the column. Only called on columns with tokens. | Guarded: returns null |
+| 6 | `BINFILE.C BinFileGetInt` | With 1–3 bytes left, the missing bytes come from an uninitialised buffer. | Missing bytes read as 0 |
+| 7 | `PLAYER.C PlayerGroupPlayer` | Only checks the upper bound, so a bad saved-game player number below 0 reads outside the array. | Returns null |
+| 8 | `GRID.C MoveAll` | Recounts `tokensingrid` without resetting it first, so the count doubles. Only `Continuance` calls it, and nothing calls that. | Not ported |
+| 9 | `CONNECTN.C UnBlockableWin` | Empty, with no return value. Never called. | Not ported |
+| 10 | `NINARO.C RuleMove` | Rule 3 checks the cell above the landing cell while the landing cell is still empty, so vertical lines through it are never counted. | Kept |
+| 11 | `NINARO.C BestOfResult` | "The Set is Drawn" is printed with an unused extra argument. | Harmless |
 
 ## Input mapping
 
@@ -97,8 +115,12 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
 
 0. **Scaffold and deploy.** ✅ Done. The placeholder page draws the empty 7×8 board at the original's position (`src/layout.ts`, a port of `ViewportFromViewport`, with tests). Copy the VTTSP setup: `vite.config.ts` (`base: '/ninaro/'`, `server.fs.allow: ['..']`), `tsconfig.json`, Vitest, and the `deploy-pages.yml` workflow (build → test → guard → deploy) with its guard step from the start. Add `.claude/launch.json` with dev on **5174** and preview on **4174**, so it can run beside VTTSP's servers.
    *Manual step:* repo Settings → Pages → Source = **GitHub Actions**.
-1. **Core logic.** `grid.ts`, `connect.ts`, `player.ts`, `random.ts` (Watcom `rand`, seeded and injectable), `binfile.ts` (big-endian reader for `NINARO.TTL`), `ai.ts` (`RuleMove`, `RandomMoveFromList`, the 5 levels). Unit tests as in Oracle 1. Comments name the C function each piece comes from.
-   *Optional:* the golden-game harness and its replay tests (Oracle 2).
+1. **Core logic.** ✅ Done. `src/core/`:
+   - `grid.ts` (`GRID.C`), `connect.ts` (`CONNECTN.C`, including `GameSave`/`GameLoad` as bytes), `player.ts`, `random.ts` (Watcom `rand`, seeded; `StartRandom`'s clock seed), `binfile.ts` (big-endian ints, Watcom's unsigned `char`).
+   - `ai.ts`: `ruleScores` (the column scores, which `RuleMove`'s `TESTING` build printed), `ruleMove`, and `randomMoveFromList`. The AI reads the game's `playgrid` and writes its `win`, as the C did.
+   - `Continuance`, `MoveAll`, `UnBlockableWin` and the `BINFILE` "encryption" were never used by the game, so they aren't ported.
+   - Tests: 63 in 7 files. The golden replay (`golden.test.ts`) matches all 1,600 games (moves, result and winning cells) and the title picture. Breaking a rule on purpose (for example, removing the take-a-win bonus) fails it.
+   - `Legacy/NINARO.HLP` is now the release's newer help (decision 2), with its About section redacted.
 2. **Renderer.** `palette.ts` (EGA indexes, `ResetPalette`, remapping), `screen.ts` (640×350 logical canvas with the device pixel ratio and 4:3 aspect, viewports, `_rectangle`/`_ellipse`/`_lineto` in pixel and window (`_w`) coordinates, fill masks for Suggest Move), `strokeFont.ts` (Hershey font with `_setcharsize`/`_setcharspacing`/`_settextalign`), `viewsys.ts` (windows, changed flags, hint text). Draw the board, discs, win highlight and player icons (`DisplayHuman`, `DisplayComputer`). *Check:* a static screen matching the layout table above.
 3. **Game loop.** The input queue and `sleep`, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", demo mode, `SuggestMove`, sound. *Check:* full games human vs AI and AI vs AI from the keyboard and the mouse, with the menu stubbed.
 4. **Menus, dialogs, help, title.** `textbox.ts`, `menu.ts` (4 menus as in `ProgInit`, enabling and disabling items as the C does), `dialog.ts`/`controls.ts` (Player, Custom Board with `GameSizeFit`, Player Options, Game Options), `help.ts` (scrolling, jump to heading, context help from menus and dialogs), the About box, and the title screen (TTL picture falling in, YELLOW cycling, "Hit Any Key To Continue...", the slide-off animation). Bundle `NINARO.HLP` and `NINARO.TTL` with `import.meta.glob(..., { query: '?raw' })`.
@@ -107,7 +129,7 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
    - **Classic mode, development only.** Copy VTTSP's `dev/classicPlugin.ts` and `classic.html`: js-dos 8.5.3 from jsDelivr, files from git-ignored `Temp/Source/connect4/pack` (`ninaro.exe`, `DOS4GW.EXE`, `ninaro.hlp`, `ninaro.ttl`), or from `NINARO_ORIGINAL_DIR`. Never built or deployed: the pack's `read.me` contains the author's name, and DOS4GW is third-party. The pack has no `MODERN.FON`, so `_setfont` may fail in DOSBox and the text may be missing or in a default font. Check this first.
    - **AI tournament page.** Seeded round-robin of the 5 AIs on 7×8×4 and 12×13×6 (and custom sizes), run in a worker, with a win/draw table and a seed you can change. It works as a check (Genius should beat Random almost always) and as a demo.
 
-7. **Known bugs review (after Phase 6 is committed).** List every known bug: the original's bugs kept by decision 4 below, plus any found during the port. Give each one its file and function, what happens, and a suggested fix. The user picks some or all of them, and those are fixed in a separate commit on top of the faithful port. Each fix is listed under "Changes from the original", and the golden-game tests are updated where a fix changes moves.
+7. **Known bugs review (after Phase 6 is committed).** List every known bug (the running list is under "Known bugs" above): the original's bugs kept by decision 4 below, plus any found during the port. Give each one its file and function, what happens, and a suggested fix. The user picks some or all of them, and those are fixed in a separate commit on top of the faithful port. Each fix is listed under "Changes from the original", and the golden-game tests are updated where a fix changes moves.
 
 ## Decisions (agreed 2026-11-08)
 
@@ -129,4 +151,10 @@ npm run dev       # local dev server (port 5174)
 npm test          # Vitest
 npm run build     # type-check + production build to dist/
 npm run preview   # serve dist/ (port 4174)
+```
+
+To regenerate the golden games after changing the harness (Windows, needs Visual Studio's C++ tools and Python):
+
+```bat
+Tools\golden\build.bat
 ```
