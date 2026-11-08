@@ -2,6 +2,8 @@
 // and help, as the original's main() ran them.
 
 import helpText from '../../Legacy/NINARO.HLP?raw';
+import { decodeConfig } from './data/config';
+import { CONFIG_KEY, SAVE_KEY, StoredFile } from './data/storage';
 import ttlUrl from '../../Legacy/NINARO.TTL?url';
 import { gameViewSys } from './game/display';
 import { Game } from './game/game';
@@ -23,6 +25,20 @@ input.attach(window, canvas, (x, y) => screen.toScreen(x, y));
 const game = new Game(state, screen.graph, vs, input);
 const ui = new NinaroUi(game, helpText);
 game.ui = ui;
+
+// NINARO.CFG and NINARO.SAV live in the browser's storage. LoadCfg: the
+// settings from last time, if there are any (ProgInit's defaults if not).
+game.configFile = new StoredFile(CONFIG_KEY);
+game.saveFile = new StoredFile(SAVE_KEY);
+const cfg = game.configFile.read();
+if (cfg) decodeConfig(cfg, game);
+
+// The original saved its settings when it quit; a page can be closed at any
+// time, so they are also saved whenever it is hidden or closed.
+window.addEventListener('pagehide', () => game.saveConfig());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') game.saveConfig();
+});
 
 // Browsers only allow sound after the player has pressed a key or clicked.
 for (const type of ['keydown', 'pointerdown'] as const) {
@@ -52,6 +68,7 @@ async function program(): Promise<void> {
 // Exit: the original saved its configuration and quit to DOS; here the
 // program starts again from the title screen.
 ui.onExit = async () => {
+  game.saveConfig();
   game.ingame = false;
   state.resetMessages();
   await program();

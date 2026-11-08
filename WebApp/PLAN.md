@@ -133,7 +133,7 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
 2. **Renderer.** ✅ Done. See "Phase 2 notes" below. Planned as: `palette.ts` (EGA indexes, `ResetPalette`, remapping), `screen.ts` (640×350 logical canvas with the device pixel ratio and 4:3 aspect, viewports, `_rectangle`/`_ellipse`/`_lineto` in pixel and window (`_w`) coordinates, fill masks for Suggest Move), `strokeFont.ts` (Hershey font with `_setcharsize`/`_setcharspacing`/`_settextalign`), `viewsys.ts` (windows, changed flags, hint text). Draw the board, discs, win highlight and player icons (`DisplayHuman`, `DisplayComputer`). *Check:* a static screen matching the layout table above.
 3. **Game loop.** ✅ Done. See "Phase 3 notes" below. Planned as: the input queue and `sleep`, `HumanMove`, `AnimateMove`, `DropToken`, `NewGame`/`EndGame`, goes-first rules, scores, best-of sets, draws, "Press ESC To Continue", demo mode, `SuggestMove`, sound. *Check:* full games human vs AI and AI vs AI from the keyboard and the mouse, with the menu stubbed.
 4. **Menus, dialogs, help, title.** ✅ Done. See "Phase 4 notes" below. Planned as: `textbox.ts`, `menu.ts` (4 menus as in `ProgInit`, enabling and disabling items as the C does), `dialog.ts`/`controls.ts` (Player, Custom Board with `GameSizeFit`, Player Options, Game Options), `help.ts` (scrolling, jump to heading, context help from menus and dialogs), the About box, and the title screen (TTL picture falling in, YELLOW cycling, "Hit Any Key To Continue...", the slide-off animation). Bundle `NINARO.HLP` and `NINARO.TTL` with `import.meta.glob(..., { query: '?raw' })`.
-5. **Storage.** `NINARO.CFG` becomes `localStorage['ninaro:v1:cfg']`, written on change and when leaving the page (`pagehide`). `NINARO.SAV` becomes `localStorage['ninaro:v1:save']`. Every access is guarded. Ctrl-F9 (delete config) is kept. *Optional:* import or export the original binary `.CFG`/`.SAV` files with the big-endian `BINFILE` layout.
+5. **Storage.** ✅ Done. See "Phase 5 notes" below. Planned as: `NINARO.CFG` becomes `localStorage['ninaro:v1:cfg']`, written on change and when leaving the page (`pagehide`). `NINARO.SAV` becomes `localStorage['ninaro:v1:save']`. Every access is guarded. Ctrl-F9 (delete config) is kept. *Optional:* import or export the original binary `.CFG`/`.SAV` files with the big-endian `BINFILE` layout.
 6. **Extras.**
    - **Classic mode, development only.** ✅ Done early, in Phase 2 (see its notes). Copy VTTSP's `dev/classicPlugin.ts` and `classic.html`: js-dos 8.5.3 from jsDelivr, files from git-ignored `Temp/Source/connect4/pack` (`ninaro.exe`, `DOS4GW.EXE`, `ninaro.hlp`, `ninaro.ttl`), or from `NINARO_ORIGINAL_DIR`. Never built or deployed: the pack's `read.me` contains the author's name, and DOS4GW is third-party. The pack has no `MODERN.FON`, so `_setfont` may fail in DOSBox and the text may be missing or in a default font. Check this first.
    - **AI tournament page.** Seeded round-robin of the 5 AIs on 7×8×4 and 12×13×6 (and custom sizes), run in a worker, with a win/draw table and a seed you can change. It works as a check (Genius should beat Random almost always) and as a demo.
@@ -204,6 +204,20 @@ Each phase ends as before: tests green, `npm run build` clean, commit on a `weba
   - **Resizing:** the window can be resized with a menu, dialog or help open; it is redrawn.
   - **Help line endings:** git stores `NINARO.HLP` with LF line endings, so the help reader turns them back into CR LF first.
 - **Tests:** 144 in 17 files.
+
+### Phase 5 notes
+
+- **`data/config.ts`:** `SaveCfg`/`LoadCfg` in the original's 100-byte `NINARO.CFG` layout (big-endian ints). The release's own file reads correctly (a test uses its values). Mouse calibration isn't kept (`mouseconfig` 0), and the copy slot is rebuilt when both players were the same AI, as `LoadCfg` did.
+- **`data/storage.ts`:** each file's bytes are kept base64-encoded in `localStorage`: `ninaro:v1:cfg` and `ninaro:v1:save`. Every access is guarded; with storage blocked or full the game plays the same and forgets.
+- **When it is saved:**
+  - **Settings:** read at start-up, as `ProgInit` did. They are written on Exit, as the original did, and also whenever the page is hidden or closed (`pagehide`, `visibilitychange`), since a tab can be closed at any time.
+  - **Ctrl-F9:** removes them and stops them being written again for the rest of the visit (`savecfg = FALSE`).
+  - **F2 / Game > Save:** writes the one saved game, or says "~Save Error!" if it can't be kept. F3 / Game > Load reads it back.
+- **Checked in the browser:** a 12×13×6 board and "went first" survived a reload, F3 brought back a saved token (entry token at `cols / 2`, bug 2), and Ctrl-F9 left nothing stored.
+- **Changes from the original:**
+  - **Damaged files:** a damaged `.CFG` is ignored (the defaults stand), and a damaged `.SAV` gives "~Load Error!". The original read whatever was there.
+  - **Original files:** importing or exporting the original's `.CFG`/`.SAV` files (the plan's optional extra) isn't done. The stored bytes use the same layout, so it could be added.
+- **Tests:** 156 in 19 files.
 
 ## Decisions (agreed 2026-11-08)
 

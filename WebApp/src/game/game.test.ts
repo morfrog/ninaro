@@ -190,6 +190,30 @@ describe('save and load (F2, F3)', () => {
     game.loadGame();
     expect(state.msgbox.line(state.msgbox.size)).toBe('~Load Error!');
   });
+
+  it("says Load Error for a damaged save, and Save Error when it can't be kept", () => {
+    const { game, state } = makeGame();
+    game.start(1);
+    game.saveFile = { read: () => new Uint8Array([0, 0, 0, 9, 1, 2, 3]), write: () => false, remove: () => {} };
+    game.loadGame();
+    expect(state.msgbox.line(state.msgbox.size)).toBe('~Load Error!');
+    game.saveGame();
+    expect(state.msgbox.line(state.msgbox.size)).toBe('~Save Error!');
+  });
+
+  it('Ctrl-F9 removes the configuration and stops it being saved again', async () => {
+    const { game, state } = makeGame();
+    let removed = false;
+    let writes = 0;
+    game.configFile = { read: () => null, write: () => (writes++, true), remove: () => void (removed = true) };
+    game.saveConfig();
+    expect(writes).toBe(1);
+    await game.extraFunctionality(256 + 102); // Ctrl-F9
+    expect(removed).toBe(true);
+    expect(state.msgbox.line(state.msgbox.size)).toBe('Config Removed...');
+    game.saveConfig();
+    expect(writes).toBe(1);
+  });
 });
 
 describe('the pointer', () => {

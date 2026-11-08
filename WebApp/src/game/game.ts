@@ -15,6 +15,7 @@ import { Input, LMB, NMB, RMB, sleep } from '../input/input';
 import {
   AF4, BKSP, CF9, CQ, CX, ENTER, ESC, F1, F10, F2, F3, F4, F5, F6, F7, F8, F9, KP2, KP4, KP6, KP8, KeyGroup, KeySys,
 } from '../input/keys';
+import { encodeConfig } from '../data/config';
 import type { Graph } from '../render/graph';
 import { Display, type ViewSys } from '../render/viewsys';
 import { GameWindow } from './display';
@@ -43,6 +44,41 @@ export const NO_UI: GameUi = {
   exit: async () => {},
 };
 
+/** A file the game keeps (NINARO.SAV, NINARO.CFG). */
+export interface SavedFile {
+  read(): Uint8Array | null;
+  write(bytes: Uint8Array): boolean;
+  remove(): void;
+}
+
+/** A file kept only while the page is open. */
+export function memoryFile(): SavedFile {
+  let data: Uint8Array | null = null;
+  return {
+    read: () => data,
+    write: (bytes) => ((data = bytes.slice()), true),
+    remove: () => void (data = null),
+  };
+}
+
+/**
+ * Whether bytes look like a NINARO.SAV this game can load (the original
+ * trusted the file; a damaged one would have crashed it).
+ */
+export function validSave(bytes: Uint8Array): boolean {
+  if (bytes.length < 24) return false;
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const [p1, p2, current, size, width, height] = [0, 1, 2, 3, 4, 5].map((i) => v.getInt32(i * 4));
+  const slot = (n: number) => n >= 0 && n <= 7;
+  if (!slot(p1) || !slot(p2) || (current !== p1 && current !== p2)) return false;
+  if (width < 3 || width > 50 || height < 3 || height > 50 || size < 3 || size > Math.max(width, height)) return false;
+  if (bytes.length < 24 + width * height * 4) return false;
+  for (let i = 0; i < width * height; i++) {
+    if (!slot(v.getInt32(24 + i * 4) - 1) && v.getInt32(24 + i * 4) !== 0) return false;
+  }
+  return true;
+}
+
 /** Hatching meant for Suggest Move's token (SuggestMove's new_mask); never seen in the original. */
 const SUGGEST_MASK = [0xa2, 0x15, 0xa2, 0x10, 0xa2, 0x10, 0xa2, 0x15];
 
@@ -56,8 +92,12 @@ export class Game {
   ingame = false;
   /** 0 none, 1 partial (moves only), 2 full (menus and dialogs too). */
   mouseUsage = 2;
-  /** The saved game (NINARO.SAV); kept in storage from phase 5. */
-  saved: Uint8Array | null = null;
+  /** NINARO.SAV: the one saved game. In memory unless main() gives it storage. */
+  saveFile: SavedFile = memoryFile();
+  /** NINARO.CFG: the settings, written by saveConfig(). */
+  configFile: SavedFile = memoryFile();
+  /** savecfg: false after Ctrl-F9 removes the configuration, so it isn't written again. */
+  saveCfg = true;
   ui: GameUi = NO_UI;
   /** Stops run() (for tests). */
   stopped = false;
@@ -502,18 +542,24 @@ export class Game {
   /** SaveGame (F2) */
   saveGame(): void {
     const s = this.state;
-    this.saved = gameSave(s.playerOne, s.playerTwo, s.playerCurrent, s.win.tokens, s.playgrid, s.players);
-    s.msgbox.fixedAddLine('Game Saved');
+    const bytes = gameSave(s.playerOne, s.playerTwo, s.playerCurrent, s.win.tokens, s.playgrid, s.players);
+    s.msgbox.fixedAddLine(this.saveFile.write(bytes) ? 'Game Saved' : '~Save Error!');
+  }
+
+  /** SaveCfg, unless Ctrl-F9 removed the configuration (ExitGame's `if (savecfg)`). */
+  saveConfig(): void {
+    if (this.saveCfg) this.configFile.write(encodeConfig(this));
   }
 
   /** LoadGame (F3) */
   loadGame(): void {
     const s = this.state;
-    if (!this.saved) {
+    const bytes = this.saveFile.read();
+    const loaded = bytes && validSave(bytes) ? gameLoad(bytes, s.players) : null;
+    if (!loaded) {
       s.msgbox.fixedAddLine('~Load Error!');
       return;
     }
-    const loaded = gameLoad(this.saved, s.players);
     s.gridCols = loaded.grid.cols();
     s.keypos = Math.trunc(s.gridCols / 2); // not ResetGameSize's position (known bug 2)
     s.gridRows = loaded.grid.rows();
@@ -621,6 +667,8 @@ export class Game {
       case F9: // reset the mouse calibration: nothing to calibrate on the web
         break;
       case CF9:
+        this.configFile.remove();
+        this.saveCfg = false;
         this.state.msgbox.fixedAddLine('Config Removed...');
         this.vs.windowChanged(GameWindow.msgBox, true);
         this.vs.display(Display.DisplayChanged);
