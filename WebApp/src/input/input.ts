@@ -87,7 +87,7 @@ export class Input {
     if (!t) return;
     t.x = x;
     t.y = y;
-    if (t.tracked && Math.hypot(x - t.startX, y - t.startY) > TAP_SLOP) t.dragging = true;
+    if (Math.hypot(x - t.startX, y - t.startY) > TAP_SLOP) t.dragging = true;
     this.wake();
   }
 
@@ -106,6 +106,12 @@ export class Input {
   /** The finger has dropped its token: the same press drops no more. */
   spendTouch(): void {
     if (this.touch) this.touch.spent = true;
+  }
+
+  /** Forgets a click released so far and any press in progress, so neither acts on a turn that has only just begun. */
+  forgetPresses(): void {
+    this.lmb = false;
+    this.spendTouch();
   }
 
   /** Scroll by this many lines (down if positive). */

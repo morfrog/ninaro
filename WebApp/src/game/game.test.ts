@@ -328,7 +328,41 @@ describe('the pointer', () => {
     input.touchMove(x(5), 300);
     await tick();
     expect(state.keypos).toBe(3);
-    expect(input.touchUp()).toBe(false); // not a tracked drag, so the release is a tap
+    expect(input.touchUp()).toBe(true); // dragged, so the release is not a tap
+    game.stopped = true;
+    input.pushKey(0);
+    await run;
+  });
+
+  it('repeated sideways drags in the bottom third neither move nor drop the token', async () => {
+    const { game, state, input } = makeGame();
+    game.start(1);
+    const run = game.run();
+    const x = (col: number) => Math.round(((col + 0.5) * 384) / 7);
+    for (const [from, to] of [[1, 5], [5, 1], [1, 5], [5, 1]]) {
+      input.touchDown(x(from), 300);
+      input.touchMove(x(to), 300);
+      await tick();
+      expect(input.touchUp()).toBe(true);
+      await tick();
+    }
+    expect(state.keypos).toBe(3);
+    expect(state.playgrid.inCol(3)).toBe(0);
+    game.stopped = true;
+    input.pushKey(0);
+    await run;
+  });
+
+  it('a press that began before the turn does not drop the token when the turn starts', async () => {
+    const { game, state, input } = makeGame();
+    game.start(1);
+    const x = (col: number) => Math.round(((col + 0.5) * 384) / 7);
+    input.touchDown(x(1), 150);
+    input.touchMove(x(1), 230); // dragged down before player two's turn began
+    const run = game.run();
+    await tick();
+    await tick();
+    expect(state.playgrid.inCol(3)).toBe(0);
     game.stopped = true;
     input.pushKey(0);
     await run;

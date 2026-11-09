@@ -579,6 +579,8 @@ export class Game {
    */
   async humanMove(useMouse: boolean): Promise<number> {
     const s = this.state;
+    // A click or press made during the other player's (or the AI's) turn does not drop this player's token.
+    this.input.forgetPresses();
     // The point the finger's drop is measured from: where it went down, or where it last moved the token.
     let anchor: { x: number; y: number } | null = null;
     for (;;) {
