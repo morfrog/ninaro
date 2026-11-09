@@ -119,7 +119,7 @@ const INFO_WINDOWS = [
 export interface ViewState {
   /** Fullscreen is on and no menu, dialog or help is open over it. */
   cropped: boolean;
-  /** The View option chosen. */
+  /** Fullscreen is chosen and the game screen is showing (not the title). */
   fullscreen: boolean;
   /** "cols x rows @ connect", as the status box shows them. */
   readout: string;
@@ -226,7 +226,7 @@ export class Game {
     const s = this.state;
     this.onView({
       cropped: this.cropped,
-      fullscreen: this.viewMode === 'fullscreen',
+      fullscreen: this.viewMode === 'fullscreen' && this.screenOn,
       readout: `${s.gridCols}x${s.gridRows}@${s.win.tokens}`,
     });
   }

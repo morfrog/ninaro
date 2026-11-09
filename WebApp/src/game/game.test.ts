@@ -361,7 +361,7 @@ describe('the View option', () => {
     game.setScreenOn(false);
     game.setViewMode('fullscreen');
     expect(active.every(Boolean)).toBe(true);
-    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: true, readout: '7x8@4' });
+    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4' });
     game.setScreenOn(true);
     expect(active[INFO[0]]).toBe(false);
   });

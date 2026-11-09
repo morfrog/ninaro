@@ -67,7 +67,7 @@ a {
   gap: 8px;
 }
 
-/* View and Display sit at the right, unless the title is showing before them. */
+/* The title and View share the space after Help, so the title is centred in it. */
 .toolbar__view {
   margin-left: auto;
 }
@@ -78,10 +78,6 @@ a {
   gap: 8px;
   margin-left: auto;
   font-weight: bold;
-}
-
-.toolbar__title:not([hidden]) + .toolbar__view {
-  margin-left: 0;
 }
 
 .toolbar__name {
