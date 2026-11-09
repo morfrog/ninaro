@@ -1,66 +1,81 @@
-// Monochrome display (the Display option's second mode): the screen is drawn
-// in the background colour and three greens. The game's sixteen colours
-// cannot all be told apart by shade alone, so each one gets a "look": a
-// green tone and a hatch, out of sixteen distinct looks. The colours are
+// Monochrome display (the Display option's second mode): black stays the
+// background, and every other colour is drawn in combinations of three
+// greens (dark, mid and bright), with hatching where two greens meet. The
+// game's fifteen colours cannot all be told apart by shade alone, so each
+// gets a "look": one of fifteen distinct green combinations. The colours are
 // ranked by how far each is from the background, so the ones nearest the
-// background get the sparsest hatching and the ones furthest from it the
-// solid greens. No two colours share a look, so the players stay apart.
+// background get the darkest look and the ones furthest the brightest. No two
+// colours share a look, so the players stay apart.
 
 import { toCss } from './palette';
 
-/** Background, then dark, mid and bright green (the tones of a look). */
+/** Dark, mid and bright green. */
 export const MONO_GREENS = ['#006400', '#00b000', '#66ff66'] as const;
 
-/** One of the sixteen looks: a tone (0 = background) and an 8 x 8 hatch. */
+/** Which green a look uses: 0 is the background, 1..3 index MONO_GREENS. */
+export type MonoTone = 0 | 1 | 2 | 3;
+
+/**
+ * One of the sixteen looks. Each pixel of its 8 x 8 tile is colour `a` where
+ * the hatch is set and colour `b` where it is clear. Tone 0 is the background.
+ */
 export interface MonoLook {
-  /** 0 is the background; 1..3 index MONO_GREENS. */
-  tone: 0 | 1 | 2 | 3;
-  /** Eight rows, top first, bit 7 leftmost; a set bit is ink. */
+  a: MonoTone;
+  b: MonoTone;
+  /** Eight rows, top first, bit 7 leftmost; a set bit is `a`. */
   mask: readonly number[];
 }
 
 /** Builds an 8 x 8 hatch from a rule for each cell (x and y in 0..7). */
-function hatch(ink: (x: number, y: number) => boolean): number[] {
+function hatch(on: (x: number, y: number) => boolean): number[] {
   return Array.from({ length: 8 }, (_, y) => {
     let row = 0;
-    for (let x = 0; x < 8; x++) if (ink(x, y)) row |= 0x80 >> x;
+    for (let x = 0; x < 8; x++) if (on(x, y)) row |= 0x80 >> x;
     return row;
   });
 }
 
 const SOLID = hatch(() => true);
-const DOTS_1_16 = hatch((x, y) => x % 4 === 0 && y % 4 === 0);
-const DOTS_1_4 = hatch((x, y) => x % 2 === 0 && y % 2 === 0);
-const ROWS_1_4 = hatch((_, y) => y % 4 === 0);
-const ROWS_1_2 = hatch((_, y) => y % 2 === 0);
-const COLUMNS_1_2 = hatch((x) => x % 2 === 0);
+/** Half the pixels, in alternate rows: an even mix of two greens. */
+const ROWS = hatch((_, y) => y % 2 === 0);
+/** Half the pixels, in a checkerboard: an even mix of two greens. */
 const CHECKER = hatch((x, y) => (x + y) % 2 === 0);
-const DIAGONAL = hatch((x, y) => (x + y) % 8 === 0);
-const DIAGONAL_BACK = hatch((x, y) => (x + 8 - y) % 8 === 0);
+/** Three quarters `a`, with `b` showing through as a dot on every second row and column. */
+const MOSTLY = hatch((x, y) => !(x % 2 === 0 && y % 2 === 0));
+
+const D = 1;
+const M = 2;
+const B = 3;
 
 /**
- * The sixteen looks, from the sparsest to the densest. Dark greens come
- * first, then mid, then bright; the hatches within a tone run from sparse to
- * dense.
+ * The sixteen looks, from the darkest to the brightest: the background, then
+ * fifteen combinations of the three greens. Solids come as the single green;
+ * a mix of two greens is either even (checkerboard or rows) or mostly one
+ * green with the other as dots.
  */
 export const MONO_LOOKS: readonly MonoLook[] = [
-  { tone: 0, mask: SOLID }, // the background itself
-  { tone: 1, mask: DOTS_1_16 },
-  { tone: 1, mask: DOTS_1_4 },
-  { tone: 1, mask: ROWS_1_4 },
-  { tone: 1, mask: DIAGONAL },
-  { tone: 1, mask: CHECKER },
-  { tone: 1, mask: SOLID },
-  { tone: 2, mask: DOTS_1_16 },
-  { tone: 2, mask: COLUMNS_1_2 },
-  { tone: 2, mask: DIAGONAL_BACK },
-  { tone: 2, mask: ROWS_1_2 },
-  { tone: 2, mask: CHECKER },
-  { tone: 2, mask: SOLID },
-  { tone: 3, mask: DOTS_1_4 },
-  { tone: 3, mask: ROWS_1_2 },
-  { tone: 3, mask: SOLID },
+  { a: 0, b: 0, mask: SOLID }, // the background itself
+  { a: D, b: D, mask: SOLID },
+  { a: D, b: M, mask: MOSTLY },
+  { a: D, b: B, mask: MOSTLY },
+  { a: D, b: M, mask: CHECKER },
+  { a: D, b: M, mask: ROWS },
+  { a: M, b: D, mask: MOSTLY },
+  { a: D, b: B, mask: CHECKER },
+  { a: D, b: B, mask: ROWS },
+  { a: M, b: M, mask: SOLID },
+  { a: M, b: B, mask: MOSTLY },
+  { a: B, b: D, mask: MOSTLY },
+  { a: M, b: B, mask: CHECKER },
+  { a: M, b: B, mask: ROWS },
+  { a: B, b: M, mask: MOSTLY },
+  { a: B, b: B, mask: SOLID },
 ];
+
+/** Whether a look is the background (black, on the default screen). */
+export function isBackgroundLook(look: MonoLook): boolean {
+  return look.a === 0 && look.b === 0;
+}
 
 /** Rec. 601 luma of a 0x00BBGGRR palette value, 0..255. */
 function luma(value: number): number {
@@ -86,17 +101,26 @@ export function monoLookIndices(values: readonly number[]): number[] {
   return index;
 }
 
-/** The ink colour of a look: its green, or the background for the background look. */
+/** The colour of a tone: the background colour for tone 0, else its green. */
+export function monoToneCss(tone: MonoTone, backgroundCss: string): string {
+  return tone === 0 ? backgroundCss : MONO_GREENS[tone - 1];
+}
+
+/**
+ * A single colour for a look, for fills that need one (such as the suggest
+ * hatch): the look's `a` green.
+ */
 export function monoInkCss(look: MonoLook, backgroundCss: string): string {
-  return look.tone === 0 ? backgroundCss : MONO_GREENS[look.tone - 1];
+  return monoToneCss(look.a, backgroundCss);
 }
 
 /** The 64 pixels of a look's tile, as CSS colours (row by row, left to right). */
 export function monoTilePixels(look: MonoLook, backgroundCss: string): string[] {
-  const ink = monoInkCss(look, backgroundCss);
+  const a = monoToneCss(look.a, backgroundCss);
+  const b = monoToneCss(look.b, backgroundCss);
   const pixels: string[] = [];
   for (let y = 0; y < 8; y++) {
-    for (let x = 0; x < 8; x++) pixels.push(look.mask[y] & (0x80 >> x) ? ink : backgroundCss);
+    for (let x = 0; x < 8; x++) pixels.push(look.mask[y] & (0x80 >> x) ? a : b);
   }
   return pixels;
 }

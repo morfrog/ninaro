@@ -19,7 +19,7 @@
 
 import type { DisplayMode } from './displayMode';
 import { HERSHEY_SIMPLEX } from './hersheyFont';
-import { MONO_LOOKS, monoInkCss, monoLookIndices, monoTilePixels, type MonoLook } from './displayStyle';
+import { MONO_LOOKS, isBackgroundLook, monoInkCss, monoLookIndices, monoTilePixels, type MonoLook } from './displayStyle';
 import type { Palette } from './palette';
 
 export const SCREEN_WIDTH = 640;
@@ -117,7 +117,7 @@ export class Graph {
     if (this.display !== 'mono') return this.palette.css(slot);
     const bg = this.palette.css(0);
     const look = this.monoLook(slot);
-    if (look.tone === 0) return bg;
+    if (isBackgroundLook(look)) return bg;
     const key = `${MONO_LOOKS.indexOf(look)}|${bg}`;
     const cached = this.patterns.get(key);
     if (cached) return cached;
