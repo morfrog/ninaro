@@ -19,6 +19,8 @@ export class TextBox {
   private items: string[] = [];
   /** Index in items of the first line shown. */
   private start = 0;
+  /** Called with each line as it is added (not for lines changed in place). */
+  onAdd: ((line: string) => void) | null = null;
 
   /** TextBoxNew */
   constructor(
@@ -46,8 +48,10 @@ export class TextBox {
   fixedAddLine(s: string): boolean {
     if (this.size < this.lines) return this.addLine(s, ATEND);
     // The C wrote into the head node, then moved head and start on one.
-    this.items.push(this.clip(s));
+    const line = this.clip(s);
+    this.items.push(line);
     this.items.shift();
+    this.onAdd?.(line);
     return true;
   }
 
@@ -56,6 +60,12 @@ export class TextBox {
    * end. False if afterLine was past the end (it is then added at the end).
    */
   addLine(s: string, afterLine: number): boolean {
+    const ok = this.insertLine(s, afterLine);
+    this.onAdd?.(this.clip(s));
+    return ok;
+  }
+
+  private insertLine(s: string, afterLine: number): boolean {
     const line = this.clip(s);
     if (this.size === 0) {
       this.items = [line];

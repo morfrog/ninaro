@@ -13,6 +13,17 @@
         <a href="https://morfrog.github.io/" class="btn btn--link" id="home-link">Home</a>
         <button type="button" id="menu-button" class="btn">Menu</button>
         <button type="button" id="help-button" class="btn">Help</button>
+        <span class="toolbar__title" id="board-title" hidden>
+          <span class="toolbar__name">Ninaro</span>
+          <span id="board-readout"></span>
+        </span>
+        <label class="toolbar__view">
+          View
+          <select id="view-mode" class="btn btn--select">
+            <option value="normal">Normal</option>
+            <option value="fullscreen">Fullscreen</option>
+          </select>
+        </label>
         <label class="toolbar__display">
           Display
           <select id="display-mode" class="btn btn--select">
@@ -22,7 +33,9 @@
           </select>
         </label>
       </div>
-      <canvas id="screen" class="screen" width="640" height="350" role="img" aria-label="Ninaro screen"></canvas>
+      <div class="screen-frame" id="screen-frame">
+        <canvas id="screen" class="screen" width="640" height="350" role="img" aria-label="Ninaro screen"></canvas>
+      </div>
       <p class="note">
         Player one: A and D move, S or E drops, W or Q opens the menu. Player two: the arrow keys, Enter drops,
         Backspace opens the menu. Or click (tap) a column. Esc or M: menu. F1 or H: help.

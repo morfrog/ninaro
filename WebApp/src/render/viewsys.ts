@@ -24,6 +24,8 @@ export class ViewSys {
   readonly main: Viewport;
   readonly windows: ViewWindow[] = [];
   readonly current: MemPage;
+  /** Runs after each display, on top of the screen as drawn (not part of the saved screen). */
+  afterDisplay: (() => void) | null = null;
   private changedCount = 0;
 
   /** ViewSysNew */
@@ -61,6 +63,13 @@ export class ViewSys {
    * DisplayCurrent restores the saved screen. Returns false for NoDisplay.
    */
   display(mode: Display): boolean {
+    const drawn = this.draw(mode);
+    // After the saved screen is taken, so what it draws is not kept in it.
+    if (drawn) this.afterDisplay?.();
+    return drawn;
+  }
+
+  private draw(mode: Display): boolean {
     switch (mode) {
       case Display.DisplayAll:
         this.background(this.main);
@@ -75,7 +84,7 @@ export class ViewSys {
         this.current.get();
         return true;
       case Display.DisplayChanged:
-        if (!this.current.valid) return this.display(Display.DisplayAll);
+        if (!this.current.valid) return this.draw(Display.DisplayAll);
         this.current.put();
         if (this.changedCount > 0) {
           for (const w of this.windows) {
@@ -91,7 +100,7 @@ export class ViewSys {
         }
         return true;
       case Display.DisplayCurrent:
-        if (!this.current.valid) return this.display(Display.DisplayAll);
+        if (!this.current.valid) return this.draw(Display.DisplayAll);
         this.current.put();
         return true;
       default:

@@ -334,3 +334,62 @@ describe('the falling token', () => {
     expect(state.playgrid.statusOfCR(3, state.playgrid.height - 1)).not.toBeNull();
   });
 });
+
+describe('the View option', () => {
+  /** A game whose windows record whether they are active, as ViewSys does. */
+  function viewGame() {
+    const state = new GameState();
+    const active = Array.from({ length: 11 }, () => true);
+    const views: { cropped: boolean; fullscreen: boolean; readout: string }[] = [];
+    const vs = {
+      windows: active.map(() => ({ vp: viewportFromViewport({ x1: 0, y1: 0, x2: 1, y2: 1 }, SCREEN) })),
+      display: () => true,
+      windowChanged: () => {},
+      windowActivate: (i: number, on: boolean) => void (active[i] = on),
+    } as unknown as ViewSys;
+    const g = { getFillMask: () => null, setFillMask: () => {} } as unknown as Graph;
+    const game = new Game(state, g, vs, new Input());
+    game.onView = (v) => views.push(v);
+    game.setScreenOn(true);
+    return { game, active, views };
+  }
+
+  const INFO = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  it('never crops the title screen', () => {
+    const { game, active, views } = viewGame();
+    game.setScreenOn(false);
+    game.setViewMode('fullscreen');
+    expect(active.every(Boolean)).toBe(true);
+    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: true, readout: '7x8@4' });
+    game.setScreenOn(true);
+    expect(active[INFO[0]]).toBe(false);
+  });
+
+  it('leaves out the info windows in Fullscreen, and shows them in Normal', () => {
+    const { game, active, views } = viewGame();
+    game.setViewMode('fullscreen');
+    expect(active.slice(0, 2)).toEqual([true, true]);
+    for (const i of INFO) expect(active[i]).toBe(false);
+    expect(views.at(-1)).toEqual({ cropped: true, fullscreen: true, readout: '7x8@4' });
+
+    game.setViewMode('normal');
+    expect(active.every(Boolean)).toBe(true);
+    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4' });
+  });
+
+  it('gives the whole screen back while a menu or dialog is open', async () => {
+    const { game, active } = viewGame();
+    game.setViewMode('fullscreen');
+    let during: boolean[] = [];
+    await game.withOverlay(
+      () => {},
+      async () => {
+        during = active.slice();
+      },
+    );
+    expect(during.every(Boolean)).toBe(true);
+    expect(game.cropped).toBe(true);
+    expect(active[INFO[0]]).toBe(false);
+  });
+});

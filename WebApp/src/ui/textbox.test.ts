@@ -75,3 +75,24 @@ describe('TextBox', () => {
     expect(tb.scrollLine(4)).toBe(false);
   });
 });
+
+describe('TextBox onAdd', () => {
+  it('reports each added line once, including when the box is full', () => {
+    const tb = box(2);
+    const seen: string[] = [];
+    tb.onAdd = (line) => seen.push(line);
+    tb.fixedAddLine('a');
+    tb.fixedAddLine('b');
+    tb.fixedAddLine('c');
+    tb.addLine('d', ATEND);
+    expect(seen).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('reports the line as it is kept (cut to the width)', () => {
+    const tb = box(2, 4);
+    const seen: string[] = [];
+    tb.onAdd = (line) => seen.push(line);
+    tb.fixedAddLine('Successive');
+    expect(seen).toEqual(['Succ']);
+  });
+});

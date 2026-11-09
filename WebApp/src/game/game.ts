@@ -17,8 +17,11 @@ import {
 } from '../input/keys';
 import { encodeConfig } from '../data/config';
 import type { Graph } from '../render/graph';
+import type { ViewMode } from '../render/viewMode';
 import { Display, type ViewSys } from '../render/viewsys';
 import { GameWindow } from './display';
+import { FLASH_FRAME_MS, LogFlash, drawLogFlash } from './logFlash';
+import { Color } from '../render/palette';
 import { GoesFirst, PLAYER_SLOTS, type GameState } from './state';
 
 /** What the game needs from the menus, dialogs, help and title (phase 4). */
@@ -96,6 +99,32 @@ const HUMAN_DROP_MS = 1000;
 /** Pause between frames of a falling token. */
 const FRAME_MS = 16;
 
+/**
+ * The windows Fullscreen leaves out: everything at the right, where the
+ * information is. The entry row and the board stay.
+ */
+const INFO_WINDOWS = [
+  GameWindow.gameName,
+  GameWindow.msgBox,
+  GameWindow.statusBox,
+  GameWindow.p1Type,
+  GameWindow.p1Name,
+  GameWindow.p1Score,
+  GameWindow.p2Type,
+  GameWindow.p2Name,
+  GameWindow.p2Score,
+] as const;
+
+/** What the page shows of the view: whether the screen is cropped to the board, and the board's size. */
+export interface ViewState {
+  /** Fullscreen is on and no menu, dialog or help is open over it. */
+  cropped: boolean;
+  /** The View option chosen. */
+  fullscreen: boolean;
+  /** "cols x rows @ connect", as the status box shows them. */
+  readout: string;
+}
+
 export class Game {
   readonly rng = new WatcomRandom();
   /** The AIs' rules: the fixed ones, or RULES_1998 to play exactly as the original. */
@@ -121,6 +150,16 @@ export class Game {
   stopped = false;
   /** Redraws whatever is open over the game screen (menu, dialog, help), after a resize. */
   readonly overlays: (() => void)[] = [];
+  /** The View option. */
+  private viewMode: ViewMode = 'normal';
+  /** Whether the game screen is showing (not the title screen). */
+  private screenOn = false;
+  /** Told whenever the view changes, and after each redraw, so the page can follow. */
+  onView: (view: ViewState) => void = () => {};
+  private readonly flash = new LogFlash();
+  private flashTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Whether the info windows are currently left out. */
+  private infoHidden = false;
 
   constructor(
     readonly state: GameState,
@@ -134,16 +173,101 @@ export class Game {
     this.ks.iFunc(3, () => this.keyDown());
     this.ks.iFunc(4, () => this.keyDown()); // KeySelect
     this.ks.iFunc(5, () => this.keyUp()); // KeyCancel
+    vs.afterDisplay = () => this.afterDraw();
+    state.msgbox.onAdd = (line) => this.logAdded(line);
   }
 
-  /** Runs a menu, dialog or help call with `redraw` as its overlay. */
+  /** Runs a menu, dialog or help call with `redraw` as its overlay. Menus need the whole screen, so Fullscreen is set aside while one is open. */
   async withOverlay<T>(redraw: () => void, call: () => Promise<T>): Promise<T> {
     this.overlays.push(redraw);
+    this.applyView();
     try {
       return await call();
     } finally {
       this.overlays.pop();
+      this.applyView();
     }
+  }
+
+  // ---- The View option ----
+
+  /** Whether Fullscreen is showing: the board only, with the info windows left out. */
+  get cropped(): boolean {
+    return this.viewMode === 'fullscreen' && this.screenOn && this.overlays.length === 0;
+  }
+
+  /** Called when the title screen is shown (false) or the game screen is (true). Fullscreen applies to the game only. */
+  setScreenOn(on: boolean): void {
+    this.screenOn = on;
+    this.applyView();
+  }
+
+  /** Sets the View option (Normal or Fullscreen) and redraws the screen to match. */
+  setViewMode(mode: ViewMode): void {
+    this.viewMode = mode;
+    this.applyView();
+  }
+
+  /**
+   * Leaves out the info windows when Fullscreen is on, and puts them back
+   * otherwise, redrawing the game screen if it changed.
+   */
+  private applyView(): void {
+    const hide = this.cropped;
+    if (hide !== this.infoHidden) {
+      this.infoHidden = hide;
+      for (const w of INFO_WINDOWS) this.vs.windowActivate(w, !hide);
+      if (this.screenOn) this.vs.display(Display.DisplayAll);
+    }
+    this.syncView();
+  }
+
+  private syncView(): void {
+    const s = this.state;
+    this.onView({
+      cropped: this.cropped,
+      fullscreen: this.viewMode === 'fullscreen',
+      readout: `${s.gridCols}x${s.gridRows}@${s.win.tokens}`,
+    });
+  }
+
+  /** Runs after each redraw: the page follows the view, and any message on show is drawn over the board. */
+  private afterDraw(): void {
+    this.syncView();
+    if (!this.screenOn || !this.cropped) return;
+    const flash = this.flash.current(performance.now());
+    if (!flash) return;
+    const s = this.state;
+    drawLogFlash(this.g, this.vs.windows[GameWindow.playGrid].vp, flash, {
+      back: Color.BLACK,
+      border: Color.RED,
+      text: s.text,
+      hilite: s.hilite,
+    });
+  }
+
+  /** A line added to the message box: in Fullscreen it is shown over the board for a moment. */
+  private logAdded(line: string): void {
+    if (!this.screenOn || !this.cropped || line.replace(/^~/, '').trim() === '') return;
+    this.flash.show(line, performance.now());
+    this.startFlash();
+  }
+
+  /** Redraws the screen until the message has faded. */
+  private startFlash(): void {
+    if (this.flashTimer !== null) return;
+    const frame = () => {
+      this.flashTimer = null;
+      if (!this.screenOn || !this.cropped) {
+        this.flash.clear();
+        return;
+      }
+      const live = this.flash.current(performance.now()) !== null;
+      // Restores the saved screen, then draws the message if it is still showing.
+      this.vs.display(Display.DisplayCurrent);
+      if (live) this.flashTimer = setTimeout(frame, FLASH_FRAME_MS);
+    };
+    frame();
   }
 
   /** The whole screen again (after a resize): the game, then what is open over it. */
@@ -759,6 +883,7 @@ export class Game {
   start(seed?: number, size = { cols: this.state.gridCols, rows: this.state.gridRows, connect: this.state.win.tokens }): void {
     const s = this.state;
     if (seed !== undefined) this.rng.seed(seed);
+    this.setScreenOn(true);
     this.speaker.muted = s.mute;
     this.resetGameSize(size.cols, size.rows, size.connect);
     this.newGame();

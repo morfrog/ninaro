@@ -5,6 +5,8 @@
   --focus: #55ffff;
   /* EGA 640x350 was shown on a 4:3 screen: pixels 1.37x taller than wide. */
   --ega-pixel-aspect: 1.3714;
+  /* Fullscreen's board: the left 384 of the 640 EGA pixels, at the same pixel shape. */
+  --board-aspect: calc(384 / (350 * var(--ega-pixel-aspect)));
   color-scheme: dark;
 }
 
@@ -58,11 +60,53 @@ a {
   margin-bottom: 8px;
 }
 
+.toolbar__view,
 .toolbar__display {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* View and Display sit at the right, unless the title is showing before them. */
+.toolbar__view {
   margin-left: auto;
+}
+
+.toolbar__title:not([hidden]) {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: auto;
+  font-weight: bold;
+}
+
+.toolbar__title:not([hidden]) + .toolbar__view {
+  margin-left: 0;
+}
+
+.toolbar__name {
+  color: #ff5555;
+}
+
+#board-readout {
+  color: var(--muted);
+  font-weight: normal;
+}
+
+/* Fullscreen: the frame shows the board only. The canvas is 640 / 384 times the frame's width, so the
+   right-hand part of the screen is cut off, and the frame is no taller than the window. */
+.screen-frame {
+  width: 100%;
+}
+
+.screen-frame--cropped {
+  overflow: hidden;
+  width: min(100%, calc((100vh - 200px) * var(--board-aspect)));
+  margin: 0 auto;
+}
+
+.screen-frame--cropped .screen {
+  width: calc(100% * 640 / 384);
 }
 
 .btn--link {

@@ -4,6 +4,7 @@
 import helpText from '../../Legacy/NINARO.HLP?raw';
 import { decodeConfig } from './data/config';
 import { loadDisplayMode, parseDisplayMode, saveDisplayMode, type DisplayMode } from './render/displayMode';
+import { loadViewMode, parseViewMode, saveViewMode, type ViewMode } from './render/viewMode';
 import { MODERN_PALETTE, NINARO_PALETTE } from './render/palette';
 import { CONFIG_KEY, SAVE_KEY, StoredFile } from './data/storage';
 import ttlUrl from '../../Legacy/NINARO.TTL?url';
@@ -80,9 +81,34 @@ if (displaySelect) {
   });
 }
 
+// The View option: Normal, or Fullscreen (the board only). The page follows
+// the game through onView: the screen is cropped to the board, and the title
+// and board size appear in the toolbar.
+const frame = document.querySelector<HTMLElement>('#screen-frame');
+const boardTitle = document.querySelector<HTMLElement>('#board-title');
+const boardReadout = document.querySelector<HTMLElement>('#board-readout');
+game.onView = (view) => {
+  frame?.classList.toggle('screen-frame--cropped', view.cropped);
+  if (boardTitle) boardTitle.hidden = !view.fullscreen;
+  if (boardReadout && boardReadout.textContent !== view.readout) boardReadout.textContent = view.readout;
+};
+
+const viewSelect = document.querySelector<HTMLSelectElement>('#view-mode');
+if (viewSelect) {
+  const initial: ViewMode = loadViewMode();
+  viewSelect.value = initial;
+  game.setViewMode(initial);
+  viewSelect.addEventListener('change', () => {
+    const mode = parseViewMode(viewSelect.value);
+    saveViewMode(mode);
+    game.setViewMode(mode);
+  });
+}
+
 /** main(): the title screen, then the first game on the configured board. */
 async function program(): Promise<void> {
   const size = { cols: state.gridCols, rows: state.gridRows, connect: state.win.tokens };
+  game.setScreenOn(false);
   inTitle = true;
   await titleScreen(game, ttl);
   inTitle = false;
