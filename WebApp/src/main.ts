@@ -3,6 +3,7 @@
 
 import helpText from '../../Legacy/NINARO.HLP?raw';
 import { decodeConfig } from './data/config';
+import { loadDisplayMode, parseDisplayMode, saveDisplayMode } from './render/displayMode';
 import { CONFIG_KEY, SAVE_KEY, StoredFile } from './data/storage';
 import ttlUrl from '../../Legacy/NINARO.TTL?url';
 import { gameViewSys } from './game/display';
@@ -48,6 +49,20 @@ for (const type of ['keydown', 'pointerdown'] as const) {
 // Buttons for players without a keyboard: the same as Esc and F1.
 document.querySelector('#menu-button')?.addEventListener('click', () => input.pushKey(ESC));
 document.querySelector('#help-button')?.addEventListener('click', () => input.pushKey(F1));
+
+// The Display option: remembered in the browser and changeable at any time.
+// Phase 1 only stores it and marks the page; the drawing follows in later steps.
+const displaySelect = document.querySelector<HTMLSelectElement>('#display-mode');
+if (displaySelect) {
+  let mode = loadDisplayMode();
+  displaySelect.value = mode;
+  document.documentElement.dataset.display = mode;
+  displaySelect.addEventListener('change', () => {
+    mode = parseDisplayMode(displaySelect.value);
+    saveDisplayMode(mode);
+    document.documentElement.dataset.display = mode;
+  });
+}
 
 let ttl = new Uint8Array();
 let inTitle = false;

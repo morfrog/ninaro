@@ -9,11 +9,20 @@
   </head>
   <body>
     <main id="app">
-      <canvas id="screen" class="screen" width="640" height="350" role="img" aria-label="Ninaro screen"></canvas>
-      <div class="controls">
+      <div class="toolbar">
+        <a href="https://morfrog.github.io/" class="btn btn--link" id="home-link">Home</a>
         <button type="button" id="menu-button" class="btn">Menu</button>
         <button type="button" id="help-button" class="btn">Help</button>
+        <label class="toolbar__display">
+          Display
+          <select id="display-mode" class="btn btn--select">
+            <option value="vga">VGA</option>
+            <option value="mono">Monochrome</option>
+            <option value="modern">Modern</option>
+          </select>
+        </label>
       </div>
+      <canvas id="screen" class="screen" width="640" height="350" role="img" aria-label="Ninaro screen"></canvas>
       <p class="note">
         Player one: A and D move, S or E drops, W or Q opens the menu. Player two: the arrow keys, Enter drops,
         Backspace opens the menu. Or click (tap) a column. Esc or M: menu. F1 or H: help.
