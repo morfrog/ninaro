@@ -97,9 +97,10 @@ export function displayGameName(g: Graph): void {
   g.setCharSpacingW(-0.01);
   g.setCharSizeW(0.1, 0.04);
   if (isModern(g)) {
-    g.setTextWeight(3);
+    // The bold stroke grows above the letters, and the title's window clips at its top edge, so it sits lower.
+    g.setTextWeight(2);
     g.setColorCss(MODERN.text);
-    g.grTextW(0.0, 0.7, 'Ninaro');
+    g.grTextW(0.0, 0.8, 'Ninaro');
     g.setTextWeight(1);
   } else {
     g.setColor(Color.RED);

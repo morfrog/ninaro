@@ -50,6 +50,10 @@ const GLYPH_UNITS_PER_CELL = 32;
 const HERSHEY_CAP = 21;
 const CAP_TOP = 0.1;
 const CAP_HEIGHT = 0.7;
+/** Arial's capital height as a fraction of its font size. */
+const ARIAL_CAP_HEIGHT = 0.716;
+/** Modern's text size as a share of the stroke font's capitals. */
+const ARIAL_SIZE = 0.8;
 
 /** A _setlinestyle mask as canvas dash lengths: runs of on and off bits from the high bit. */
 export function lineDash(mask: number): number[] {
@@ -423,6 +427,39 @@ export class Graph {
     this.screenText(this.windowX(wx), this.windowY(wy), text);
   }
 
+  /**
+   * Modern's text: a standard sans-serif font, each character centred in its
+   * cell, so the columns and rows of numbers still line up. The capitals are
+   * as tall as the original's, and a bold weight is used for thick text.
+   */
+  private modernText(left: number, width: number, top: number, h: number, text: string): void {
+    const capHeight = CAP_HEIGHT * h;
+    // Sized a little under the stroke font's caps: Arial is wider, so this keeps the labels in their boxes.
+    const fontPx = (ARIAL_SIZE * capHeight) / ARIAL_CAP_HEIGHT;
+    const baseline = top + CAP_TOP * h + capHeight;
+    this.clipped((ctx) => {
+      ctx.fillStyle = this.paintFor(this.color);
+      ctx.font = `${this.textWeight >= 2 ? 'bold ' : ''}${fontPx}px Arial, Helvetica, sans-serif`;
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      // The string is set in its own widths, and placed in the same box the
+      // cells gave it, so the alignment still holds.
+      // A string wider than its box is squeezed to fit, as the cells of the
+      // stroke font would have made it.
+      const measured = ctx.measureText(text).width;
+      const squeeze = measured > width && measured > 0 ? width / measured : 1;
+      const shown = measured * squeeze;
+      let x = left;
+      if (this.alignH === HAlign.CENTER) x = left + (width - shown) / 2;
+      else if (this.alignH === HAlign.RIGHT) x = left + width - shown;
+      ctx.save();
+      ctx.translate(x, baseline);
+      ctx.scale(squeeze, 1);
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
+    });
+  }
+
   private screenText(x: number, y: number, text: string): void {
     const w = this.charWidth;
     const h = this.charHeight;
@@ -432,6 +469,10 @@ export class Graph {
     if (this.alignH === HAlign.CENTER) left = x - width / 2;
     else if (this.alignH === HAlign.RIGHT) left = x - width;
     const top = y + CELL_TOP[this.alignV] * h;
+    if (this.display === 'modern') {
+      this.modernText(left, width, top, h, text);
+      return;
+    }
     const sx = w / GLYPH_UNITS_PER_CELL;
     const sy = (CAP_HEIGHT * h) / HERSHEY_CAP;
     this.clipped((ctx) => {
