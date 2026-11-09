@@ -60,18 +60,6 @@ a {
   margin-bottom: 8px;
 }
 
-.toolbar__view,
-.toolbar__display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* The title and View share the space after Help, so the title is centred in it. */
-.toolbar__view {
-  margin-left: auto;
-}
-
 .toolbar__title:not([hidden]) {
   display: inline-flex;
   align-items: baseline;
@@ -135,21 +123,6 @@ html[data-view='fullscreen'] .site-footer {
   width: calc(100% * 640 / 384);
   height: 100%;
   aspect-ratio: auto;
-}
-
-.btn--link {
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
-}
-
-.btn--select {
-  padding: 6px 8px;
-}
-
-.btn--select:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
 }
 
 .btn {

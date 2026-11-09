@@ -111,7 +111,14 @@ describe('the menu', () => {
     const fresh = new NinaroUi(makeUi().game, '');
     expect(fresh.menu.subs[0].items[0].enabled).toBe(false);
     expect(fresh.menu.subs[2].items[0].enabled).toBe(false);
-    expect(ui.menu.subs[3].items.map((i) => i.name)).toEqual(['Contents', 'About']);
+    expect(ui.menu.subs[5].items.map((i) => i.name)).toEqual(['Contents', 'About']);
+  });
+
+  it('has View and Display between Player and Help', () => {
+    const { ui } = makeUi();
+    expect(ui.menu.subs.map((s) => s.name)).toEqual(['Game', 'Board', 'Player', 'View', 'Display', 'Help']);
+    expect(ui.menu.subs[3].items.map((i) => i.name)).toEqual(['Normal', 'Fullscreen']);
+    expect(ui.menu.subs[4].items.map((i) => i.name)).toEqual(['VGA', 'Monochrome', 'Modern']);
   });
 
   it('runs the menu Exit through onHome', async () => {

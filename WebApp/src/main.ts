@@ -3,18 +3,17 @@
 
 import helpText from '../../Legacy/NINARO.HLP?raw';
 import { decodeConfig } from './data/config';
-import { loadDisplayMode, parseDisplayMode, saveDisplayMode, type DisplayMode } from './render/displayMode';
-import { loadViewMode, parseViewMode, saveViewMode, type ViewMode } from './render/viewMode';
-import { MODERN_PALETTE, NINARO_PALETTE } from './render/palette';
+import { loadDisplayMode } from './render/displayMode';
+import { loadViewMode } from './render/viewMode';
 import { CONFIG_KEY, SAVE_KEY, StoredFile } from './data/storage';
 import ttlUrl from '../../Legacy/NINARO.TTL?url';
 import { gameViewSys } from './game/display';
 import { Game } from './game/game';
 import { GameState } from './game/state';
 import { titleScreen } from './game/title';
-import { NinaroUi, applyBackground } from './game/ui';
+import { NinaroUi, applyBackground, applyDisplayMode } from './game/ui';
 import { Input } from './input/input';
-import { ESC, F1 } from './input/keys';
+import { ESC } from './input/keys';
 import { Screen } from './render/screen';
 import './devLink';
 
@@ -48,42 +47,24 @@ for (const type of ['keydown', 'pointerdown'] as const) {
   window.addEventListener(type, () => game.speaker.unlock(), { capture: true });
 }
 
-// Buttons for players without a keyboard: the same as Esc and F1.
-document.querySelector('#menu-button')?.addEventListener('click', () => input.pushKey(ESC));
-document.querySelector('#help-button')?.addEventListener('click', () => input.pushKey(F1));
+// The toolbar's Menu button, for players without a keyboard: the same as Esc.
+// On the title screen it reads Play, and Esc (or a click) starts the game.
+const menuButton = document.querySelector<HTMLButtonElement>('#menu-button');
+menuButton?.addEventListener('click', () => input.pushKey(ESC));
 
-// The Display option: remembered in the browser and changeable at any time.
-// Monochrome changes how colours are drawn; Modern is drawn as VGA until its
-// own step.
 let ttl = new Uint8Array();
 let inTitle = false;
 screen.onResize = () => {
   if (!inTitle) game.redrawAll();
 };
 
-const displaySelect = document.querySelector<HTMLSelectElement>('#display-mode');
-if (displaySelect) {
-  /** Modern has its own palette; VGA and Monochrome use the original's. */
-  const applyMode = (mode: DisplayMode) => {
-    document.documentElement.dataset.display = mode;
-    screen.graph.palette.setBase(mode === 'modern' ? MODERN_PALETTE : NINARO_PALETTE);
-    screen.graph.setDisplay(mode);
-    applyBackground(game);
-  };
-  const initial: DisplayMode = loadDisplayMode();
-  applyMode(initial);
-  displaySelect.value = initial;
-  displaySelect.addEventListener('change', () => {
-    const mode = parseDisplayMode(displaySelect.value);
-    saveDisplayMode(mode);
-    applyMode(mode);
-    if (!inTitle) game.redrawAll();
-  });
-}
+// The Display option (in the menu bar): how the screen is drawn. Monochrome
+// changes how colours are drawn; Modern is drawn as VGA until its own step.
+applyDisplayMode(game, loadDisplayMode());
 
-// The View option: Normal, or Fullscreen (the board only). The page follows
-// the game through onView: the screen is cropped to the board, and the title
-// and board size appear in the toolbar.
+// The View option (in the menu bar): Normal, or Fullscreen (the board only).
+// The page follows the game through onView: the screen is cropped to the
+// board, and the title and board size appear in the toolbar.
 const frame = document.querySelector<HTMLElement>('#screen-frame');
 const boardTitle = document.querySelector<HTMLElement>('#board-title');
 const boardReadout = document.querySelector<HTMLElement>('#board-readout');
@@ -104,26 +85,17 @@ game.onView = (view) => {
     }
   }
 };
-
-const viewSelect = document.querySelector<HTMLSelectElement>('#view-mode');
-if (viewSelect) {
-  const initial: ViewMode = loadViewMode();
-  viewSelect.value = initial;
-  game.setViewMode(initial);
-  viewSelect.addEventListener('change', () => {
-    const mode = parseViewMode(viewSelect.value);
-    saveViewMode(mode);
-    game.setViewMode(mode);
-  });
-}
+game.setViewMode(loadViewMode());
 
 /** main(): the title screen, then the first game on the configured board. */
 async function program(): Promise<void> {
   const size = { cols: state.gridCols, rows: state.gridRows, connect: state.win.tokens };
   game.setScreenOn(false);
   inTitle = true;
+  if (menuButton) menuButton.textContent = 'Play';
   await titleScreen(game, ttl);
   inTitle = false;
+  if (menuButton) menuButton.textContent = 'Menu';
   applyBackground(game);
   game.start(undefined, size);
 }

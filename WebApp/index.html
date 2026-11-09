@@ -10,29 +10,12 @@
   <body>
     <main id="app">
       <div class="toolbar">
-        <a href="https://morfrog.github.io/" class="btn btn--link" id="home-link">Home</a>
         <button type="button" id="menu-button" class="btn">Menu</button>
-        <button type="button" id="help-button" class="btn">Help</button>
         <span class="toolbar__title" id="board-title" hidden>
           <span class="toolbar__name">Ninaro</span>
           <span id="board-readout"></span>
           <span id="board-players"></span>
         </span>
-        <label class="toolbar__view">
-          View
-          <select id="view-mode" class="btn btn--select">
-            <option value="normal">Normal</option>
-            <option value="fullscreen">Fullscreen</option>
-          </select>
-        </label>
-        <label class="toolbar__display">
-          Display
-          <select id="display-mode" class="btn btn--select">
-            <option value="vga">VGA</option>
-            <option value="mono">Monochrome</option>
-            <option value="modern">Modern</option>
-          </select>
-        </label>
       </div>
       <div class="screen-frame" id="screen-frame">
         <canvas id="screen" class="screen" width="640" height="350" role="img" aria-label="Ninaro screen"></canvas>

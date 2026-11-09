@@ -4,7 +4,9 @@
 
 import type { Viewport } from '../render/screen';
 import { borderedBox, setViewport } from '../render/screen';
-import { Color, EGA, MODERN_PALETTE, hexToValue } from '../render/palette';
+import { Color, EGA, MODERN_PALETTE, NINARO_PALETTE, hexToValue } from '../render/palette';
+import { DISPLAY_LABELS, DISPLAY_MODES, saveDisplayMode, type DisplayMode } from '../render/displayMode';
+import { VIEW_LABELS, VIEW_MODES, saveViewMode, type ViewMode } from '../render/viewMode';
 import { Display } from '../render/viewsys';
 import { Control, Dialog, Show } from '../ui/dialog';
 import { Help } from '../ui/help';
@@ -42,6 +44,14 @@ export function applyBackground(game: Game): void {
     p.remap(Color.BLACK, modern ? hexToValue('#f3f3f3') : EGA._BRIGHTWHITE);
     p.remap(Color.WHITE, modern ? MODERN_PALETTE[Color.BLACK] : EGA._BLACK);
   }
+}
+
+/** The Display option: the palette and how the screen is drawn. Modern has its own palette. */
+export function applyDisplayMode(game: Game, mode: DisplayMode): void {
+  document.documentElement.dataset.display = mode;
+  game.g.palette.setBase(mode === 'modern' ? MODERN_PALETTE : NINARO_PALETTE);
+  game.g.setDisplay(mode);
+  applyBackground(game);
 }
 
 export class NinaroUi implements GameUi {
@@ -174,6 +184,14 @@ export class NinaroUi implements GameUi {
       item('Options...', () => this.playerOptions()),
       item('Reset Scores', () => game.resetScores()),
     ]);
+    this.menu.addSub(
+      'View',
+      VIEW_MODES.map((mode) => item(VIEW_LABELS[mode], () => this.setView(mode))),
+    );
+    this.menu.addSub(
+      'Display',
+      DISPLAY_MODES.map((mode) => item(DISPLAY_LABELS[mode], () => this.setDisplay(mode))),
+    );
     this.menu.addSub('Help', [item('Contents', () => this.helpContentsFunc()), item('About', () => this.helpAbout())]);
 
     this.helpBox = new Help(g, helpText, pkeys, 20, Color.RED, text, hilite, 60);
@@ -244,11 +262,29 @@ export class NinaroUi implements GameUi {
     await this.helpContents();
   }
 
-  /** HelpMenu: help on the open menu. */
+  /** The View menu: the choice is kept in the browser. */
+  private setView(mode: ViewMode): void {
+    saveViewMode(mode);
+    this.game.setViewMode(mode);
+  }
+
+  /** The Display menu: the choice is kept in the browser, and the screen redrawn. */
+  private setDisplay(mode: DisplayMode): void {
+    saveDisplayMode(mode);
+    applyDisplayMode(this.game, mode);
+    this.game.redrawAll();
+  }
+
+  /** HelpMenu: help on the open menu. View and Display have no section in the help file. */
   private async helpMenu(): Promise<void> {
-    const headings = ['~The Game Menu', '~The Board Menu', '~The Player Menu', '~The Help Menu'];
+    const headings: Record<string, string> = {
+      Game: '~The Game Menu',
+      Board: '~The Board Menu',
+      Player: '~The Player Menu',
+      Help: '~The Help Menu',
+    };
     this.helpBox.home();
-    const heading = headings[this.menu.current];
+    const heading = headings[this.menu.subs[this.menu.current]?.name ?? ''];
     if (heading) this.helpBox.scrollString(heading);
     await this.helpContents();
   }
