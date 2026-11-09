@@ -93,15 +93,16 @@ a {
   font-weight: normal;
 }
 
-/* Fullscreen: the frame shows the board only. The canvas is 640 / 384 times the frame's width, so the
-   right-hand part of the screen is cut off, and the frame is no taller than the window. */
+/* Fullscreen: the frame shows the board only. The board is 60% of the screen's width, as in Normal view,
+   so the frame is 60% wide. The canvas is 640 / 384 times the frame's width, so the right-hand part of
+   the screen is cut off, and the frame is no taller than the window. */
 .screen-frame {
   width: 100%;
 }
 
 .screen-frame--cropped {
   overflow: hidden;
-  width: min(100%, calc((100vh - 200px) * var(--board-aspect)));
+  width: min(60%, calc((100vh - 200px) * var(--board-aspect)));
   margin: 0 auto;
 }
 
