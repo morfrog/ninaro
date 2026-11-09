@@ -123,6 +123,8 @@ export interface ViewState {
   fullscreen: boolean;
   /** "cols x rows @ connect", as the status box shows them. */
   readout: string;
+  /** Who is playing, as "Human vs AI Normal". */
+  players: string;
 }
 
 export class Game {
@@ -228,6 +230,7 @@ export class Game {
       cropped: this.cropped,
       fullscreen: this.viewMode === 'fullscreen' && this.screenOn,
       readout: `${s.gridCols}x${s.gridRows}@${s.win.tokens}`,
+      players: `${s.logName(s.playerOne)} vs ${s.logName(s.playerTwo)}`,
     });
   }
 

@@ -89,6 +89,10 @@ a {
   font-weight: normal;
 }
 
+#board-players {
+  font-weight: normal;
+}
+
 /* Fullscreen: the frame shows the board only, and is as wide as the toolbar, so the board lines up with
    Home on the left and Display on the right. The canvas is 640 / 384 times the frame's width, so the
    right-hand part of the screen is cut off. */

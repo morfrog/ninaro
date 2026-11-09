@@ -361,7 +361,7 @@ describe('the View option', () => {
     game.setScreenOn(false);
     game.setViewMode('fullscreen');
     expect(active.every(Boolean)).toBe(true);
-    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4' });
+    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4', players: 'Human 1 vs Human 2' });
     game.setScreenOn(true);
     expect(active[INFO[0]]).toBe(false);
   });
@@ -371,11 +371,11 @@ describe('the View option', () => {
     game.setViewMode('fullscreen');
     expect(active.slice(0, 2)).toEqual([true, true]);
     for (const i of INFO) expect(active[i]).toBe(false);
-    expect(views.at(-1)).toEqual({ cropped: true, fullscreen: true, readout: '7x8@4' });
+    expect(views.at(-1)).toEqual({ cropped: true, fullscreen: true, readout: '7x8@4', players: 'Human 1 vs Human 2' });
 
     game.setViewMode('normal');
     expect(active.every(Boolean)).toBe(true);
-    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4' });
+    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4', players: 'Human 1 vs Human 2' });
   });
 
   it('gives the whole screen back while a menu or dialog is open', async () => {
