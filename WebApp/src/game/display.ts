@@ -25,13 +25,17 @@ export const GameWindow = {
   p2Score: 10,
 } as const;
 
-/** DisplayGrid (GRID.C): the grid lines in the current colour, then the tokens. */
-export function displayGrid(g: Graph, grid: Grid, size: number): void {
+/**
+ * DisplayGrid (GRID.C): the grid lines in the current colour, then the tokens.
+ * `hidden` leaves out one cell, for a token still falling into it.
+ */
+export function displayGrid(g: Graph, grid: Grid, size: number, hidden?: { col: number; row: number }): void {
   drawGrid(g, grid.width, grid.height);
   for (let x = 0; x < grid.width; x++) {
     for (let y = 0; y < grid.height; y++) {
       const p = grid.grid[x][y];
-      if (p !== null) drawDisc(g, x, grid.width, y, grid.height, p.color, size);
+      if (p === null || (hidden && hidden.col === x && hidden.row === y)) continue;
+      drawDisc(g, x, grid.width, y, grid.height, p.color, size);
     }
   }
 }
@@ -141,7 +145,11 @@ export function gameViewSys(g: Graph, canvas: HTMLCanvasElement, state: GameStat
   }, null, 'Enter Your Token Here');
   vs.windowNew(0.0, 0.09, 0.6, 1.0, true, () => {
     g.setColor(Color.GREEN);
-    displayGrid(g, state.playgrid, 0.6);
+    displayGrid(g, state.playgrid, 0.6, state.falling ?? undefined);
+    if (state.falling) {
+      const f = state.falling;
+      drawDisc(g, f.col, state.playgrid.width, f.y, state.playgrid.height, f.color, 0.6);
+    }
     if (state.winOccurred) {
       for (const t of state.win.win) {
         const p = state.playgrid.statusOfCR(t.col, t.row);

@@ -6,7 +6,7 @@
 // help and the title screen come in phase 4, through GameUi.
 
 import { RULES_FIXED, ruleMove, type AiRules } from '../core/ai';
-import { InsertResult, gameLoad, gameSave, insertTokenInCol, setWinSize } from '../core/connect';
+import { InsertResult, gameLoad, gameSave, insertTokenInCol, insertTokenTarget, setWinSize } from '../core/connect';
 import { Direction, Grid } from '../core/grid';
 import { PlayerType, type Player } from '../core/player';
 import { WatcomRandom } from '../core/random';
@@ -91,6 +91,11 @@ export function validSave(bytes: Uint8Array): boolean {
 /** Hatching meant for Suggest Move's token (SuggestMove's new_mask); never seen in the original. */
 const SUGGEST_MASK = [0xa2, 0x15, 0xa2, 0x10, 0xa2, 0x10, 0xa2, 0x15];
 
+/** Time for a human's token to fall the height of the board. */
+const HUMAN_DROP_MS = 1000;
+/** Pause between frames of a falling token. */
+const FRAME_MS = 16;
+
 export class Game {
   readonly rng = new WatcomRandom();
   /** The AIs' rules: the fixed ones, or RULES_1998 to play exactly as the original. */
@@ -101,6 +106,8 @@ export class Game {
   readonly p2keys = new KeyGroup(KP4, KP6, KP8, KP2, ENTER, BKSP);
   readonly ks = new KeySys(this.pkeys);
   ingame = false;
+  /** Shows tokens falling into the board. Tests turn it off to run fast. */
+  animateDrops = true;
   /** 0 none, 1 partial (moves only), 2 full (menus and dialogs too). */
   mouseUsage = 2;
   /** NINARO.SAV: the one saved game. In memory unless main() gives it storage. */
@@ -318,7 +325,10 @@ export class Game {
   /** DropToken: Win, Success or Failure. */
   async dropToken(): Promise<InsertResult> {
     const s = this.state;
-    const ret = insertTokenInCol(s.playgrid, s.keypos, this.currentPlayer(), s.win);
+    const dropper = this.currentPlayer();
+    const row = insertTokenTarget(s.playgrid, s.keypos);
+    const ret = insertTokenInCol(s.playgrid, s.keypos, dropper, s.win);
+    if (ret !== InsertResult.Failure) await this.animateDrop(s.keypos, row, dropper);
     switch (ret) {
       case InsertResult.Success:
         s.entrygrid.removeTokenAtCR(s.keypos, 0);
@@ -351,6 +361,39 @@ export class Game {
         break;
     }
     return ret;
+  }
+
+  /**
+   * How long a token takes to fall the height of the board. A human's drop
+   * is 1 second, at a constant speed. A computer's drop scales with AI Speed:
+   * Normal is also 1 second, each step faster or slower doubles or halves it
+   * (Fastest 0.25 s, Slowest 4 s).
+   */
+  dropMs(player: Player): number {
+    if (player.type === PlayerType.Human) return HUMAN_DROP_MS;
+    return HUMAN_DROP_MS * 2 ** (this.state.aiSpeed - 2);
+  }
+
+  /**
+   * Shows a token falling from the top edge of the board to its row at
+   * constant speed, so a drop to half way takes half the time. The token is
+   * already in the grid, hidden, until it lands.
+   */
+  async animateDrop(col: number, row: number, player: Player): Promise<void> {
+    if (!this.animateDrops) return;
+    const s = this.state;
+    // From the top edge (-0.5) to the centre of `row` (row + 0.5): row + 1 rows.
+    const total = (this.dropMs(player) * (row + 1)) / s.playgrid.height;
+    const start = performance.now();
+    for (;;) {
+      const t = Math.min(1, (performance.now() - start) / total);
+      s.falling = { col, row, y: -0.5 + t * (row + 1), color: player.color };
+      this.vs.windowChanged(GameWindow.playGrid, true);
+      this.vs.display(Display.DisplayChanged);
+      if (t >= 1) break;
+      await sleep(FRAME_MS);
+    }
+    s.falling = null;
   }
 
   /** AnimateMove: steps the entry token to col over ai_speed half-seconds. */

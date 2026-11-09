@@ -42,6 +42,11 @@ export class GameState {
   win: Win = newWin(4);
   winOccurred = false;
   isDraw = false;
+  /**
+   * The token on its way down (not drawn in the grid until it lands). `y` is
+   * its centre in board rows, from -0.5 (the top edge) to row + 0.5.
+   */
+  falling: { col: number; row: number; y: number; color: number } | null = null;
   /** The column the entry token is over. */
   keypos = 0;
   playgrid = new Grid(7, 8);
