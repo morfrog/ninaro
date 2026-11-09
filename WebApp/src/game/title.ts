@@ -15,6 +15,7 @@ import { PlayerType, playerNew, type Player } from '../core/player';
 import { startRandomSeed } from '../core/random';
 import { LMB } from '../input/input';
 import { HAlign, VAlign } from '../render/graph';
+import { MONO_DARKEST, MONO_LIGHTEST } from '../render/displayStyle';
 import { Color } from '../render/palette';
 import { drawDisc, drawGrid, resetPalette, setViewport, type Viewport } from '../render/screen';
 import type { Game } from './game';
@@ -44,6 +45,9 @@ export async function titleScreen(game: Game, ttl: Uint8Array, nextFrame = () =>
   const tokens = filegrid.maxTokens();
   g.palette.remap(Color.YELLOW, 0x020202);
   g.palette.remap(Color.GREEN, 0x040404);
+  // Monochrome: the background tokens are the darkest non-black, the title's tokens the lightest green.
+  g.setMonoLook(Color.YELLOW, MONO_DARKEST);
+  g.setMonoLook(Color.RED, MONO_LIGHTEST);
   game.rng.seed(startRandomSeed()); // StartRandom
   game.resetGameSize(filegrid.cols(), filegrid.rows(), 4);
 
@@ -96,5 +100,7 @@ export async function titleScreen(game: Game, ttl: Uint8Array, nextFrame = () =>
   drawGrid(g, state.playgrid.cols(), state.playgrid.rows());
   g.setViewport(0, 0, 639, 349);
   g.clearScreen(false);
+  g.setMonoLook(Color.YELLOW, null);
+  g.setMonoLook(Color.RED, null);
   resetPalette(g);
 }

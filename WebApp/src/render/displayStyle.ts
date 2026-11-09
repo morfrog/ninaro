@@ -72,6 +72,11 @@ export const MONO_LOOKS: readonly MonoLook[] = [
   { a: B, b: B, mask: SOLID },
 ];
 
+/** The look index of the darkest non-black colour: the solid dark green. */
+export const MONO_DARKEST = 1;
+/** The look index of the lightest green: the solid bright green. */
+export const MONO_LIGHTEST = 15;
+
 /** Whether a look is the background (black, on the default screen). */
 export function isBackgroundLook(look: MonoLook): boolean {
   return look.a === 0 && look.b === 0;

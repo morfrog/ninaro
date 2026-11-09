@@ -99,6 +99,8 @@ export class Graph {
   private display: DisplayMode = 'vga';
   /** Monochrome hatch patterns, by look and background colour. */
   private readonly patterns = new Map<string, string | CanvasPattern>();
+  /** Colour slots fixed to a monochrome look, by look index. */
+  private readonly monoFixed = new Map<number, number>();
 
   constructor(ctx: CanvasRenderingContext2D, palette: Palette) {
     this.ctx = ctx;
@@ -142,8 +144,20 @@ export class Graph {
   }
 
   private monoLook(slot: number): MonoLook {
+    const fixed = this.monoFixed.get(slot & 15);
+    if (fixed !== undefined) return MONO_LOOKS[fixed];
     const values = Array.from({ length: 16 }, (_, i) => this.palette.value(i));
     return MONO_LOOKS[monoLookIndices(values)[slot & 15]];
+  }
+
+  /**
+   * Fixes a colour slot to one of the monochrome looks (by index), or frees it
+   * with null. Used where a screen needs a particular look for a colour, such
+   * as the title screen's tokens.
+   */
+  setMonoLook(slot: number, look: number | null): void {
+    if (look === null) this.monoFixed.delete(slot & 15);
+    else this.monoFixed.set(slot & 15, look);
   }
 
   // ---- Viewports and coordinates ----
