@@ -100,7 +100,7 @@ export class Graph {
   /** Monochrome hatch patterns, by look and background colour. */
   private readonly patterns = new Map<string, string | CanvasPattern>();
   /** Colour slots fixed to a monochrome look, by look index. */
-  private readonly monoFixed = new Map<number, number>();
+  private readonly monoFixed = new Map<number, { look: number; value: number }>();
 
   constructor(ctx: CanvasRenderingContext2D, palette: Palette) {
     this.ctx = ctx;
@@ -145,8 +145,10 @@ export class Graph {
 
   private monoLook(slot: number): MonoLook {
     const fixed = this.monoFixed.get(slot & 15);
-    if (fixed !== undefined) return MONO_LOOKS[fixed];
-    const values = Array.from({ length: 16 }, (_, i) => this.palette.value(i));
+    if (fixed !== undefined) return MONO_LOOKS[fixed.look];
+    // Ranking uses each fixed slot's value as it was when fixed, so a pulsing
+    // slot cannot move the other colours' looks.
+    const values = Array.from({ length: 16 }, (_, i) => this.monoFixed.get(i)?.value ?? this.palette.value(i));
     return MONO_LOOKS[monoLookIndices(values)[slot & 15]];
   }
 
@@ -156,8 +158,13 @@ export class Graph {
    * as the title screen's tokens.
    */
   setMonoLook(slot: number, look: number | null): void {
-    if (look === null) this.monoFixed.delete(slot & 15);
-    else this.monoFixed.set(slot & 15, look);
+    if (look === null) {
+      this.monoFixed.delete(slot & 15);
+      return;
+    }
+    // The palette value is taken the first time the slot is fixed; later changes keep it.
+    const value = this.monoFixed.get(slot & 15)?.value ?? this.palette.value(slot & 15);
+    this.monoFixed.set(slot & 15, { look, value });
   }
 
   // ---- Viewports and coordinates ----

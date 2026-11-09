@@ -15,7 +15,7 @@ import { PlayerType, playerNew, type Player } from '../core/player';
 import { startRandomSeed } from '../core/random';
 import { LMB } from '../input/input';
 import { HAlign, VAlign } from '../render/graph';
-import { MONO_DARKEST, MONO_LIGHTEST } from '../render/displayStyle';
+import { MONO_DARKEST, MONO_LIGHTEST, MONO_SECOND } from '../render/displayStyle';
 import { Color } from '../render/palette';
 import { drawDisc, drawGrid, resetPalette, setViewport, type Viewport } from '../render/screen';
 import type { Game } from './game';
@@ -90,6 +90,8 @@ export async function titleScreen(game: Game, ttl: Uint8Array, nextFrame = () =>
     }
     add = add === 2 ? 0 : add + 1;
     g.palette.remap(Color.YELLOW, sety);
+    // Monochrome: the pulse shows as a flash between the two darkest looks.
+    g.setMonoLook(Color.YELLOW, sety > (BOTTOM + TOP) / 2 ? MONO_SECOND : MONO_DARKEST);
     draw();
     if (input.kbhit() || input.getMouseInput().button === LMB) break;
     await nextFrame();
