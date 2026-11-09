@@ -88,6 +88,7 @@ const frame = document.querySelector<HTMLElement>('#screen-frame');
 const boardTitle = document.querySelector<HTMLElement>('#board-title');
 const boardReadout = document.querySelector<HTMLElement>('#board-readout');
 game.onView = (view) => {
+  document.documentElement.dataset.view = view.fullscreen ? 'fullscreen' : 'normal';
   frame?.classList.toggle('screen-frame--cropped', view.cropped);
   if (boardTitle) boardTitle.hidden = !view.fullscreen;
   if (boardReadout && boardReadout.textContent !== view.readout) boardReadout.textContent = view.readout;
