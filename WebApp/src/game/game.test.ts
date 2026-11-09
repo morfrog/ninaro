@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RULES_1998 } from '../core/ai';
+import { PlayerType } from '../core/player';
 import golden from '../core/__golden__/games.json';
 import { Input } from '../input/input';
 import { ESC, KP4 } from '../input/keys';
@@ -24,6 +25,7 @@ function makeGame() {
   const input = new Input();
   const game = new Game(state, g, vs, input);
   game.speaker.muted = true;
+  game.animateDrops = false; // the tests play whole games; the drops would take seconds
   return { game, state, input };
 }
 
@@ -276,5 +278,30 @@ describe('the pointer', () => {
     expect(game.mouseCol(383, 100)).toBe(6);
     expect(game.mouseCol(200, 10)).toBe(3); // over the entry row
     expect(game.mouseCol(500, 100)).toBe(-1);
+  });
+});
+
+describe('the falling token', () => {
+  it('takes 1 second a board for a human, scaled by AI Speed for a computer', () => {
+    const { game, state } = makeGame();
+    const human = state.player(state.playerOne);
+    const ai = state.player(state.playerTwo);
+    ai.type = PlayerType.Computer;
+    expect(game.dropMs(human)).toBe(1000);
+    state.aiSpeed = 2; // Normal
+    expect(game.dropMs(ai)).toBe(1000);
+    state.aiSpeed = 0; // Fastest: still animates, but quickly
+    expect(game.dropMs(ai)).toBe(250);
+    state.aiSpeed = 4; // Slowest
+    expect(game.dropMs(ai)).toBe(4000);
+  });
+
+  it('is hidden in the grid while it falls, and lands where the grid says', async () => {
+    const { game, state } = makeGame();
+    game.animateDrops = true;
+    state.keypos = 3;
+    await game.dropToken();
+    expect(state.falling).toBeNull();
+    expect(state.playgrid.statusOfCR(3, state.playgrid.height - 1)).not.toBeNull();
   });
 });
