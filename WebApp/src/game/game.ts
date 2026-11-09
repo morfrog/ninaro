@@ -171,6 +171,8 @@ export class Game {
     readonly vs: ViewSys,
     readonly input: Input,
   ) {
+    // A finger that goes down in the board's bottom third is a tap to drop, not a drag to track.
+    this.input.trackTouch = (_x, y) => !this.inDropZone(y);
     this.ks.iFunc(0, () => this.keyLeft());
     this.ks.iFunc(1, () => this.keyRight());
     this.ks.iFunc(2, () => this.keyUp());
@@ -615,7 +617,8 @@ export class Game {
           if (col !== s.keypos) {
             this.moveEntryTo(col);
             this.vs.display(Display.DisplayChanged);
-            if (m.pointerType === 'touch') continue; // tap again to drop
+            // A tap higher up moves only; tap again to drop. In the bottom third it drops at once.
+            if (m.pointerType === 'touch' && !this.inDropZone(m.y)) continue;
           }
           return s.keypos;
         }
@@ -638,14 +641,23 @@ export class Game {
   }
 
   /**
+   * Touch: the board's bottom third. A press there is not tracked, and a tap
+   * in it drops the token in the tapped column at once.
+   */
+  inDropZone(y: number): boolean {
+    const board = this.vs.windows[GameWindow.playGrid].vp;
+    return y >= board.y1 + ((board.y2 - board.y1) * 2) / 3;
+  }
+
+  /**
    * A finger that went down on the board and is dragged: sideways moves the
    * entry token to the column under the finger, and down DROP_PX from the
    * last sideways move drops it. Returns true when it drops.
    */
   private touchDragMove(drag: TouchDrag, anchor: { x: number; y: number }): boolean {
     if (!drag.dragging || drag.spent) return false;
-    // A press that began off the board is not a drag on the board.
-    if (this.mouseCol(drag.startX, drag.startY) < 0) return false;
+    // A press that began off the board is not a drag on the board; nor is one that has moved into the bottom third.
+    if (this.mouseCol(drag.startX, drag.startY) < 0 || this.inDropZone(drag.y)) return false;
     const s = this.state;
     const dx = drag.x - anchor.x;
     const dy = drag.y - anchor.y;

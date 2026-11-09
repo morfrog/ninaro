@@ -29,6 +29,8 @@ export interface TouchDrag {
   x: number;
   y: number;
   dragging: boolean;
+  /** Whether this press is tracked as a drag at all (the game decides by where it went down). */
+  tracked: boolean;
   /** Set by the game once the finger has dropped its token, so the same press does not drop another. */
   spent: boolean;
 }
@@ -36,6 +38,8 @@ export interface TouchDrag {
 export class Input {
   private keys: number[] = [];
   private touch: TouchDrag | null = null;
+  /** Whether a press that went down at (x, y) is tracked as a drag. The game sets this. */
+  trackTouch: (x: number, y: number) => boolean = () => true;
   private lmb = false;
   private rmb = false;
   private x = -1;
@@ -73,17 +77,17 @@ export class Input {
 
   /** A finger went down on the page at (x, y), in EGA pixels. */
   touchDown(x: number, y: number): void {
-    this.touch = { startX: x, startY: y, x, y, dragging: false, spent: false };
+    this.touch = { startX: x, startY: y, x, y, dragging: false, tracked: this.trackTouch(x, y), spent: false };
     this.wake();
   }
 
-  /** The finger moved to (x, y). Past TAP_SLOP from where it went down, it is a drag. */
+  /** The finger moved to (x, y). Past TAP_SLOP from where it went down, a tracked press is a drag. */
   touchMove(x: number, y: number): void {
     const t = this.touch;
     if (!t) return;
     t.x = x;
     t.y = y;
-    if (Math.hypot(x - t.startX, y - t.startY) > TAP_SLOP) t.dragging = true;
+    if (t.tracked && Math.hypot(x - t.startX, y - t.startY) > TAP_SLOP) t.dragging = true;
     this.wake();
   }
 

@@ -285,20 +285,50 @@ describe('the pointer', () => {
     game.start(1);
     const run = game.run();
     const x = (col: number) => Math.round(((col + 0.5) * 384) / 7);
-    input.touchDown(x(1), 200);
-    input.touchMove(x(5), 200); // sideways: the token follows the finger
+    // The board's upper two-thirds are y 31 to about 242; the bottom third is tap-only.
+    input.touchDown(x(1), 150);
+    input.touchMove(x(5), 150); // sideways: the token follows the finger
     await tick();
     expect(state.keypos).toBe(5);
     expect(state.playgrid.inCol(5)).toBe(0);
-    input.touchMove(x(5), 260); // down: drops in column 5
+    input.touchMove(x(5), 225); // down: drops in column 5
     await tick();
     await tick();
     expect(state.playgrid.statusOfCR(5, 7)).toBe(state.player(1)); // player two moves first
-    input.touchMove(x(5), 320); // still down: the same press drops nothing more
+    input.touchMove(x(5), 230); // still down: the same press drops nothing more
     await tick();
     expect(input.touchDrag()?.spent).toBe(true);
     expect(input.touchUp()).toBe(true); // a drag, so no tap follows
     expect(input.touchDrag()).toBeNull();
+    game.stopped = true;
+    input.pushKey(0);
+    await run;
+  });
+
+  it('a tap in the bottom third drops at once, in the column tapped', async () => {
+    const { game, state, input } = makeGame();
+    game.start(1);
+    const run = game.run();
+    const x = (col: number) => Math.round(((col + 0.5) * 384) / 7);
+    input.pushButton(1, x(5), 300, 'touch');
+    await tick();
+    await tick();
+    expect(state.playgrid.statusOfCR(5, 7)).toBe(state.player(1));
+    game.stopped = true;
+    input.pushKey(0);
+    await run;
+  });
+
+  it('a press in the bottom third is not tracked, so dragging it moves nothing', async () => {
+    const { game, state, input } = makeGame();
+    game.start(1);
+    const run = game.run();
+    const x = (col: number) => Math.round(((col + 0.5) * 384) / 7);
+    input.touchDown(x(1), 300);
+    input.touchMove(x(5), 300);
+    await tick();
+    expect(state.keypos).toBe(3);
+    expect(input.touchUp()).toBe(false); // not a tracked drag, so the release is a tap
     game.stopped = true;
     input.pushKey(0);
     await run;
