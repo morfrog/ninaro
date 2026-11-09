@@ -52,6 +52,8 @@ export class NinaroUi implements GameUi {
   readonly about: Help;
   /** Restarts the program after Exit (the original quit to DOS). */
   onExit: () => Promise<void> = async () => {};
+  /** Leaves for the home page, from the menu's Exit. */
+  onHome: () => Promise<void> = async () => {};
 
   constructor(
     private readonly game: Game,
@@ -157,7 +159,7 @@ export class NinaroUi implements GameUi {
       item('Suggest Move', () => game.suggestMove()),
       item('Toggle Sound', () => game.toggleSound()),
       item('Options...', () => this.gameOptions()),
-      item('Exit', () => this.exit()),
+      item('Exit', () => this.home()),
     ]);
     this.menu.addSub('Board', [
       item('7x8x4', () => game.gameSize7x8x4()),
@@ -206,6 +208,11 @@ export class NinaroUi implements GameUi {
   /** ExitGame: the original saved the configuration and quit to DOS. */
   async exit(): Promise<void> {
     await this.onExit();
+  }
+
+  /** The menu's Exit: leaves the game for the home page. */
+  async home(): Promise<void> {
+    await this.onHome();
   }
 
   // ---- Help ----

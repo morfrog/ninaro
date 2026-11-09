@@ -114,14 +114,17 @@ describe('the menu', () => {
     expect(ui.menu.subs[3].items.map((i) => i.name)).toEqual(['Contents', 'About']);
   });
 
-  it('runs Exit through onExit', async () => {
+  it('runs the menu Exit through onHome', async () => {
     const { ui, input } = makeUi();
+    let home = false;
     let exited = false;
+    ui.onHome = async () => void (home = true);
     ui.onExit = async () => void (exited = true);
     ui.menu.current = 0;
     ui.menu.subs[0].current = 7;
     await typing(input, ui.menuCall(), ENTER);
-    expect(exited).toBe(true);
+    expect(home).toBe(true);
+    expect(exited).toBe(false);
   });
 
   it('opens with the keys of whoever is moving (KP2 moves down for player two)', () => {

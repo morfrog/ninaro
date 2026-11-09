@@ -89,6 +89,13 @@ ui.onExit = async () => {
   await program();
 };
 
+// The menu's Exit goes to the home page instead.
+const HOME_URL = 'https://morfrog.github.io/';
+ui.onHome = async () => {
+  game.saveConfig();
+  window.location.href = HOME_URL;
+};
+
 void (async () => {
   ttl = new Uint8Array(await (await fetch(ttlUrl)).arrayBuffer());
   await program();
