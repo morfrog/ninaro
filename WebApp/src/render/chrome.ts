@@ -110,15 +110,19 @@ export function radioMark(g: Graph, x1: number, y1: number, x2: number, y2: numb
     }
     return;
   }
+  // A true circle, centred in the box: the box's shorter side is its diameter.
+  const d = Math.min(x2 - x1, y2 - y1);
+  const cx = Math.trunc((x1 + x2) / 2);
+  const cy = Math.trunc((y1 + y2) / 2);
+  const r = Math.trunc(d / 2);
   g.setColorCss(MODERN.field);
-  g.ellipse(FILL, x1, y1, x2, y2);
+  g.ellipse(FILL, cx - r, cy - r, cx + r, cy + r);
   g.setColorCss(MODERN.raisedDark);
-  g.ellipse(BORDER, x1, y1, x2, y2);
+  g.ellipse(BORDER, cx - r, cy - r, cx + r, cy + r);
   if (selected) {
-    const x = Math.trunc((x2 - x1) / 4);
-    const y = Math.trunc((y2 - y1) / 4);
+    const inner = Math.trunc(r / 2);
     g.setColorCss(MODERN.accent);
-    g.ellipse(FILL, x1 + x, y1 + y, x2 - x, y2 - y);
+    g.ellipse(FILL, cx - inner, cy - inner, cx + inner, cy + inner);
   }
 }
 

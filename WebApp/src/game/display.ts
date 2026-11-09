@@ -4,6 +4,7 @@
 import type { Grid } from '../core/grid';
 import { PlayerType, type Player } from '../core/player';
 import { BORDER, FILL, HAlign, VAlign, type Graph } from '../render/graph';
+import { MODERN, isModern } from '../render/chrome';
 import { Color } from '../render/palette';
 import { clearViewport, drawDisc, drawGrid, type Viewport } from '../render/screen';
 import { ViewSys } from '../render/viewsys';
@@ -90,15 +91,22 @@ export function displayPlayerScore(g: Graph, score: number, gamesPlayed: number)
  */
 const CREDIT = ['By Drew', '', '   1998  '];
 
-/** DisplayGameName: "Ninaro" in red with a green shadow, and the credit. */
+/** DisplayGameName: "Ninaro" in red with a green shadow, and the credit. Modern sets the title in bold instead. */
 export function displayGameName(g: Graph): void {
   g.setTextAlign(HAlign.LEFT, VAlign.BASE);
   g.setCharSpacingW(-0.01);
   g.setCharSizeW(0.1, 0.04);
-  g.setColor(Color.RED);
-  g.grTextW(0.0, 0.7, 'Ninaro');
-  g.setColor(Color.GREEN);
-  g.grTextW(0.01, 0.7, 'Ninaro');
+  if (isModern(g)) {
+    g.setTextWeight(3);
+    g.setColorCss(MODERN.text);
+    g.grTextW(0.0, 0.7, 'Ninaro');
+    g.setTextWeight(1);
+  } else {
+    g.setColor(Color.RED);
+    g.grTextW(0.0, 0.7, 'Ninaro');
+    g.setColor(Color.GREEN);
+    g.grTextW(0.01, 0.7, 'Ninaro');
+  }
   g.setCharSpacingW(-0.001);
   g.setCharSizeW(0.03, 0.013);
   g.setColor(Color.RED);

@@ -108,6 +108,7 @@ export class Graph {
   }
 
   private explicit: string | null = null;
+  private textWeight = 1;
 
   /** The Display option: 'mono' draws in the background and three greens; other modes use the colours. */
   setDisplay(mode: DisplayMode): void {
@@ -391,6 +392,11 @@ export class Graph {
   }
 
   /** _setcharspacing_w */
+  /** The stroke width of text, in EGA pixels: 1 is the original's; more is bolder. */
+  setTextWeight(width: number): void {
+    this.textWeight = width;
+  }
+
   setCharSpacingW(spacing: number): void {
     this.charSpacing = spacing * WINDOW_SCALE_X;
   }
@@ -430,7 +436,7 @@ export class Graph {
     const sy = (CAP_HEIGHT * h) / HERSHEY_CAP;
     this.clipped((ctx) => {
       ctx.strokeStyle = this.paintFor(this.color);
-      ctx.lineWidth = 1;
+      ctx.lineWidth = this.textWeight;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();

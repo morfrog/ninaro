@@ -487,8 +487,44 @@ function scaleGeometry(vp: Viewport, range: number) {
   return { width, edge, left, section, ticks };
 }
 
+/**
+ * Modern's slider: a track with the part up to the value filled in blue, a
+ * round thumb at the value, and the value above it.
+ */
+function modernScale(g: Graph, vp: Viewport, range: number, pos: number, value: string, chars: number): void {
+  const height = vp.y2 - vp.y1 + 1;
+  const { edge, left, ticks } = scaleGeometry(vp, range);
+  const right = vp.x2 - edge;
+  const at = range === 1 ? ticks[0] : ticks[pos];
+  const mid = vp.y1 + Math.trunc(height * 0.6);
+  const half = Math.max(1, Math.trunc(height / 24));
+  // The track, and the filled part up to the value.
+  g.setColorCss(MODERN.raisedLight);
+  g.rectangle(FILL, left, mid - half, right, mid + half);
+  g.setColorCss(MODERN.accent);
+  g.rectangle(FILL, left, mid - half, at, mid + half);
+  // A small dot at each position.
+  g.setColorCss(MODERN.dim);
+  for (const t of ticks) g.rectangle(FILL, t, mid + half + 3, t, mid + half + 3);
+  // The thumb: a circle with a light ring.
+  const r = Math.max(4, Math.min(Math.trunc(height / 3), 12));
+  g.setColorCss(MODERN.accent);
+  g.ellipse(FILL, at - r, mid - r, at + r, mid + r);
+  g.setColorCss(MODERN.text);
+  g.ellipse(BORDER, at - r, mid - r, at + r, mid + r);
+  // The value, above the thumb.
+  g.setCharSize(Math.trunc(height / 4), Math.trunc((edge + edge) / chars));
+  g.setTextAlign(HAlign.CENTER, VAlign.HALF);
+  g.setColorCss(MODERN.text);
+  g.grText(at, vp.y1 + Math.trunc(height / 8), value);
+}
+
 /** DisplayScale: a slider with a tick for each position and a box showing the value. */
 function displayScale(g: Graph, vp: Viewport, range: number, pos: number, value: string, chars: number, hilite: number): void {
+  if (isModern(g)) {
+    modernScale(g, vp, range, pos, value, chars);
+    return;
+  }
   const height = vp.y2 - vp.y1 + 1;
   const { edge, left, ticks } = scaleGeometry(vp, range);
   g.setCharSize(Math.trunc(height / 2), Math.trunc((edge + edge) / chars));
