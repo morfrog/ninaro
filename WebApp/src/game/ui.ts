@@ -4,7 +4,7 @@
 
 import type { Viewport } from '../render/screen';
 import { borderedBox, setViewport } from '../render/screen';
-import { Color, EGA } from '../render/palette';
+import { Color, EGA, MODERN_PALETTE, hexToValue } from '../render/palette';
 import { Display } from '../render/viewsys';
 import { Control, Dialog, Show } from '../ui/dialog';
 import { Help } from '../ui/help';
@@ -33,12 +33,14 @@ const ABOUT = [
 /** The background option: _remappalette so BLACK and WHITE swap for a white background. */
 export function applyBackground(game: Game): void {
   const p = game.g.palette;
+  // Modern keeps its own light and dark pair, so text stays readable on either background.
+  const modern = game.g.displayMode === 'modern';
   if (game.state.back === Color.BLACK) {
-    p.remap(Color.BLACK, EGA._BLACK);
-    p.remap(Color.WHITE, EGA._WHITE);
+    p.remap(Color.BLACK, modern ? MODERN_PALETTE[Color.BLACK] : EGA._BLACK);
+    p.remap(Color.WHITE, modern ? MODERN_PALETTE[Color.WHITE] : EGA._WHITE);
   } else {
-    p.remap(Color.BLACK, EGA._BRIGHTWHITE);
-    p.remap(Color.WHITE, EGA._BLACK);
+    p.remap(Color.BLACK, modern ? hexToValue('#f3f3f3') : EGA._BRIGHTWHITE);
+    p.remap(Color.WHITE, modern ? MODERN_PALETTE[Color.BLACK] : EGA._BLACK);
   }
 }
 

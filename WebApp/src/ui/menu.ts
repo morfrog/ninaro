@@ -14,7 +14,8 @@ import { ESC, F1, KeySys, type KeyGroup } from '../input/keys';
 import { BORDER, FILL, HAlign, VAlign, type Graph } from '../render/graph';
 import type { MemPage } from '../render/memPage';
 import { Color } from '../render/palette';
-import { borderedBox, type Viewport } from '../render/screen';
+import { type Viewport } from '../render/screen';
+import { isModern, MODERN, windowBox } from '../render/chrome';
 
 const MENUBACK = Color.LTGREY;
 const MENUTEXT = Color.BLACK;
@@ -157,17 +158,25 @@ export class Menu {
     const width = vp.x2 - vp.x1 + 1;
     const height = vp.y2 - vp.y1 + 1;
     const menuwidth = Math.trunc(width / this.subs.length);
-    borderedBox(g, vp.x1, vp.y1, vp.x2, vp.y2, MENUBACK, this.hilite());
-    g.rectangle(dropped ? BORDER : FILL, vp.x1 + this.current * menuwidth, vp.y1, vp.x1 + (this.current + 1) * menuwidth, vp.y2);
+    windowBox(g, vp.x1, vp.y1, vp.x2, vp.y2, MENUBACK, this.hilite());
+    const hx1 = vp.x1 + this.current * menuwidth;
+    const hx2 = vp.x1 + (this.current + 1) * menuwidth;
+    if (isModern(g)) {
+      g.setColorCss(MODERN.accent);
+      g.rectangle(FILL, hx1, vp.y1, hx2, vp.y2);
+    } else {
+      g.rectangle(dropped ? BORDER : FILL, hx1, vp.y1, hx2, vp.y2);
+    }
     g.setTextAlign(HAlign.LEFT, VAlign.TOP);
     g.setCharSize(height - 4, Math.trunc(menuwidth / 12));
     g.setCharSpacing(-1);
-    g.setColor(MENUTEXT);
     let pos = vp.x1;
-    for (const sub of this.subs) {
+    this.subs.forEach((sub, i) => {
+      if (isModern(g)) g.setColorCss(i === this.current ? MODERN.accentText : MODERN.text);
+      else g.setColor(MENUTEXT);
       g.grText(pos, vp.y1 + 1, sub.name);
       pos += menuwidth;
-    }
+    });
   }
 
   /** MenuDisplaySub: uses the text size the bar set. */
@@ -176,15 +185,21 @@ export class Menu {
     const hilite = this.hilite();
     const height = vp.y2 - vp.y1 + 1;
     const itemheight = Math.trunc(height / sub.items.length);
-    borderedBox(g, vp.x1, vp.y1, vp.x2, vp.y2, MENUBACK, hilite);
+    windowBox(g, vp.x1, vp.y1, vp.x2, vp.y2, MENUBACK, hilite);
     g.setTextAlign(HAlign.LEFT, VAlign.TOP);
+    if (isModern(g)) g.setColorCss(MODERN.accent);
     g.rectangle(FILL, vp.x1, vp.y1 + itemheight * sub.current, vp.x2, vp.y1 + itemheight * (sub.current + 1));
     let pos = vp.y1;
-    for (const item of sub.items) {
-      g.setColor(item.enabled ? MENUTEXT : hilite);
+    sub.items.forEach((item, i) => {
+      if (isModern(g)) {
+        const current = i === sub.current;
+        g.setColorCss(item.enabled ? (current ? MODERN.accentText : MODERN.text) : MODERN.dim);
+      } else {
+        g.setColor(item.enabled ? MENUTEXT : hilite);
+      }
       g.grText(vp.x1 + 2, pos, item.name);
       pos += itemheight;
-    }
+    });
   }
 
   /** MenuDisplay: the saved screen, then the bar and the open menu. */

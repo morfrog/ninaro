@@ -56,11 +56,55 @@ export function toCss(value: number): string {
   return `#${hex(channel(0))}${hex(channel(8))}${hex(channel(16))}`;
 }
 
+/** A '#rrggbb' colour as a 6-bit 0x00BBGGRR palette value (the nearest step of each channel). */
+export function hexToValue(hex: string): number {
+  const channel = (i: number) => Math.round((parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16) * 63) / 255);
+  return (channel(2) << 16) | (channel(1) << 8) | channel(0);
+}
+
+/**
+ * The Modern look's sixteen slots: a dark background with light text, and the
+ * game's colours in brighter, flatter tones. The same slots as the VGA
+ * palette, so the game's drawing is unchanged.
+ */
+export const MODERN_PALETTE: readonly number[] = [
+  '#1e1e1e', // BLACK: the background
+  '#e5484d', // RED
+  '#f5c542', // YELLOW
+  '#3b82f6', // BLUE
+  '#46a758', // GREEN
+  '#8e4ec6', // PURPLE
+  '#f76b15', // ORANGE
+  '#e6e6e6', // WHITE: the text
+  '#12a4b0', // CYAN
+  '#ff8a8f', // LTRED
+  '#ffe58a', // LTYELLOW
+  '#8ab4ff', // LTBLUE
+  '#8fd49a', // LTGREEN
+  '#c49cff', // LTPURPLE
+  '#6e6e73', // GREY
+  '#a0a0a8', // LTGREY
+].map(hexToValue);
+
 export class Palette {
   private readonly slots: number[];
+  /** The values reset() goes back to: the VGA palette, or the Modern one. */
+  private base: number[];
 
   constructor(values: readonly number[] = NINARO_PALETTE) {
     this.slots = [...values];
+    this.base = [...values];
+  }
+
+  /** Makes these the values reset() returns to, and applies them now. */
+  setBase(values: readonly number[]): void {
+    this.base = [...values];
+    this.reset();
+  }
+
+  /** ResetPalette: back to the base values. */
+  reset(): void {
+    this.base.forEach((v, i) => (this.slots[i] = v));
   }
 
   /** _remappalette */

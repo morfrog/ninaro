@@ -2,7 +2,7 @@
 // screen.
 
 import { BORDER, FILL, Graph, SCREEN_HEIGHT, SCREEN_WIDTH } from './graph';
-import { NINARO_PALETTE, Palette } from './palette';
+import { Palette } from './palette';
 
 /** VIEWPORT: a pixel rectangle, corners inclusive. */
 export interface Viewport {
@@ -54,7 +54,7 @@ export function borderedBox(g: Graph, x1: number, y1: number, x2: number, y2: nu
 
 /** ResetPalette */
 export function resetPalette(g: Graph): void {
-  g.palette.remapAll(NINARO_PALETTE);
+  g.palette.reset();
 }
 
 /** DrawGrid: x columns and y rows of lines across the viewport. */

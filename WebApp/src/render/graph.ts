@@ -107,6 +107,8 @@ export class Graph {
     this.palette = palette;
   }
 
+  private explicit: string | null = null;
+
   /** The Display option: 'mono' draws in the background and three greens; other modes use the colours. */
   setDisplay(mode: DisplayMode): void {
     if (mode === this.display) return;
@@ -114,8 +116,21 @@ export class Graph {
     this.patterns.clear();
   }
 
+  get displayMode(): DisplayMode {
+    return this.display;
+  }
+
+  /**
+   * Draws the next things in an exact CSS colour instead of a palette slot,
+   * for the Modern look's controls. null goes back to the slot set by setColor.
+   */
+  setColorCss(css: string | null): void {
+    this.explicit = css;
+  }
+
   /** The style for a colour slot: its colour, or in monochrome its hatch pattern. */
   private paintFor(slot: number): string | CanvasPattern {
+    if (this.explicit) return this.explicit;
     if (this.display !== 'mono') return this.palette.css(slot);
     const bg = this.palette.css(0);
     const look = this.monoLook(slot);
@@ -139,6 +154,7 @@ export class Graph {
 
   /** A single colour for the slot: in monochrome, the ink of its look. */
   private inkCss(slot: number): string {
+    if (this.explicit) return this.explicit;
     if (this.display !== 'mono') return this.palette.css(slot);
     return monoInkCss(this.monoLook(slot), this.palette.css(0));
   }
@@ -207,6 +223,7 @@ export class Graph {
   /** _setcolor */
   setColor(color: number): void {
     this.color = color;
+    this.explicit = null;
   }
 
   /** _setfillmask: 8 bytes, top row first, bit 7 leftmost; null for solid. */

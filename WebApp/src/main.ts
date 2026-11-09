@@ -4,6 +4,7 @@
 import helpText from '../../Legacy/NINARO.HLP?raw';
 import { decodeConfig } from './data/config';
 import { loadDisplayMode, parseDisplayMode, saveDisplayMode, type DisplayMode } from './render/displayMode';
+import { MODERN_PALETTE, NINARO_PALETTE } from './render/palette';
 import { CONFIG_KEY, SAVE_KEY, StoredFile } from './data/storage';
 import ttlUrl from '../../Legacy/NINARO.TTL?url';
 import { gameViewSys } from './game/display';
@@ -61,15 +62,20 @@ screen.onResize = () => {
 
 const displaySelect = document.querySelector<HTMLSelectElement>('#display-mode');
 if (displaySelect) {
+  /** Modern has its own palette; VGA and Monochrome use the original's. */
+  const applyMode = (mode: DisplayMode) => {
+    document.documentElement.dataset.display = mode;
+    screen.graph.palette.setBase(mode === 'modern' ? MODERN_PALETTE : NINARO_PALETTE);
+    screen.graph.setDisplay(mode);
+    applyBackground(game);
+  };
   const initial: DisplayMode = loadDisplayMode();
-  document.documentElement.dataset.display = initial;
-  screen.graph.setDisplay(initial);
+  applyMode(initial);
   displaySelect.value = initial;
   displaySelect.addEventListener('change', () => {
     const mode = parseDisplayMode(displaySelect.value);
     saveDisplayMode(mode);
-    document.documentElement.dataset.display = mode;
-    screen.graph.setDisplay(mode);
+    applyMode(mode);
     if (!inTitle) game.redrawAll();
   });
 }

@@ -18,7 +18,8 @@ import { ESC, F1, KeySys, type KeyGroup } from '../input/keys';
 import { BORDER, FILL, HAlign, VAlign, type Graph } from '../render/graph';
 import type { MemPage } from '../render/memPage';
 import { Color } from '../render/palette';
-import { borderedBox, type Viewport } from '../render/screen';
+import { type Viewport } from '../render/screen';
+import { inkSelected, inkText, panelFill, radioMark, raised, selectionFrame, trackLine, MODERN, isModern } from '../render/chrome';
 
 /** Display types (DIALOG.H). */
 export const Show = { Button: 0, Radio: 1, Color: 2, Name: 3, Slider: 4, Dial: 5 } as const;
@@ -303,12 +304,11 @@ export class Dialog {
     const names = Math.trunc(width / namefract);
     mp.put();
     g.setViewport(0, 0, 639, 349);
-    g.setColor(CONTROLBACK);
-    g.rectangle(FILL, vp.x1, vp.y1, vp.x2, vp.y2);
+    panelFill(g, vp.x1, vp.y1, vp.x2, vp.y2, CONTROLBACK);
     g.setCharSize(Math.trunc((4 * rowheight) / 5), Math.trunc(width / 20));
     g.setCharSpacing(0);
     g.setTextAlign(HAlign.CENTER, VAlign.HALF);
-    g.setColor(CONTROLTEXT);
+    inkText(g, CONTROLTEXT);
     g.grText(vp.x1 + Math.trunc(width / 2), vp.y1 + Math.trunc(rowheight / 2), this.name);
     g.grText(vp.x1 + Math.trunc(width / 2) + 1, vp.y1 + Math.trunc(rowheight / 2), this.name);
     g.setCharSize(Math.trunc(rowheight / 2), Math.trunc(names / chars));
@@ -326,9 +326,7 @@ export class Dialog {
       if (!e.enabled) return;
       const control: Viewport = { x1: vp.x1 + 1, y1: aty + 1, x2: vp.x2 - 1, y2: aty + e.store.rows * rowheight - 1 };
       if (x === this.current) {
-        g.setColor(hilite);
-        g.rectangle(BORDER, vp.x1, control.y1, vp.x2, control.y2);
-        g.rectangle(BORDER, vp.x1 + 1, control.y1 - 1, vp.x2 - 1, control.y2 + 1);
+        selectionFrame(g, vp.x1, control.y1, vp.x2, control.y2, hilite);
       } else {
         g.setLineStyle(0x1111);
         g.setColor(CONTROLTEXT);
@@ -461,19 +459,11 @@ export class Dialog {
 
 // ---- Drawing controls (DisplayList, DisplayRange and their helpers) ----
 
-/** DisplayCircleFilled: a ring, filled in the middle if `filled`. */
-function circleFilled(g: Graph, x1: number, y1: number, x2: number, y2: number, filled: boolean): void {
-  g.ellipse(BORDER, x1, y1, x2, y2);
-  if (filled) {
-    const x = Math.trunc((x2 - x1) / 4);
-    const y = Math.trunc((y2 - y1) / 4);
-    g.ellipse(FILL, x1 + x, y1 + y, x2 - x, y2 - y);
-  }
-}
-
 /** DisplayColor: a swatch, with a dotted double frame when selected. */
 function displayColor(g: Graph, x1: number, y1: number, x2: number, y2: number, hilite: number, color: number, selected: boolean): void {
-  if (selected) {
+  if (selected && isModern(g)) {
+    selectionFrame(g, x1, y1, x2, y2, hilite);
+  } else if (selected) {
     g.setColor(hilite);
     g.setLineStyle(0x5555);
     g.rectangle(BORDER, x1, y1, x2, y2);
@@ -503,7 +493,7 @@ function displayScale(g: Graph, vp: Viewport, range: number, pos: number, value:
   const { edge, left, ticks } = scaleGeometry(vp, range);
   g.setCharSize(Math.trunc(height / 2), Math.trunc((edge + edge) / chars));
   g.setTextAlign(HAlign.CENTER, VAlign.HALF);
-  g.setColor(CONTROLTEXT);
+  trackLine(g, CONTROLTEXT);
   g.moveTo(left, vp.y2);
   g.lineTo(vp.x2 - edge, vp.y2);
   g.moveTo(left, vp.y1);
@@ -513,8 +503,8 @@ function displayScale(g: Graph, vp: Viewport, range: number, pos: number, value:
     g.lineTo(at, vp.y2);
   }
   const at = range === 1 ? ticks[0] : ticks[pos];
-  borderedBox(g, at - edge, vp.y1 + Math.trunc(height / 4), at + edge, vp.y2 - Math.trunc(height / 4), CONTROLBACK, hilite);
-  g.setColor(CONTROLTEXT);
+  raised(g, at - edge, vp.y1 + Math.trunc(height / 4), at + edge, vp.y2 - Math.trunc(height / 4), CONTROLBACK, hilite);
+  inkText(g, CONTROLTEXT);
   g.grText(at, vp.y1 + Math.trunc(height / 2), value);
 }
 
@@ -528,6 +518,7 @@ function rangeArea(c: Control, vp: Viewport): Viewport {
 /** DisplayRange */
 function displayRange(g: Graph, c: Control, vp: Viewport, hilite: number): void {
   const height = Math.trunc((vp.y2 - vp.y1) / c.rows);
+  if (isModern(g)) inkText(g, CONTROLTEXT);
   g.setCharSize(height, Math.trunc((vp.x2 - vp.x1) / (4 * c.strwidth)));
   g.setCharSpacing(0);
   if (c.minName !== '' && c.maxName !== '') {
@@ -608,26 +599,39 @@ function displayList(g: Graph, c: Control, vp: Viewport, hilite: number): void {
     const name = elem.name ?? '';
     switch (c.show) {
       case Show.Radio:
-        g.setColor(CONTROLTEXT);
-        circleFilled(g, atx, aty, atx + Math.trunc(width / 8), aty + height, x === c.current);
+        radioMark(g, atx, aty, atx + Math.trunc(width / 8), aty + height, x === c.current, CONTROLTEXT);
+        inkText(g, CONTROLTEXT);
         g.grText(atx + Math.trunc(width / 8), aty + texty, name);
         break;
       case Show.Button:
-        if (x === c.current) {
-          g.setColor(hilite);
-          g.rectangle(FILL, atx + 5, aty + 5, atx + width - 5, aty + height - 5);
+        if (isModern(g)) {
+          if (x === c.current) {
+            g.setColorCss(MODERN.accent);
+            g.rectangle(FILL, atx + 3, aty + 3, atx + width - 3, aty + height - 3);
+            inkSelected(g, hilite);
+            g.setColorCss(MODERN.accentText);
+          } else {
+            raised(g, atx + 3, aty + 3, atx + width - 3, aty + height - 3, CONTROLBACK, hilite);
+            inkText(g, CONTROLTEXT);
+          }
+        } else {
+          if (x === c.current) {
+            g.setColor(hilite);
+            g.rectangle(FILL, atx + 5, aty + 5, atx + width - 5, aty + height - 5);
+          }
+          g.setColor(CONTROLTEXT);
+          g.rectangle(BORDER, atx + 3, aty + 3, atx + width - 3, aty + height - 3);
         }
-        g.setColor(CONTROLTEXT);
-        g.rectangle(BORDER, atx + 3, aty + 3, atx + width - 3, aty + height - 3);
         g.grText(atx + textx, aty + texty, name);
         break;
       case Show.Name:
-        g.setColor(x === c.current ? hilite : CONTROLTEXT);
+        if (x === c.current) inkSelected(g, hilite);
+        else inkText(g, CONTROLTEXT);
         g.grText(atx + textx, aty + texty, name);
         break;
       case Show.Color:
         displayColor(g, atx, aty, atx + width, aty + threeQuarters, hilite, elem.value, x === c.current);
-        g.setColor(CONTROLTEXT);
+        inkText(g, CONTROLTEXT);
         g.grText(atx + textx, aty + threeQuarters, name);
         break;
     }
