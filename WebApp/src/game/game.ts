@@ -559,8 +559,9 @@ export class Game {
       this.vs.windowChanged(GameWindow.entryGrid, true);
       this.vs.display(Display.DisplayChanged);
       // Each column must stay on screen for at least one frame, or the page
-      // never shows it and the token seems to skip squares.
-      await sleep(Math.max(del, FRAME_MS));
+      // never shows it and the token seems to skip squares. (Tests turn
+      // animation off and run as fast as they can.)
+      await sleep(this.animateDrops ? Math.max(del, FRAME_MS) : del);
     } while (s.keypos !== col);
   }
 
