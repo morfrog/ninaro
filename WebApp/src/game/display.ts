@@ -110,6 +110,16 @@ export function displayGameName(g: Graph): void {
   }
   g.setCharSpacingW(-0.001);
   g.setCharSizeW(0.03, 0.013);
+  if (isModern(g)) {
+    // Modern: the credit once, in bold, in the same small size.
+    g.setTextWeight(2);
+    g.setColorCss(MODERN.text);
+    g.grTextW(0.65, 0.25, CREDIT[0]);
+    g.grTextW(0.65, 0.55, CREDIT[1]);
+    g.grTextW(0.65, 0.85, CREDIT[2]);
+    g.setTextWeight(1);
+    return;
+  }
   g.setColor(Color.RED);
   g.grTextW(0.65, 0.25, CREDIT[0]);
   g.grTextW(0.65, 0.55, CREDIT[1]);
