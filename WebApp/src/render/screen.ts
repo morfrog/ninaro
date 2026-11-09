@@ -71,15 +71,24 @@ export function drawGrid(g: Graph, x: number, y: number): void {
   }
 }
 
-/** DrawDisc: a filled ellipse discsize of the cell across, centred in it. */
+/**
+ * DrawDisc: a filled circle, discsize of the cell across, centred in it. The
+ * cells may be wider than they are tall (Fullscreen stretches the board
+ * across), so the circle is sized in device pixels and then converted back
+ * to window fractions for the ellipse.
+ */
 export function drawDisc(g: Graph, col: number, cols: number, row: number, rows: number, color: number, discsize: number): void {
-  const colwidth = 1.0 / cols;
-  const rowheight = 1.0 / rows;
+  const vp = g.viewport;
+  const boardW = (vp.x2 - vp.x1 + 1) * g.pixelScaleX;
+  const boardH = (vp.y2 - vp.y1 + 1) * g.pixelScaleY;
   const side = discsize / 2;
-  const wherex = (col + 0.5) * colwidth;
-  const wherey = (row + 0.5) * rowheight;
+  const radius = side * Math.min(boardW / cols, boardH / rows);
+  const wherex = (col + 0.5) / cols;
+  const wherey = (row + 0.5) / rows;
+  const hw = radius / boardW;
+  const hh = radius / boardH;
   g.setColor(color);
-  g.ellipseW(FILL, wherex - side * colwidth, wherey - side * rowheight, wherex + side * colwidth, wherey + side * rowheight);
+  g.ellipseW(FILL, wherex - hw, wherey - hh, wherex + hw, wherey + hh);
 }
 
 /**
@@ -112,6 +121,7 @@ export class Screen {
     this.canvas.width = width;
     this.canvas.height = height;
     this.graph.ctx.setTransform(width / SCREEN_WIDTH, 0, 0, height / SCREEN_HEIGHT, 0, 0);
+    this.graph.setPixelScale(width / SCREEN_WIDTH, height / SCREEN_HEIGHT);
     return true;
   }
 

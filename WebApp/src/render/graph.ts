@@ -113,6 +113,23 @@ export class Graph {
 
   private explicit: string | null = null;
   private textWeight = 1;
+  /** Device pixels per screen pixel, across and down (the canvas may be stretched across). */
+  private pixelScale = { x: 1, y: 1 };
+
+  /** Set when the canvas is sized: device pixels for each EGA pixel, across and down. */
+  setPixelScale(x: number, y: number): void {
+    this.pixelScale = { x, y };
+  }
+
+  /** Device pixels per EGA pixel, across. */
+  get pixelScaleX(): number {
+    return this.pixelScale.x;
+  }
+
+  /** Device pixels per EGA pixel, down. */
+  get pixelScaleY(): number {
+    return this.pixelScale.y;
+  }
 
   /** The Display option: 'mono' draws in the background and three greens; other modes use the colours. */
   setDisplay(mode: DisplayMode): void {

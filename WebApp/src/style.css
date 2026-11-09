@@ -96,13 +96,22 @@ a {
   width: 100%;
 }
 
+/* The frame keeps the Normal screen's height for its width, so the canvas is as tall as in Normal view
+   and, at 640 / 384 times the frame's width, its left 60% fills the frame. */
 .screen-frame--cropped {
+  position: relative;
   overflow: hidden;
   width: 100%;
+  aspect-ratio: 640 / calc(350 * var(--ega-pixel-aspect));
 }
 
 .screen-frame--cropped .screen {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: calc(100% * 640 / 384);
+  height: 100%;
+  aspect-ratio: auto;
 }
 
 .btn--link {
