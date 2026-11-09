@@ -122,7 +122,7 @@ describe('the main loop', () => {
     for (let i = 0; i < 5; i++) await tick();
     await new Promise((r) => setTimeout(r, 250)); // the win tune's length, muted: none
     expect(state.playerTwoScore).toBe(1);
-    expect(state.msgbox.line(state.msgbox.size)).toBe('Player One Goes First'); // NewGame ran
+    expect(state.msgbox.line(state.msgbox.size)).toBe('Human 1 Goes First'); // NewGame ran
     input.pushKey(97); // not Esc
     await tick();
     input.pushKey(ESC);
@@ -278,6 +278,35 @@ describe('the pointer', () => {
     expect(game.mouseCol(383, 100)).toBe(6);
     expect(game.mouseCol(200, 10)).toBe(3); // over the entry row
     expect(game.mouseCol(500, 100)).toBe(-1);
+  });
+});
+
+describe('log names and the player menu', () => {
+  it('numbers same-type players 1 and 2, and names others by type', () => {
+    const { game, state } = makeGame();
+    expect(game.logName(state.playerOne)).toBe('Human 1');
+    expect(game.logName(state.playerTwo)).toBe('Human 2');
+    state.playerTwo = 6; // AI Genius
+    expect(game.logName(state.playerOne)).toBe('Human');
+    expect(game.logName(state.playerTwo)).toBe('AI Genius');
+    state.playerOne = 6; // AI Genius vs AI Expert: both computers, so both numbered
+    state.playerTwo = 5;
+    expect(game.logName(state.playerOne)).toBe('AI Genius 1');
+    expect(game.logName(state.playerTwo)).toBe('AI Expert 2');
+  });
+
+  it('locks the other player only when two humans are in a game', () => {
+    const { game, state } = makeGame();
+    const menu: Record<string, boolean> = {};
+    game.ui = { ...game.ui, menuItemEnable: (sub, item, enable) => (menu[`${sub}.${item}`] = enable) } as typeof game.ui;
+    game.ingame = true;
+    state.playerCurrent = state.playerOne;
+    game.updatePlayerMenu();
+    expect(menu['2.0']).toBe(true);
+    expect(menu['2.1']).toBe(false);
+    state.playerTwo = 6; // an AI on the other side: both stay enabled
+    game.updatePlayerMenu();
+    expect(menu['2.1']).toBe(true);
   });
 });
 

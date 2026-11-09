@@ -206,17 +206,40 @@ export class Game {
   /** SetP1Current */
   setP1Current(): void {
     this.state.playerCurrent = this.state.playerOne;
-    this.ui.menuItemEnable(2, 0, true);
-    this.ui.menuItemEnable(2, 1, false);
+    this.updatePlayerMenu();
     this.ui.menuSubCurrentSet(2, 0);
   }
 
   /** SetP2Current */
   setP2Current(): void {
     this.state.playerCurrent = this.state.playerTwo;
-    this.ui.menuItemEnable(2, 1, true);
-    this.ui.menuItemEnable(2, 0, false);
+    this.updatePlayerMenu();
     this.ui.menuSubCurrentSet(2, 1);
+  }
+
+  /**
+   * The Player menu's One and Two items. During a game with two humans, only
+   * the player to move can be changed (the other human changes on their own
+   * turn). Otherwise both can be changed at any time.
+   */
+  updatePlayerMenu(): void {
+    const s = this.state;
+    const bothHuman = this.player(s.playerOne).type === PlayerType.Human && this.player(s.playerTwo).type === PlayerType.Human;
+    const locked = this.ingame && bothHuman;
+    this.ui.menuItemEnable(2, 0, !locked || s.playerCurrent === s.playerOne);
+    this.ui.menuItemEnable(2, 1, !locked || s.playerCurrent === s.playerTwo);
+  }
+
+  /**
+   * The name a player goes by in the log: "Human", or the AI's name. When
+   * both players are the same type, they are numbered 1 (player one) and 2.
+   */
+  logName(slot: number): string {
+    const s = this.state;
+    const p = this.player(slot);
+    const base = p.type === PlayerType.Human ? 'Human' : p.name;
+    if (this.player(s.playerOne).type !== this.player(s.playerTwo).type) return base;
+    return `${base} ${slot === s.playerOne ? 1 : 2}`;
   }
 
   /** NextPlayer */
@@ -353,7 +376,7 @@ export class Game {
           ++s.playerTwoScore;
           s.playerWinner = s.playerTwo;
         }
-        s.msgbox.fixedAddLine(`${this.currentPlayer().name} Wins`);
+        s.msgbox.fixedAddLine(`${this.logName(s.playerCurrent)} Wins`);
         s.entrygrid.removeTokenAtCR(s.keypos, 0);
         break;
       case InsertResult.Failure:
@@ -507,37 +530,33 @@ export class Game {
     switch (s.goesFirst) {
       case GoesFirst.One:
         this.setP1Current();
-        s.msgbox.fixedAddLine('Player One Goes First');
         break;
       case GoesFirst.Two:
         this.setP2Current();
-        s.msgbox.fixedAddLine('Player Two Goes First');
         break;
       case GoesFirst.Loser:
         if (s.playerWinner === s.playerOne) this.setP2Current();
         else if (s.playerWinner === s.playerTwo) this.setP1Current();
         else if (this.rng.random(2) === 0) this.setP1Current();
         else this.setP2Current(); // the original forgot the () here (known bug 1, fixed)
-        s.msgbox.fixedAddLine('Loser Goes First');
         break;
       case GoesFirst.Winner:
         if (s.playerWinner === s.playerOne) this.setP1Current();
         else if (s.playerWinner === s.playerTwo) this.setP2Current();
         else if (this.rng.random(2) === 0) this.setP1Current();
         else this.setP2Current();
-        s.msgbox.fixedAddLine('Winner Goes First');
         break;
       case GoesFirst.Successive:
         if (s.wentFirst === s.playerTwo) this.setP1Current();
         else this.setP2Current();
-        s.msgbox.fixedAddLine('Successive Player Goes First');
         break;
       case GoesFirst.Random:
         if (this.rng.random(2) === 0) this.setP1Current();
         else this.setP2Current();
-        s.msgbox.fixedAddLine('Random Player Goes First');
         break;
     }
+    // Who goes first, by name, whatever the setting that chose them.
+    s.msgbox.fixedAddLine(`${this.logName(s.playerCurrent)} Goes First`);
     s.wentFirst = s.playerCurrent;
     s.playgrid.empty();
     s.entrygrid.empty();
@@ -555,6 +574,7 @@ export class Game {
       this.resetScores();
     }
     this.ingame = true;
+    this.updatePlayerMenu();
   }
 
   /** EndGame */
@@ -626,15 +646,8 @@ export class Game {
     s.winOccurred = false;
     s.entrygrid.resetTokenAtCR(s.keypos, 0, this.currentPlayer());
     s.gameStatus();
-    if (this.ingame) {
-      const one = s.playerCurrent === s.playerOne;
-      this.ui.menuItemEnable(2, 0, one);
-      this.ui.menuItemEnable(2, 1, !one);
-      this.ui.menuSubCurrentSet(2, one ? 0 : 1);
-    } else {
-      this.ui.menuItemEnable(2, 0, true);
-      this.ui.menuItemEnable(2, 1, true);
-    }
+    this.updatePlayerMenu();
+    if (this.ingame) this.ui.menuSubCurrentSet(2, s.playerCurrent === s.playerOne ? 0 : 1);
   }
 
   /** ToggleSound (F8) */
@@ -669,8 +682,8 @@ export class Game {
   bestOfResult(): void {
     const s = this.state;
     let out: string;
-    if (s.playerOneScore > s.playerTwoScore) out = `${this.player(s.playerOne).name} Wins The Set`;
-    else if (s.playerTwoScore > s.playerOneScore) out = `${this.player(s.playerTwo).name} Wins The Set`;
+    if (s.playerOneScore > s.playerTwoScore) out = `${this.logName(s.playerOne)} Wins The Set`;
+    else if (s.playerTwoScore > s.playerOneScore) out = `${this.logName(s.playerTwo)} Wins The Set`;
     else out = 'The Set is Drawn';
     s.msgbox.fixedAddLine(out);
   }
