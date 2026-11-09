@@ -279,6 +279,30 @@ describe('the pointer', () => {
     expect(game.mouseCol(200, 10)).toBe(3); // over the entry row
     expect(game.mouseCol(500, 100)).toBe(-1);
   });
+
+  it('a finger dragged sideways moves the token, and dragged down drops it', async () => {
+    const { game, state, input } = makeGame();
+    game.start(1);
+    const run = game.run();
+    const x = (col: number) => Math.round(((col + 0.5) * 384) / 7);
+    input.touchDown(x(1), 200);
+    input.touchMove(x(5), 200); // sideways: the token follows the finger
+    await tick();
+    expect(state.keypos).toBe(5);
+    expect(state.playgrid.inCol(5)).toBe(0);
+    input.touchMove(x(5), 260); // down: drops in column 5
+    await tick();
+    await tick();
+    expect(state.playgrid.statusOfCR(5, 7)).toBe(state.player(1)); // player two moves first
+    input.touchMove(x(5), 320); // still down: the same press drops nothing more
+    await tick();
+    expect(input.touchDrag()?.spent).toBe(true);
+    expect(input.touchUp()).toBe(true); // a drag, so no tap follows
+    expect(input.touchDrag()).toBeNull();
+    game.stopped = true;
+    input.pushKey(0);
+    await run;
+  });
 });
 
 describe('log names and the player menu', () => {

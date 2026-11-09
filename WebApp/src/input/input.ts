@@ -19,8 +19,23 @@ export interface MouseInput {
   pointerType: string;
 }
 
+/** A finger moved this far (EGA pixels) from where it went down is a drag, not a tap. */
+export const TAP_SLOP = 8;
+
+/** A finger that is down: where it went down, where it is now, and whether it has been dragged. */
+export interface TouchDrag {
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  dragging: boolean;
+  /** Set by the game once the finger has dropped its token, so the same press does not drop another. */
+  spent: boolean;
+}
+
 export class Input {
   private keys: number[] = [];
+  private touch: TouchDrag | null = null;
   private lmb = false;
   private rmb = false;
   private x = -1;
@@ -54,6 +69,39 @@ export class Input {
     this.moved = true;
     this.pointerType = pointerType;
     this.wake();
+  }
+
+  /** A finger went down on the page at (x, y), in EGA pixels. */
+  touchDown(x: number, y: number): void {
+    this.touch = { startX: x, startY: y, x, y, dragging: false, spent: false };
+    this.wake();
+  }
+
+  /** The finger moved to (x, y). Past TAP_SLOP from where it went down, it is a drag. */
+  touchMove(x: number, y: number): void {
+    const t = this.touch;
+    if (!t) return;
+    t.x = x;
+    t.y = y;
+    if (Math.hypot(x - t.startX, y - t.startY) > TAP_SLOP) t.dragging = true;
+    this.wake();
+  }
+
+  /** The finger lifted. Returns true if it had been dragged (so it is not a tap). */
+  touchUp(): boolean {
+    const t = this.touch;
+    this.touch = null;
+    return t?.dragging ?? false;
+  }
+
+  /** The finger that is down, or null. */
+  touchDrag(): TouchDrag | null {
+    return this.touch;
+  }
+
+  /** The finger has dropped its token: the same press drops no more. */
+  spendTouch(): void {
+    if (this.touch) this.touch.spent = true;
   }
 
   /** Scroll by this many lines (down if positive). */
@@ -138,11 +186,14 @@ export class Input {
     let dragY: number | null = null;
     let dragged = false;
     canvas.addEventListener('pointerdown', (e) => {
-      dragY = toScreen(e.clientX, e.clientY).y;
+      const p = toScreen(e.clientX, e.clientY);
+      dragY = p.y;
       dragged = false;
+      if (e.pointerType === 'touch') this.touchDown(p.x, p.y);
     });
     canvas.addEventListener('pointermove', (e) => {
       const p = toScreen(e.clientX, e.clientY);
+      if (e.pointerType === 'touch') this.touchMove(p.x, p.y);
       if (dragY !== null && e.pointerType === 'touch') {
         const lines = Math.trunc((dragY - p.y) / 12);
         if (lines !== 0) {
@@ -155,7 +206,8 @@ export class Input {
     });
     canvas.addEventListener('pointerup', (e) => {
       dragY = null;
-      if (e.button !== 0 || dragged) return;
+      const touchDragged = e.pointerType === 'touch' ? this.touchUp() : false;
+      if (e.button !== 0 || dragged || touchDragged) return;
       const p = toScreen(e.clientX, e.clientY);
       this.pushButton(LMB, p.x, p.y, e.pointerType);
     });

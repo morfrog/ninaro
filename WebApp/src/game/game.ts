@@ -11,7 +11,7 @@ import { Direction, Grid } from '../core/grid';
 import { PlayerType, type Player } from '../core/player';
 import { WatcomRandom } from '../core/random';
 import { Speaker } from '../audio/sound';
-import { Input, LMB, NMB, RMB, sleep } from '../input/input';
+import { Input, LMB, NMB, RMB, sleep, type TouchDrag } from '../input/input';
 import {
   AF4, BKSP, CF9, CQ, CX, ENTER, ESC, F1, F10, F2, F3, F4, F5, F6, F7, F8, F9, KP2, KP4, KP6, KP8, KeyGroup, KeySys,
 } from '../input/keys';
@@ -98,6 +98,8 @@ const SUGGEST_MASK = [0xa2, 0x15, 0xa2, 0x10, 0xa2, 0x10, 0xa2, 0x15];
 const HUMAN_DROP_MS = 1000;
 /** Pause between frames of a falling token. */
 const FRAME_MS = 16;
+/** How far (EGA pixels) a finger must go down, past any sideways move, to drop the token. */
+const DROP_PX = 40;
 
 /**
  * The windows Fullscreen leaves out: everything at the right, where the
@@ -570,10 +572,13 @@ export class Game {
    * a function key). Player keys move and drop; the pointer (for either
    * human here; only player one in the original) moves over the board,
    * and a click on the board drops. On a touch screen the first tap on a column moves
-   * the token there and a second tap drops it.
+   * the token there and a second tap drops it. A finger dragged from the board moves
+   * the token sideways and drops it on a downward drag (touchDragMove).
    */
   async humanMove(useMouse: boolean): Promise<number> {
     const s = this.state;
+    // The point the finger's drop is measured from: where it went down, or where it last moved the token.
+    let anchor: { x: number; y: number } | null = null;
     for (;;) {
       if (this.input.kbhit()) {
         const key = await this.input.getKey();
@@ -596,6 +601,11 @@ export class Game {
         continue;
       }
       if (this.mouseUsage && useMouse) {
+        const drag = this.input.touchDrag();
+        if (drag) {
+          anchor ??= { x: drag.startX, y: drag.startY };
+          if (this.touchDragMove(drag, anchor)) return s.keypos;
+        }
         const m = this.input.getMouseInput();
         if (m.button === LMB) {
           const col = this.mouseCol(m.x, m.y);
@@ -625,6 +635,34 @@ export class Game {
       if (this.stopped) return -1;
       await this.input.wait();
     }
+  }
+
+  /**
+   * A finger that went down on the board and is dragged: sideways moves the
+   * entry token to the column under the finger, and down DROP_PX from the
+   * last sideways move drops it. Returns true when it drops.
+   */
+  private touchDragMove(drag: TouchDrag, anchor: { x: number; y: number }): boolean {
+    if (!drag.dragging || drag.spent) return false;
+    // A press that began off the board is not a drag on the board.
+    if (this.mouseCol(drag.startX, drag.startY) < 0) return false;
+    const s = this.state;
+    const dx = drag.x - anchor.x;
+    const dy = drag.y - anchor.y;
+    if (dy > DROP_PX && dy > Math.abs(dx)) {
+      this.input.spendTouch();
+      this.input.takeWheel(); // the finger's vertical scroll is not for the help
+      return true;
+    }
+    const col = this.mouseCol(drag.x, drag.startY);
+    if (col >= 0 && col !== s.keypos) {
+      this.moveEntryTo(col);
+      this.vs.display(Display.DisplayChanged);
+      anchor.x = drag.x;
+      anchor.y = drag.y;
+    }
+    this.input.takeWheel();
+    return false;
   }
 
   /** P1Move */
