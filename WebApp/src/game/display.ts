@@ -75,12 +75,12 @@ export function displayPlayerType(g: Graph, player: Player): void {
 }
 
 /** DisplayPlayerName */
-export function displayPlayerName(g: Graph, player: Player): void {
+export function displayPlayerName(g: Graph, name: string): void {
   g.setColor(Color.GREEN);
   g.setTextAlign(HAlign.LEFT, VAlign.BOTTOM);
   g.setCharSpacingW(-0.013);
   g.setCharSizeW(0.04, 0.03);
-  g.grTextW(0.0, 1.0, player.name);
+  g.grTextW(0.0, 1.0, name);
 }
 
 /** DisplayPlayerScore: uses the text settings DisplayPlayerName left. */
@@ -167,10 +167,10 @@ export function gameViewSys(g: Graph, canvas: HTMLCanvasElement, state: GameStat
     state.statusbox.display(g, g.viewport);
   }, null, 'The Game Status');
   vs.windowNew(0.61, 0.4, 0.65, 0.448, true, () => displayPlayerType(g, p1()), null, "Player One's Type");
-  vs.windowNew(0.66, 0.4, 0.85, 0.448, true, () => displayPlayerName(g, p1()), null, "Player One's Name");
+  vs.windowNew(0.66, 0.4, 0.85, 0.448, true, () => displayPlayerName(g, state.logName(state.playerOne)), null, "Player One's Name");
   vs.windowNew(0.86, 0.4, 1.0, 0.448, true, () => displayPlayerScore(g, state.playerOneScore, state.gamesPlayed), null, "Player One's Score");
   vs.windowNew(0.61, 0.452, 0.65, 0.5, true, () => displayPlayerType(g, p2()), null, "Player Two's Type");
-  vs.windowNew(0.66, 0.452, 0.85, 0.5, true, () => displayPlayerName(g, p2()), null, "Player Two's Name");
+  vs.windowNew(0.66, 0.452, 0.85, 0.5, true, () => displayPlayerName(g, state.logName(state.playerTwo)), null, "Player Two's Name");
   vs.windowNew(0.86, 0.452, 1.0, 0.5, true, () => displayPlayerScore(g, state.playerTwoScore, state.gamesPlayed), null, "Player Two's Score");
   return vs;
 }

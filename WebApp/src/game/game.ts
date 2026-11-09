@@ -235,11 +235,7 @@ export class Game {
    * both players are the same type, they are numbered 1 (player one) and 2.
    */
   logName(slot: number): string {
-    const s = this.state;
-    const p = this.player(slot);
-    const base = p.type === PlayerType.Human ? 'Human' : p.name;
-    if (this.player(s.playerOne).type !== this.player(s.playerTwo).type) return base;
-    return `${base} ${slot === s.playerOne ? 1 : 2}`;
+    return this.state.logName(slot);
   }
 
   /** NextPlayer */

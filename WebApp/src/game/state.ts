@@ -93,6 +93,18 @@ export class GameState {
     return this.players.player(slot)!;
   }
 
+  /**
+   * The name a player goes by in the log and the status panel: "Human", or
+   * the AI's name. When both players are the same type, they are numbered 1
+   * (player one) and 2.
+   */
+  logName(slot: number): string {
+    const p = this.player(slot);
+    const base = p.type === PlayerType.Human ? 'Human' : p.name;
+    if (this.player(this.playerOne).type !== this.player(this.playerTwo).type) return base;
+    return `${base} ${slot === this.playerOne ? 1 : 2}`;
+  }
+
   /** ResetGameSize, without the player and menu side effects. */
   resetGameSize(cols: number, rows: number, inARow: number): void {
     this.gridCols = cols;
