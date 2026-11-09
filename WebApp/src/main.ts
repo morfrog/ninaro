@@ -3,7 +3,7 @@
 
 import helpText from '../../Legacy/NINARO.HLP?raw';
 import { decodeConfig } from './data/config';
-import { loadDisplayMode, parseDisplayMode, saveDisplayMode } from './render/displayMode';
+import { loadDisplayMode, parseDisplayMode, saveDisplayMode, type DisplayMode } from './render/displayMode';
 import { CONFIG_KEY, SAVE_KEY, StoredFile } from './data/storage';
 import ttlUrl from '../../Legacy/NINARO.TTL?url';
 import { gameViewSys } from './game/display';
@@ -51,24 +51,28 @@ document.querySelector('#menu-button')?.addEventListener('click', () => input.pu
 document.querySelector('#help-button')?.addEventListener('click', () => input.pushKey(F1));
 
 // The Display option: remembered in the browser and changeable at any time.
-// Phase 1 only stores it and marks the page; the drawing follows in later steps.
-const displaySelect = document.querySelector<HTMLSelectElement>('#display-mode');
-if (displaySelect) {
-  let mode = loadDisplayMode();
-  displaySelect.value = mode;
-  document.documentElement.dataset.display = mode;
-  displaySelect.addEventListener('change', () => {
-    mode = parseDisplayMode(displaySelect.value);
-    saveDisplayMode(mode);
-    document.documentElement.dataset.display = mode;
-  });
-}
-
+// Monochrome changes how colours are drawn; Modern is drawn as VGA until its
+// own step.
 let ttl = new Uint8Array();
 let inTitle = false;
 screen.onResize = () => {
   if (!inTitle) game.redrawAll();
 };
+
+const displaySelect = document.querySelector<HTMLSelectElement>('#display-mode');
+if (displaySelect) {
+  const initial: DisplayMode = loadDisplayMode();
+  document.documentElement.dataset.display = initial;
+  screen.graph.setDisplay(initial);
+  displaySelect.value = initial;
+  displaySelect.addEventListener('change', () => {
+    const mode = parseDisplayMode(displaySelect.value);
+    saveDisplayMode(mode);
+    document.documentElement.dataset.display = mode;
+    screen.graph.setDisplay(mode);
+    if (!inTitle) game.redrawAll();
+  });
+}
 
 /** main(): the title screen, then the first game on the configured board. */
 async function program(): Promise<void> {

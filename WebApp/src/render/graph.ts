@@ -17,7 +17,9 @@
 //   width, plus the _setcharspacing gap. Capitals start 0.1 of the cell
 //   height down and are 0.7 of it tall.
 
+import type { DisplayMode } from './displayMode';
 import { HERSHEY_SIMPLEX } from './hersheyFont';
+import { MONO_LOOKS, monoInkCss, monoLookIndices, monoTilePixels, type MonoLook } from './displayStyle';
 import type { Palette } from './palette';
 
 export const SCREEN_WIDTH = 640;
@@ -94,10 +96,54 @@ export class Graph {
   private charSpacing = 0;
   private alignH: HAlign = HAlign.NORMAL;
   private alignV: VAlign = VAlign.NORMAL;
+  private display: DisplayMode = 'vga';
+  /** Monochrome hatch patterns, by look and background colour. */
+  private readonly patterns = new Map<string, string | CanvasPattern>();
 
   constructor(ctx: CanvasRenderingContext2D, palette: Palette) {
     this.ctx = ctx;
     this.palette = palette;
+  }
+
+  /** The Display option: 'mono' draws in the background and three greens; other modes use the colours. */
+  setDisplay(mode: DisplayMode): void {
+    if (mode === this.display) return;
+    this.display = mode;
+    this.patterns.clear();
+  }
+
+  /** The style for a colour slot: its colour, or in monochrome its hatch pattern. */
+  private paintFor(slot: number): string | CanvasPattern {
+    if (this.display !== 'mono') return this.palette.css(slot);
+    const bg = this.palette.css(0);
+    const look = this.monoLook(slot);
+    if (look.tone === 0) return bg;
+    const key = `${MONO_LOOKS.indexOf(look)}|${bg}`;
+    const cached = this.patterns.get(key);
+    if (cached) return cached;
+    const tile = document.createElement('canvas');
+    tile.width = 8;
+    tile.height = 8;
+    const t = tile.getContext('2d')!;
+    monoTilePixels(look, bg).forEach((css, i) => {
+      t.fillStyle = css;
+      t.fillRect(i % 8, Math.floor(i / 8), 1, 1);
+    });
+    // Anchored at screen (0, 0) in EGA pixels, as the hardware did.
+    const pattern = this.ctx.createPattern(tile, 'repeat') ?? monoInkCss(look, bg);
+    this.patterns.set(key, pattern);
+    return pattern;
+  }
+
+  /** A single colour for the slot: in monochrome, the ink of its look. */
+  private inkCss(slot: number): string {
+    if (this.display !== 'mono') return this.palette.css(slot);
+    return monoInkCss(this.monoLook(slot), this.palette.css(0));
+  }
+
+  private monoLook(slot: number): MonoLook {
+    const values = Array.from({ length: 16 }, (_, i) => this.palette.value(i));
+    return MONO_LOOKS[monoLookIndices(values)[slot & 15]];
   }
 
   // ---- Viewports and coordinates ----
@@ -157,8 +203,8 @@ export class Graph {
   }
 
   private fillStyle(): string | CanvasPattern {
-    const css = this.palette.css(this.color);
-    if (!this.fillMask) return css;
+    if (!this.fillMask) return this.paintFor(this.color);
+    const css = this.inkCss(this.color);
     const tile = document.createElement('canvas');
     tile.width = 8;
     tile.height = 8;
@@ -206,7 +252,7 @@ export class Graph {
         ctx.fillStyle = this.fillStyle();
         ctx.fillRect(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
       } else {
-        ctx.strokeStyle = this.palette.css(this.color);
+        ctx.strokeStyle = this.paintFor(this.color);
         ctx.lineWidth = 1;
         ctx.setLineDash(this.lineDash);
         ctx.strokeRect(x1 + 0.5, y1 + 0.5, x2 - x1, y2 - y1);
@@ -241,7 +287,7 @@ export class Graph {
         ctx.fillStyle = this.fillStyle();
         ctx.fill();
       } else {
-        ctx.strokeStyle = this.palette.css(this.color);
+        ctx.strokeStyle = this.paintFor(this.color);
         ctx.lineWidth = 1;
         ctx.stroke();
       }
@@ -274,7 +320,7 @@ export class Graph {
     const fromX = this.posX;
     const fromY = this.posY;
     this.clipped((ctx) => {
-      ctx.strokeStyle = this.palette.css(this.color);
+      ctx.strokeStyle = this.paintFor(this.color);
       ctx.lineWidth = 1;
       ctx.lineCap = this.lineDash.length ? 'butt' : 'square';
       ctx.setLineDash(this.lineDash);
@@ -345,7 +391,7 @@ export class Graph {
     const sx = w / GLYPH_UNITS_PER_CELL;
     const sy = (CAP_HEIGHT * h) / HERSHEY_CAP;
     this.clipped((ctx) => {
-      ctx.strokeStyle = this.palette.css(this.color);
+      ctx.strokeStyle = this.paintFor(this.color);
       ctx.lineWidth = 1;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
