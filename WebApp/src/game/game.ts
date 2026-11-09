@@ -558,7 +558,9 @@ export class Game {
       else this.keyLeft();
       this.vs.windowChanged(GameWindow.entryGrid, true);
       this.vs.display(Display.DisplayChanged);
-      await sleep(del);
+      // Each column must stay on screen for at least one frame, or the page
+      // never shows it and the token seems to skip squares.
+      await sleep(Math.max(del, FRAME_MS));
     } while (s.keypos !== col);
   }
 
