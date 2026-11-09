@@ -393,3 +393,21 @@ describe('the View option', () => {
     expect(active[INFO[0]]).toBe(false);
   });
 });
+
+describe('the entry token', () => {
+  it('leaves the entry row when a token drops, and returns for the next player', async () => {
+    const { game, state } = makeGame();
+    game.resetGameSize(7, 8, 4);
+    game.newGame();
+    const first = game.currentPlayer();
+    expect(state.entrygrid.statusOfCR(state.keypos, 0)).toBe(first);
+
+    await game.dropToken();
+    expect(state.entrygrid.statusOfCR(state.keypos, 0)).toBeNull();
+    expect(game.currentPlayer()).not.toBe(first);
+
+    // The next player's turn starts: their token appears over the same column.
+    (game as unknown as { showEntryToken(): void }).showEntryToken();
+    expect(state.entrygrid.statusOfCR(state.keypos, 0)).toBe(game.currentPlayer());
+  });
+});

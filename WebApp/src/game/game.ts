@@ -471,13 +471,15 @@ export class Game {
     const dropper = this.currentPlayer();
     const row = insertTokenTarget(s.playgrid, s.keypos);
     const ret = insertTokenInCol(s.playgrid, s.keypos, dropper, s.win);
-    if (ret !== InsertResult.Failure) await this.animateDrop(s.keypos, row, dropper);
+    if (ret !== InsertResult.Failure) {
+      // The token leaves the entry row as it drops. The next player's token comes back when their turn starts.
+      s.entrygrid.removeTokenAtCR(s.keypos, 0);
+      this.vs.windowChanged(GameWindow.entryGrid, true);
+      await this.animateDrop(s.keypos, row, dropper);
+    }
     switch (ret) {
       case InsertResult.Success:
-        s.entrygrid.removeTokenAtCR(s.keypos, 0);
         this.nextPlayer();
-        s.entrygrid.insertTokenAtCR(s.keypos, 0, this.currentPlayer());
-        this.vs.windowChanged(GameWindow.entryGrid, true);
         this.vs.windowChanged(GameWindow.playGrid, true);
         if (s.playgrid.tokens() === s.playgrid.maxTokens()) {
           s.msgbox.fixedAddLine("It's A Draw...");
@@ -497,7 +499,6 @@ export class Game {
           s.playerWinner = s.playerTwo;
         }
         s.msgbox.fixedAddLine(`${this.logName(s.playerCurrent)} Wins`);
-        s.entrygrid.removeTokenAtCR(s.keypos, 0);
         break;
       case InsertResult.Failure:
         await this.speaker.buzz(200, 400, 20, 100);
@@ -891,11 +892,24 @@ export class Game {
     this.vs.display(Display.DisplayAll);
   }
 
+  /**
+   * At the start of a turn, the player to move's token appears in the entry
+   * row, over the column the last one dropped in.
+   */
+  private showEntryToken(): void {
+    const s = this.state;
+    if (s.entrygrid.statusOfCR(s.keypos, 0) !== null) return;
+    s.entrygrid.insertTokenAtCR(s.keypos, 0, this.currentPlayer());
+    this.vs.windowChanged(GameWindow.entryGrid, true);
+    this.vs.display(Display.DisplayChanged);
+  }
+
   /** main()'s loop. */
   async run(): Promise<void> {
     const s = this.state;
     while (!this.stopped) {
       while (this.ingame && !this.stopped) {
+        this.showEntryToken();
         const col = await this.getMove(s.playerCurrent);
         if (this.mouseUsage && this.input.getMouseInput().button === RMB) await this.keyUp();
         // The original handled a key waiting here instead of the move,
