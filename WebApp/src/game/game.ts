@@ -388,7 +388,7 @@ export class Game {
 
   /**
    * How long a token takes to fall the height of the board. A human's drop
-   * is 1 second, at a constant speed. A computer's drop scales with AI Speed:
+   * is 1 second. A computer's drop scales with AI Speed:
    * Normal is also 1 second, each step faster or slower doubles or halves it
    * (Fastest 0.25 s, Slowest 4 s).
    */
@@ -398,19 +398,22 @@ export class Game {
   }
 
   /**
-   * Shows a token falling from the top edge of the board to its row at
-   * constant speed, so a drop to half way takes half the time. The token is
-   * already in the grid, hidden, until it lands.
+   * Shows a token falling under gravity from the top edge of the board to its
+   * row, so it speeds up the further it falls. Its distance grows with the
+   * square of the time, and the height of the board takes dropMs. The token
+   * is already in the grid, hidden, until it lands.
    */
   async animateDrop(col: number, row: number, player: Player): Promise<void> {
     if (!this.animateDrops) return;
     const s = this.state;
     // From the top edge (-0.5) to the centre of `row` (row + 0.5): row + 1 rows.
-    const total = (this.dropMs(player) * (row + 1)) / s.playgrid.height;
+    // Free fall covers distance d in time T * sqrt(d / H), for a full board of height H.
+    const distance = row + 1;
+    const total = this.dropMs(player) * Math.sqrt(distance / s.playgrid.height);
     const start = performance.now();
     for (;;) {
       const t = Math.min(1, (performance.now() - start) / total);
-      s.falling = { col, row, y: -0.5 + t * (row + 1), color: player.color };
+      s.falling = { col, row, y: -0.5 + t * t * distance, color: player.color };
       this.vs.windowChanged(GameWindow.playGrid, true);
       this.vs.display(Display.DisplayChanged);
       if (t >= 1) break;
