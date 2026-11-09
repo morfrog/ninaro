@@ -78,6 +78,14 @@ a {
   gap: 8px;
   margin-left: auto;
   font-weight: bold;
+  white-space: nowrap;
+}
+
+/* "vs" between the two players: smaller, with space either side. */
+.toolbar__vs {
+  font-size: 0.75em;
+  color: var(--muted);
+  margin: 0 6px;
 }
 
 .toolbar__name {

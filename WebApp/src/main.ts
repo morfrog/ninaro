@@ -93,7 +93,16 @@ game.onView = (view) => {
   frame?.classList.toggle('screen-frame--cropped', view.cropped);
   if (boardTitle) boardTitle.hidden = !view.fullscreen;
   if (boardReadout && boardReadout.textContent !== view.readout) boardReadout.textContent = view.readout;
-  if (boardPlayers && boardPlayers.textContent !== view.players) boardPlayers.textContent = view.players;
+  if (boardPlayers) {
+    const key = `${view.players.one}|${view.players.two}`;
+    if (boardPlayers.dataset.players !== key) {
+      boardPlayers.dataset.players = key;
+      const vs = document.createElement('span');
+      vs.className = 'toolbar__vs';
+      vs.textContent = 'vs';
+      boardPlayers.replaceChildren(view.players.one, vs, view.players.two);
+    }
+  }
 };
 
 const viewSelect = document.querySelector<HTMLSelectElement>('#view-mode');
