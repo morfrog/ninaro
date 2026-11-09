@@ -85,9 +85,11 @@ export function drawLogFlash(g: Graph, board: Viewport, flash: FlashText, colors
   const y2 = y1 + boxH - 1;
   const cellH = boxH - 12;
   const charW = Math.trunc((boxW - 16) / Math.max(BOX_CHARS, flash.text.length));
-  const textW = flash.text.length * charW;
-  const textX = x1 + Math.trunc((boxW - textW) / 2);
-  const textY = y1 + Math.trunc((boxH - cellH) / 2);
+  // The text is centred on the box's middle, as the Graph centres it on a point (the
+  // modern font is narrower than its cells, so aligning by cells would sit it off-centre).
+  // The capitals sit a tenth of a cell down and are seven tenths tall, so their middle is at 0.45 of the cell.
+  const textX = x1 + boxW / 2;
+  const textY = y1 + boxH / 2 - 0.45 * cellH;
 
   const mask = g.getFillMask();
   const ctx = g.ctx;
@@ -102,7 +104,7 @@ export function drawLogFlash(g: Graph, board: Viewport, flash: FlashText, colors
     g.rectangle(BORDER, x1, y1, x2, y2);
     g.setCharSpacing(0);
     g.setCharSize(cellH, charW);
-    g.setTextAlign(HAlign.LEFT, VAlign.TOP);
+    g.setTextAlign(HAlign.CENTER, VAlign.TOP);
     g.setColor(flash.bold ? colors.hilite : colors.text);
     g.grText(textX, textY, flash.text);
   } finally {
