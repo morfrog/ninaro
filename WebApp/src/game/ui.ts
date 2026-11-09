@@ -27,7 +27,7 @@ const ABOUT = [
   '      Semester One 1998',
   '',
   '       Copyright 1998',
-  '        Version 2.07',
+  '        Version 2.08',
 ];
 
 /** The background option: _remappalette so BLACK and WHITE swap for a white background. */

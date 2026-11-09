@@ -2,7 +2,7 @@
   "name": "ninaro-web",
   "private": true,
   "version": "0.1.0",
-  "description": "Ninaro (N-in-a-row) - web port of the 1998 DOS game v2.07",
+  "description": "Ninaro (N-in-a-row) - web port of the 1998 DOS game v2.08",
   "type": "module",
   "scripts": {
     "dev": "vite",
