@@ -195,6 +195,39 @@ describe('online play', () => {
     await runB;
   });
 
+  it('a game ended part way is lost by the one who ended it, and won by the other', async () => {
+    const store = new MemoryStore();
+    const a = makeGame(store, 13);
+    const b = makeGame(store, 14);
+    a.game.setP1(PLAYER_SLOTS.aiRandom);
+    b.game.setP1(PLAYER_SLOTS.aiNormal);
+    a.state.aiDelay = 50;
+    b.state.aiDelay = 50;
+    a.state.aiSpeed = 1;
+    b.state.aiSpeed = 1;
+    const connectA = a.game.goOnline('room', 2);
+    await delay(40);
+    await Promise.all([connectA, b.game.goOnline('room', 2)]);
+    const runs = [a.game.run(), b.game.run()];
+    const linkA = a.game.online!;
+    await until(() => linkA.myMoves + linkA.theirMoves >= 2);
+    a.game.endGame(); // F4 on A, part way through
+    await until(() => !b.game.ingame);
+    expect(a.said).toContain('~You Lose');
+    expect(a.said).toContain('You ended the game');
+    expect(b.said).toContain('~You Win!');
+    expect(b.said).toContain('Opponent ended the game');
+    expect(b.said).not.toContain('~Opponent left');
+    // It counts: a win for B's player one, a game played on both.
+    expect([b.state.playerOneScore, b.state.playerTwoScore, b.state.gamesPlayed]).toEqual([1, 0, 1]);
+    expect([a.state.playerOneScore, a.state.playerTwoScore, a.state.gamesPlayed]).toEqual([0, 1, 1]);
+    for (const d of [a, b]) {
+      d.game.stopped = true;
+      d.input.poke();
+    }
+    await Promise.all(runs);
+  });
+
   it('gives up connecting when a new game is started instead', async () => {
     const store = new MemoryStore();
     const a = makeGame(store, 9);

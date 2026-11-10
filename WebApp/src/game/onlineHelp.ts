@@ -27,7 +27,9 @@ the AIs, to let an AI play someone online.
 
 Changing a player, the board or your colour, ending the game
 or closing the page leaves the online game, and the other
-player is told. Saving and loading games are off while
+player is told. Leaving part way through a game loses it:
+the other player is told they won, and the scores count it.
+Saving and loading games are off while
 online. If the connection is lost, the game keeps trying:
 press Esc for the menu, or F4 to end the game.
 

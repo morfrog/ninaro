@@ -1067,9 +1067,11 @@ export class Game {
    * Leaves the online game (or stops connecting): tells the opponent unless
    * sendQuit is false, and puts back the player the Online side had before.
    */
-  leaveOnline(sendQuit = true): void {
+  leaveOnline(sendQuit = true, forfeit = sendQuit): void {
     const link = this.online;
     if (!link) return;
+    // Ending a game under way online gives it to the opponent.
+    if (forfeit && !link.left && this.gameUnderWay(link)) this.forfeit(link, link.side);
     this.online = null;
     link.close(sendQuit && !link.left);
     const s = this.state;
@@ -1088,10 +1090,34 @@ export class Game {
     this.online?.closeNow();
   }
 
-  /** The opponent quit: the game ends. */
+  /** Whether a game is under way online: started, with a move made, and not yet won or drawn. */
+  private gameUnderWay(link: OnlineLink): boolean {
+    const s = this.state;
+    return link.started && this.ingame && !s.winOccurred && !s.isDraw && link.myMoves + link.theirMoves > 0;
+  }
+
+  /**
+   * A game ended by a player before it was won: it counts as a win for the
+   * other side. `winnerSide` is player one or two on this device.
+   */
+  private forfeit(link: OnlineLink, winnerSide: 1 | 2): void {
+    const s = this.state;
+    ++s.gamesPlayed;
+    if (winnerSide === 1) ++s.playerOneScore;
+    else ++s.playerTwoScore;
+    const iWon = winnerSide !== link.side;
+    this.say(iWon ? '~You Win!' : '~You Lose');
+    this.say(iWon ? 'Opponent ended the game' : 'You ended the game');
+    if (iWon) void this.speaker.playTune(100, 50, 300, 50, 500, 100, 400, 5);
+    else void this.speaker.playTune(400, 120, 300, 120, 200, 250);
+  }
+
+  /** The opponent quit: the game ends, and if it was under way, we won it. */
   private opponentLeft(): void {
-    if (!this.online) return;
-    this.say('~Opponent left');
+    const link = this.online;
+    if (!link) return;
+    if (this.gameUnderWay(link)) this.forfeit(link, link.side === 1 ? 2 : 1);
+    else this.say('~Opponent left');
     this.leaveOnline(false);
     if (this.ingame) this.endGame();
     this.redraw();
@@ -1166,7 +1192,7 @@ export class Game {
       // Out of step, or the session ended under us.
       if (this.online === link) {
         this.say('~Out of step: game ended');
-        this.leaveOnline();
+        this.leaveOnline(true, false); // nobody's fault: no win or loss
         if (this.ingame) this.endGame();
         this.redraw();
       }
