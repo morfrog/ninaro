@@ -40,13 +40,15 @@ export function displayGrid(g: Graph, grid: Grid, size: number, hidden?: { col: 
   }
 }
 
+/** The band behind the drop column in VGA and Monochrome: darker than the palette's grey. */
+const DROP_BAND_GREY = '#262626';
+
 /**
  * The band behind the column the entry token is over, so its drop is easy to
  * follow: the full height of the board, drawn before the grid lines.
  */
 export function drawDropColumn(g: Graph, col: number, cols: number): void {
-  if (isModern(g)) g.setColorCss(MODERN.face);
-  else g.setColor(Color.GREY);
+  g.setColorCss(isModern(g) ? MODERN.face : DROP_BAND_GREY);
   g.rectangleW(FILL, col / cols, 0, (col + 1) / cols, 1);
 }
 
