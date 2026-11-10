@@ -1,8 +1,10 @@
 // Fullscreen's log: each new message appears over the board, in a box with
 // the message box's border, and fades away on its own timer. Messages that
 // come close together stack up, newest at the bottom, so none is cut short:
-// "a", then "a b", then "b" once a has faded. The message box itself is not
-// shown in fullscreen, so this is how the player sees what happened.
+// "a", then "a b", then "b" once a has faded. An announcement (who won)
+// stays until it is released, by a click, tap or key, and then fades at once.
+// The message box itself is not shown in fullscreen, so this is how the
+// player sees what happened.
 
 import { BORDER, FILL, HAlign, VAlign, type Graph } from '../render/graph';
 import { setViewport, type Viewport } from '../render/screen';
@@ -14,7 +16,7 @@ export const FLASH_FADE_MS = 700;
 export const FLASH_MS = FLASH_HOLD_MS + FLASH_FADE_MS;
 /** Time between redraws while fading. */
 export const FLASH_FRAME_MS = 33;
-/** The most lines on show at once; a newer line pushes out the oldest. */
+/** The most lines on show at once; a newer line pushes out the oldest (announcements last). */
 export const FLASH_MAX_LINES = 4;
 
 /** Characters per line the box is sized for: the message box's width. */
@@ -36,13 +38,31 @@ export interface FlashText {
 
 /** The messages on show, oldest first, each with its own timer. */
 export class LogFlash {
-  private lines: { text: string; bold: boolean; shownAt: number }[] = [];
+  private lines: { text: string; bold: boolean; shownAt: number; sticky: boolean }[] = [];
 
-  /** Shows `line` from time `now` (milliseconds), below any still on show. */
-  show(line: string, now: number): void {
+  /**
+   * Shows `line` from time `now` (milliseconds), below any still on show. A
+   * sticky line (an announcement) stays until release().
+   */
+  show(line: string, now: number, sticky = false): void {
     const bold = line.startsWith('~');
-    this.lines.push({ text: bold ? line.slice(1) : line, bold, shownAt: now });
-    if (this.lines.length > FLASH_MAX_LINES) this.lines.splice(0, this.lines.length - FLASH_MAX_LINES);
+    this.lines.push({ text: bold ? line.slice(1) : line, bold, shownAt: now, sticky });
+    while (this.lines.length > FLASH_MAX_LINES) {
+      const oldest = this.lines.findIndex((l) => !l.sticky);
+      this.lines.splice(oldest >= 0 ? oldest : 0, 1);
+    }
+  }
+
+  /** Sticky lines start fading now, with no hold. True if there were any. */
+  release(now: number): boolean {
+    let any = false;
+    for (const l of this.lines) {
+      if (!l.sticky) continue;
+      l.sticky = false;
+      l.shownAt = now - FLASH_HOLD_MS;
+      any = true;
+    }
+    return any;
   }
 
   clear(): void {
@@ -51,8 +71,13 @@ export class LogFlash {
 
   /** What to draw at time `now`, oldest first: empty once all have faded. */
   current(now: number): FlashText[] {
-    this.lines = this.lines.filter((l) => flashAlpha(now - l.shownAt) > 0);
-    return this.lines.map((l) => ({ text: l.text, bold: l.bold, alpha: flashAlpha(now - l.shownAt) }));
+    this.lines = this.lines.filter((l) => l.sticky || flashAlpha(now - l.shownAt) > 0);
+    return this.lines.map((l) => ({ text: l.text, bold: l.bold, alpha: l.sticky ? 1 : flashAlpha(now - l.shownAt) }));
+  }
+
+  /** Whether any line is on a timer at `now` (so the screen needs redrawing as it fades). Sticky lines don't change. */
+  animating(now: number): boolean {
+    return this.current(now).length > 0 && this.lines.some((l) => !l.sticky);
   }
 }
 

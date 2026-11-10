@@ -57,6 +57,29 @@ describe('LogFlash', () => {
     expect(f.current(0)).toEqual([]);
   });
 
+  it('keeps an announcement until it is released, then fades it at once', () => {
+    const f = new LogFlash();
+    f.show('~You Win!', 0, true);
+    f.show('~Press ESC To Continue', 10);
+    expect(texts(f, 60_000)).toEqual(['You Win!']); // the other line faded; the announcement stays
+    expect(f.current(60_000)[0].alpha).toBe(1);
+    expect(f.animating(60_000)).toBe(false); // nothing to redraw while it holds still
+    expect(f.release(60_000)).toBe(true);
+    expect(f.animating(60_000)).toBe(true);
+    expect(f.current(60_000 + FLASH_FADE_MS / 2)[0].alpha).toBeCloseTo(0.5);
+    expect(texts(f, 60_000 + FLASH_FADE_MS)).toEqual([]);
+    expect(f.release(70_000)).toBe(false);
+  });
+
+  it('pushes out ordinary lines before an announcement', () => {
+    const f = new LogFlash();
+    f.show('~You Lose', 0, true);
+    for (let i = 1; i <= FLASH_MAX_LINES; i++) f.show(`line ${i}`, i);
+    const shown = texts(f, 10);
+    expect(shown).toHaveLength(FLASH_MAX_LINES);
+    expect(shown[0]).toBe('You Lose');
+  });
+
   it('can be cleared', () => {
     const f = new LogFlash();
     f.show('Game Loaded', 0);

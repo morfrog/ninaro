@@ -278,8 +278,31 @@ export class Game {
   /** A line added to the message box: in Fullscreen it is shown over the board for a moment. */
   private logAdded(line: string): void {
     if (!this.screenOn || !this.cropped || line.replace(/^~/, '').trim() === '') return;
-    this.flash.show(line, performance.now());
+    this.flash.show(line, performance.now(), this.announcing);
     this.startFlash();
+  }
+
+  /** Set while an announcement (who won) is added: it stays over the board until a click, tap or key. */
+  private announcing = false;
+
+  /**
+   * Adds lines to the message box that, in Fullscreen, stay over the board
+   * until dismissed. A new announcement lets the last one go, so results
+   * don't pile up when two AIs play on with nobody pressing a key.
+   */
+  private announce(...lines: string[]): void {
+    this.flash.release(performance.now());
+    this.announcing = true;
+    try {
+      for (const line of lines) this.state.msgbox.fixedAddLine(line);
+    } finally {
+      this.announcing = false;
+    }
+  }
+
+  /** A click, tap or key: an announcement on show fades out at once. */
+  dismissAnnouncement(): void {
+    if (this.flash.release(performance.now())) this.startFlash();
   }
 
   /** Redraws the screen until the message has faded. */
@@ -291,8 +314,9 @@ export class Game {
         this.flash.clear();
         return;
       }
-      const live = this.flash.current(performance.now()).length > 0;
-      // Restores the saved screen, then draws the message if it is still showing.
+      // Only lines on a timer need redrawing as they fade; an announcement alone holds still.
+      const live = this.flash.animating(performance.now());
+      // Restores the saved screen, then draws the messages still showing.
       this.vs.display(Display.DisplayCurrent);
       if (live) this.flashTimer = setTimeout(frame, FLASH_FRAME_MS);
     };
@@ -516,7 +540,7 @@ export class Game {
         this.nextPlayer();
         this.vs.windowChanged(GameWindow.playGrid, true);
         if (s.playgrid.tokens() === s.playgrid.maxTokens()) {
-          s.msgbox.fixedAddLine("It's A Draw...");
+          this.announce("It's A Draw...");
           s.isDraw = true;
           ++s.gamesPlayed;
         }
@@ -534,7 +558,7 @@ export class Game {
           ++s.playerTwoScore;
           s.playerWinner = s.playerTwo;
         }
-        s.msgbox.fixedAddLine(this.winLine(s.playerCurrent));
+        this.announce(this.winLine(s.playerCurrent));
         break;
       case InsertResult.Failure:
         await this.speaker.buzz(200, 400, 20, 100);
@@ -927,7 +951,7 @@ export class Game {
     if (s.playerOneScore > s.playerTwoScore) out = this.winLine(s.playerOne, true);
     else if (s.playerTwoScore > s.playerOneScore) out = this.winLine(s.playerTwo, true);
     else out = 'The Set is Drawn';
-    s.msgbox.fixedAddLine(out);
+    this.announce(out);
   }
 
   /**
@@ -1125,8 +1149,9 @@ export class Game {
     if (winnerSide === 1) ++s.playerOneScore;
     else ++s.playerTwoScore;
     const iWon = winnerSide !== link.side;
-    this.say(iWon ? '~You Win!' : '~You Lose');
-    this.say(iWon ? 'Opponent ended the game' : 'You ended the game');
+    this.announce(iWon ? '~You Win!' : '~You Lose', iWon ? 'Opponent ended the game' : 'You ended the game');
+    this.vs.windowChanged(GameWindow.msgBox, true);
+    this.redraw();
     if (iWon) void this.speaker.playTune(100, 50, 300, 50, 500, 100, 400, 5);
     else void this.speaker.playTune(400, 120, 300, 120, 200, 250);
   }

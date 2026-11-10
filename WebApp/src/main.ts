@@ -58,6 +58,11 @@ for (const type of ['keydown', 'pointerdown'] as const) {
   window.addEventListener(type, () => game.speaker.unlock(), { capture: true });
 }
 
+// Who won stays over the board in Fullscreen until a click, tap or key; then it fades at once.
+for (const type of ['keydown', 'pointerdown'] as const) {
+  window.addEventListener(type, () => game.dismissAnnouncement(), { capture: true });
+}
+
 // The toolbar's Menu button, for players without a keyboard: the same as Esc.
 // On the title screen it reads Play, and Esc (or a click) starts the game.
 const menuButton = document.querySelector<HTMLButtonElement>('#menu-button');
