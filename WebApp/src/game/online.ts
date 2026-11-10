@@ -28,6 +28,8 @@ export class OnlineLink {
   readonly controller = new AbortController();
   /** Handshake done: games can be played. */
   started = false;
+  /** Connected, and game 1 waits for the player to click, tap or press Esc. */
+  awaitingStart = false;
   /** The opponent quit; the game loop ends the game. */
   left = false;
   /** Who plays on the opponent's device: 0 a human, 1..5 an AI (KIND_NAMES). Known once started. */

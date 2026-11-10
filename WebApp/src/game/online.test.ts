@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { decodeConfig, encodeConfig } from '../data/config';
 import { Input } from '../input/input';
-import { F6 } from '../input/keys';
+import { ESC, F6 } from '../input/keys';
 import { MemoryStore } from '../online/kvStore';
 import type { Graph } from '../render/graph';
 import { Color } from '../render/palette';
 import { viewportFromViewport } from '../render/screen';
 import type { ViewSys } from '../render/viewsys';
-import { Game, type ViewState } from './game';
+import { Game, type TurnState, type ViewState } from './game';
 import type { OnlineStoreFactory } from './online';
 import { GameState, PLAYER_SLOTS } from './state';
 
@@ -121,25 +121,40 @@ describe('online play', () => {
     // Each is told who they are playing, and the toolbar says so.
     expect(a.said).toContain('~Opponent: AI Normal');
     expect(b.said).toContain('~Opponent: Human');
+    // Game 1 waits until each player has read who they are playing and continues.
+    expect(a.said.at(-1)).toBe('~Tap, click or Esc to start');
+    expect(a.game.ingame).toBe(false);
     let viewA: ViewState | null = null;
-    let viewB: ViewState | null = null;
-    a.game.onView = (v) => (viewA = v);
-    b.game.onView = (v) => (viewB = v);
+    let firstTurnA: TurnState | null = null;
+    let firstTurnB: TurnState | null = null;
+    a.game.onView = (v) => {
+      viewA = v;
+      firstTurnA ??= v.turn;
+    };
+    b.game.onView = (v) => (firstTurnB ??= v.turn);
+    // The test's screen never redraws, so the page hears of the turn when each game begins.
+    for (const d of [a, b]) {
+      const newGame = d.game.newGame.bind(d.game);
+      d.game.newGame = () => {
+        newGame();
+        d.game.setViewMode('normal');
+      };
+    }
     a.game.setViewMode('normal');
-    b.game.setViewMode('normal');
     expect(viewA!.players).toEqual({ one: 'Human', two: 'Online (AI Normal)' });
-    // Each device says whose turn it is from its own side: one says "Your turn", the other "Their turn".
-    const aFirst = a.state.playerCurrent === PLAYER_SLOTS.one;
-    expect(viewA!.turn?.text).toBe(aFirst ? 'Your turn' : 'Their turn');
-    expect(viewB!.turn?.text).toBe(aFirst ? 'Their turn' : 'Your turn');
-    expect(viewA!.turn?.mine).toBe(aFirst);
-    // The same player starts on both: one device's player one is the other's Online.
-    expect(a.state.playerCurrent === PLAYER_SLOTS.one).toBe(b.state.playerCurrent === PLAYER_SLOTS.online);
 
     const endA = stopAtGameEnd(a.game, a.state);
     const endB = stopAtGameEnd(b.game, b.state);
     const stopHuman = human(a.game, a.state, a.input);
-    await Promise.all([a.game.run(), b.game.run()]);
+    const runs = Promise.all([a.game.run(), b.game.run()]);
+    await delay(20);
+    expect(a.game.ingame || b.game.ingame).toBe(false); // still waiting
+    a.input.pushKey(ESC);
+    b.input.pushKey(ESC);
+    await runs;
+    // Each device said whose turn it was from its own side, and they agreed who started.
+    expect(firstTurnA!.text).toBe(firstTurnA!.mine ? 'Your turn' : 'Their turn');
+    expect(firstTurnB!.mine).toBe(!firstTurnA!.mine);
     stopHuman();
     expect(endA.board).not.toBe('');
     expect(endA.board).toBe(endB.board);
@@ -193,7 +208,8 @@ describe('online play', () => {
     await delay(40);
     await Promise.all([connectA, b.game.goOnline('room', 2)]);
     const runB = b.game.run();
-    expect(b.game.ingame).toBe(true);
+    b.input.pushKey(ESC); // start game 1
+    await until(() => b.game.ingame);
     a.game.endGame(); // F4 on A
     await until(() => !b.game.ingame);
     expect(b.said).toContain('~Opponent left');
@@ -218,6 +234,8 @@ describe('online play', () => {
     await delay(40);
     await Promise.all([connectA, b.game.goOnline('room', 2)]);
     const runs = [a.game.run(), b.game.run()];
+    a.input.pushKey(ESC); // start game 1 on both
+    b.input.pushKey(ESC);
     const linkA = a.game.online!;
     await until(() => linkA.myMoves + linkA.theirMoves >= 2);
     a.game.endGame(); // F4 on A, part way through

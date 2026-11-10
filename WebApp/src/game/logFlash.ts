@@ -17,7 +17,7 @@ export const FLASH_MS = FLASH_HOLD_MS + FLASH_FADE_MS;
 /** Time between redraws while fading. */
 export const FLASH_FRAME_MS = 33;
 /** The most lines on show at once; a newer line pushes out the oldest (announcements last). */
-export const FLASH_MAX_LINES = 4;
+export const FLASH_MAX_LINES = 6;
 
 /** Characters per line the box is sized for: the message box's width. */
 const BOX_CHARS = 30;

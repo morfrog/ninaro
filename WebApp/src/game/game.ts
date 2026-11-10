@@ -1088,7 +1088,7 @@ export class Game {
       this.onlineTimings,
     );
     this.online = link;
-    this.say(`Room: ${link.room}`);
+    this.say(`Room: ${link.room}`, true);
     this.updatePlayerMenu();
     this.redraw();
 
@@ -1104,22 +1104,24 @@ export class Game {
         link.started = true;
         if (result.colorChanged) {
           local.color = result.myColor;
-          this.say('Your colour changed');
+          this.say('Your colour changed', true);
         }
         this.player(PLAYER_SLOTS.online).color = result.theirColor;
         link.theirKind = result.theirKind;
-        this.say(`Connected as ${result.role === 'h' ? 'host' : 'guest'}`);
-        this.say(`~Opponent: ${KIND_NAMES[result.theirKind]}`);
-        this.newGame();
+        this.say(`Connected as ${result.role === 'h' ? 'host' : 'guest'}`, true);
+        this.say(`~Opponent: ${KIND_NAMES[result.theirKind]}`, true);
+        // Game 1 waits until the player has read this and clicks, taps or presses Esc (the main loop).
+        this.say('~Tap, click or Esc to start', true);
+        link.awaitingStart = true;
         s.gameStatus();
         break;
       case 'mismatch':
-        this.say('~Board mismatch:');
-        this.say(`You ${boardText(result.mine)}, them ${boardText(result.theirs)}`);
+        this.say('~Board mismatch:', true);
+        this.say(`You ${boardText(result.mine)}, them ${boardText(result.theirs)}`, true);
         this.leaveOnline(false);
         break;
       case 'busy':
-        this.say(`~Room in use: ${link.room}`);
+        this.say(`~Room in use: ${link.room}`, true);
         this.leaveOnline(false);
         break;
     }
@@ -1201,10 +1203,10 @@ export class Game {
     if (this.online !== link) return;
     switch (e.type) {
       case 'hosting':
-        this.say('Waiting for opponent...');
+        this.say('Waiting for opponent...', true);
         break;
       case 'joining':
-        this.say('Joining game...');
+        this.say('Joining game...', true);
         break;
       case 'offline':
         this.say(e.offline ? '~Opponent offline' : 'Opponent is back');
@@ -1222,8 +1224,13 @@ export class Game {
   }
 
   /** A line in the message box, shown now unless a menu or dialog is open over the game. */
-  private say(line: string): void {
-    this.state.msgbox.fixedAddLine(line);
+  private say(line: string, sticky = false): void {
+    this.announcing = sticky;
+    try {
+      this.state.msgbox.fixedAddLine(line);
+    } finally {
+      this.announcing = false;
+    }
     this.vs.windowChanged(GameWindow.msgBox, true);
     if (this.screenOn && this.overlays.length === 0) this.vs.display(Display.DisplayChanged);
   }
@@ -1338,6 +1345,11 @@ export class Game {
         await sleep(0);
       }
       if (this.stopped) break;
+      // Online and connected: game 1 starts once the player has read who they are playing.
+      if (this.online?.awaitingStart) {
+        await this.waitToStart(this.online);
+        continue;
+      }
       // Not in a game: only the function keys and the menu do anything.
       if (this.input.kbhit()) await this.extraFunctionality(await this.input.getKey());
       const m = this.input.getMouseInput();
@@ -1347,6 +1359,20 @@ export class Game {
       }
       if (!this.ingame && !this.input.kbhit()) await this.input.wait();
     }
+  }
+
+  /** Online, before game 1: waits for Esc, a click or a tap, then starts it. */
+  private async waitToStart(link: OnlineLink): Promise<void> {
+    await this.waitForEsc();
+    link.awaitingStart = false;
+    this.dismissAnnouncement();
+    if (this.online !== link) return; // left meanwhile
+    if (link.left) {
+      this.opponentLeft();
+      return;
+    }
+    this.newGame();
+    this.vs.display(Display.DisplayAll);
   }
 
   /** The end of a game in main(): the set result, "Press ESC To Continue", the next game. */
@@ -1368,7 +1394,7 @@ export class Game {
     // The original started the next game before waiting, so "Goes First" came
     // up under the result; now the next game begins once the player continues.
     if (waitEsc) await this.waitForEsc();
-    if (this.stopped) return;
+    if (this.stopped || this.online?.left) return; // the main loop ends an online game the opponent left
     this.newGame();
     this.vs.display(Display.DisplayAll);
   }
@@ -1379,7 +1405,8 @@ export class Game {
    */
   async waitForEsc(): Promise<void> {
     for (;;) {
-      if (this.stopped) return;
+      // Stopped, or the online opponent left (the main loop says so).
+      if (this.stopped || this.online?.left) return;
       if (this.input.kbhit()) {
         if ((await this.input.getKey()) === ESC) return;
         continue;

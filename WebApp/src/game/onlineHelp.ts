@@ -15,9 +15,10 @@ to that room.
 The first to arrive waits for the other. When both are
 there, the boards are checked: if their size or the number
 to connect differ, both are told and nothing starts. If they
-match, both boards are cleared and the game starts, with the
-first player chosen at random. After that, players take
-turns to go first.
+match, each player is told who they are playing (a human
+or which AI), and the game starts when they tap, click or
+press Esc, with the first player chosen at random. After
+that, players take turns to go first.
 
 Each player keeps their own colour, on both screens. If both
 chose the same colour, the second to arrive gets another.
