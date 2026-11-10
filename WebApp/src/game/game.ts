@@ -455,6 +455,7 @@ export class Game {
     s.entrygrid.insertTokenAtCR(col, 0, s.entrygrid.removeTokenAtCR(s.keypos, 0));
     s.keypos = col;
     this.vs.windowChanged(GameWindow.entryGrid, true);
+    this.vs.windowChanged(GameWindow.playGrid, true); // the board shows the column the token is over
   }
 
   /**

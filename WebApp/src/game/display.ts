@@ -40,6 +40,16 @@ export function displayGrid(g: Graph, grid: Grid, size: number, hidden?: { col: 
   }
 }
 
+/**
+ * The band behind the column the entry token is over, so its drop is easy to
+ * follow: the full height of the board, drawn before the grid lines.
+ */
+export function drawDropColumn(g: Graph, col: number, cols: number): void {
+  if (isModern(g)) g.setColorCss(MODERN.face);
+  else g.setColor(Color.GREY);
+  g.rectangleW(FILL, col / cols, 0, (col + 1) / cols, 1);
+}
+
 /** DisplayHuman: a stick figure in the current viewport. */
 export function displayHuman(g: Graph, primary: number, secondary: number): void {
   g.setColor(primary);
@@ -144,6 +154,7 @@ export function gameViewSys(g: Graph, canvas: HTMLCanvasElement, state: GameStat
     displayGrid(g, state.entrygrid, 0.6);
   }, null, 'Enter Your Token Here');
   vs.windowNew(0.0, 0.09, 0.6, 1.0, true, () => {
+    if (!state.winOccurred) drawDropColumn(g, state.keypos, state.playgrid.width);
     g.setColor(Color.GREEN);
     displayGrid(g, state.playgrid, 0.6, state.falling ?? undefined);
     if (state.falling) {
