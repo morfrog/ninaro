@@ -128,6 +128,13 @@ describe('online play', () => {
     expect(endA.board).not.toBe('');
     expect(endA.board).toBe(endB.board);
     expect(endA.winner).toBe(endB.winner);
+    // Each device tells its own player whether they won or lost.
+    if (endA.winner !== 'draw') {
+      const aWon = endA.winner === String(Color.YELLOW);
+      expect(a.said).toContain(aWon ? '~You Win!' : '~You Lose');
+      expect(b.said).toContain(aWon ? '~You Lose' : '~You Win!');
+      expect(a.said.some((l) => l.endsWith(' Wins'))).toBe(false);
+    }
   });
 
   it('aborts on both devices when the boards differ, and puts the players back', async () => {

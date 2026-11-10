@@ -508,7 +508,9 @@ export class Game {
         }
         break;
       case InsertResult.Win:
-        await this.speaker.playTune(100, 50, 300, 50, 500, 100, 400, 5);
+        // Online, the losing device gets a falling tune instead of the winner's.
+        if (this.online?.started && s.playerCurrent === PLAYER_SLOTS.online) await this.speaker.playTune(400, 120, 300, 120, 200, 250);
+        else await this.speaker.playTune(100, 50, 300, 50, 500, 100, 400, 5);
         s.winOccurred = true;
         ++s.gamesPlayed;
         if (s.playerCurrent === s.playerOne) {
@@ -518,7 +520,7 @@ export class Game {
           ++s.playerTwoScore;
           s.playerWinner = s.playerTwo;
         }
-        s.msgbox.fixedAddLine(`${this.logName(s.playerCurrent)} Wins`);
+        s.msgbox.fixedAddLine(this.winLine(s.playerCurrent));
         break;
       case InsertResult.Failure:
         await this.speaker.buzz(200, 400, 20, 100);
@@ -899,10 +901,20 @@ export class Game {
   bestOfResult(): void {
     const s = this.state;
     let out: string;
-    if (s.playerOneScore > s.playerTwoScore) out = `${this.logName(s.playerOne)} Wins The Set`;
-    else if (s.playerTwoScore > s.playerOneScore) out = `${this.logName(s.playerTwo)} Wins The Set`;
+    if (s.playerOneScore > s.playerTwoScore) out = this.winLine(s.playerOne, true);
+    else if (s.playerTwoScore > s.playerOneScore) out = this.winLine(s.playerTwo, true);
     else out = 'The Set is Drawn';
     s.msgbox.fixedAddLine(out);
+  }
+
+  /**
+   * Who won. Online, each device speaks to its own player: "You Win" on the
+   * winner's, "You Lose" on the loser's. Otherwise the winner by name.
+   */
+  private winLine(winner: number, set = false): string {
+    const what = set ? ' The Set' : '';
+    if (!this.online?.started) return `${this.logName(winner)} Wins${what}`;
+    return winner === PLAYER_SLOTS.online ? `~You Lose${what}` : `~You Win${what}!`;
   }
 
   /** ExtraFunctionality: the function keys; true if the key was used. */
