@@ -51,10 +51,18 @@ a {
   margin-top: 16px;
 }
 
-/* A touch screen has no keys to describe: the note about keys is left out. */
+/* Touch screens get a note on touch controls, and no note about keys. */
+.note--touch {
+  display: none;
+}
+
 @media (hover: none) and (pointer: coarse) {
-  .note {
+  .note--keys {
     display: none;
+  }
+
+  .note--touch {
+    display: block;
   }
 }
 
