@@ -85,7 +85,7 @@ Both boards look the same: each player keeps their own colour on both screens.
 - **Remote move:** the Online player's `getMove` polls the other key every second until that side's move number is the next one expected for this game, then returns its `col`. The token then moves and drops exactly as an AI's does. While waiting, keys and the menu still work, as in `humanMove`.
 - The game alternates strictly, so a side can't make move n+1 before reading the other's move n. One latest-move slot per side is enough.
 - **Win and draw** are worked out on each device by the same code from the same moves, so they agree. At game over each device waits for its own Esc. Moves for the next game carry the next game number, and a device keeps polling until it gets there, so it doesn't matter who presses Esc first.
-- **Leaving:** End Game (F4), changing a player, a board size change, Load (F3), demo mode (F6/F7) or closing the page writes `Q`. The other side shows `Opponent left` and ends the game. `pagehide` sends the write with `fetch(..., { keepalive: true })`, best effort.
+- **Leaving:** End Game (F4), changing a player, a board size change, demo mode (F6/F7) or closing the page writes `Q`. The other side shows `Opponent left` and ends the game. The side that was Online goes back to the player it had before. `pagehide` sends the write with `fetch(..., { keepalive: true })`, best effort.
 - **Save (F2), Load (F3) and Suggest (F5) on the opponent's turn** are turned off during an online game.
 
 ## Network handling

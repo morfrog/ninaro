@@ -127,6 +127,11 @@ export class Input {
     return lines;
   }
 
+  /** Wakes anything awaiting wait(), with no input: something else (the online game) changed. */
+  poke(): void {
+    this.wake();
+  }
+
   private wake(): void {
     const waiters = this.waiters;
     this.waiters = [];

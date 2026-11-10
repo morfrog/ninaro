@@ -3,7 +3,7 @@
 
 import { newWin } from '../core/connect';
 import { BinFile } from '../core/binfile';
-import { PLAYER_SLOTS } from '../game/state';
+import { LEGACY_SLOTS, PLAYER_SLOTS } from '../game/state';
 import type { Game } from '../game/game';
 
 /** SaveCfg's buffer: (17 + players) ints; unused ones stay 0 (100 bytes). */
@@ -17,18 +17,22 @@ export function encodeConfig(game: Game): Uint8Array {
   bf.putInt(s.gridRows);
   bf.putInt(s.win.tokens);
   bf.putInt(s.goesFirst);
-  bf.putInt(s.wentFirst);
+  // An Online player is saved as the human on its side: a reload is not in a room.
+  const onlineAs = s.playerOne === PLAYER_SLOTS.online ? PLAYER_SLOTS.one : PLAYER_SLOTS.two;
+  const saved = (slot: number) => (slot === PLAYER_SLOTS.online ? onlineAs : slot);
+  bf.putInt(saved(s.wentFirst));
   bf.putInt(s.aiSpeed);
   bf.putInt(s.aiDelay);
-  bf.putInt(s.playerOne);
-  bf.putInt(s.playerTwo);
+  bf.putInt(saved(s.playerOne));
+  bf.putInt(saved(s.playerTwo));
   bf.putInt(s.mute ? 1 : 0);
   bf.putInt(s.back);
   bf.putInt(s.hilite);
   bf.putInt(game.mouseUsage);
   bf.putInt(s.bestOf);
   bf.putInt(0); // mouseconfig: nothing to calibrate in a browser
-  for (const p of s.players.players) bf.putInt(p.color);
+  // The original's 8 players: Online's colour is always the opponent's, so it isn't a setting.
+  for (const p of s.players.players.slice(0, LEGACY_SLOTS)) bf.putInt(p.color);
   return bf.store;
 }
 
@@ -58,7 +62,7 @@ export function decodeConfig(bytes: Uint8Array, game: Game): boolean {
     n(); // the mouse's x and y adjustment
     n();
   }
-  const colors = game.state.players.players.map(() => n());
+  const colors = game.state.players.players.slice(0, LEGACY_SLOTS).map(() => n());
 
   const inRange = (v: number, lo: number, hi: number) => Number.isInteger(v) && v >= lo && v <= hi;
   const ok =
@@ -94,7 +98,7 @@ export function decodeConfig(bytes: Uint8Array, game: Game): boolean {
   s.hilite = hilite;
   game.mouseUsage = mouseUsage;
   s.bestOf = bestOf;
-  s.players.players.forEach((p, i) => (p.color = colors[i]));
+  colors.forEach((c, i) => (s.player(i).color = c));
   // Both players the same AI: the copy slot was a copy of the other player.
   const copySource = s.playerTwo === PLAYER_SLOTS.copy ? s.playerOne : s.playerOne === PLAYER_SLOTS.copy ? s.playerTwo : -1;
   if (copySource >= 0 && copySource !== PLAYER_SLOTS.copy) {

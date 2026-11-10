@@ -1,7 +1,7 @@
 // Players and player groups (Legacy PLAYER.C).
 
-/** Legacy player type enum {Computer, Human}. */
-export const PlayerType = { Computer: 0, Human: 1 } as const;
+/** Legacy player type enum {Computer, Human}, and Online: an opponent on another device. */
+export const PlayerType = { Computer: 0, Human: 1, Online: 2 } as const;
 export type PlayerType = (typeof PlayerType)[keyof typeof PlayerType];
 
 export interface Player {

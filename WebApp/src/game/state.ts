@@ -10,7 +10,7 @@ import { NOBORDER, TextBox } from '../ui/textbox';
 export const GoesFirst = { One: 0, Two: 1, Loser: 2, Winner: 3, Successive: 4, Random: 5 } as const;
 export type GoesFirst = (typeof GoesFirst)[keyof typeof GoesFirst];
 
-/** Player group slots (ProgInit): 2 humans, 5 AIs and a copy slot. */
+/** Player group slots (ProgInit): 2 humans, 5 AIs and a copy slot; and the online opponent. */
 export const PLAYER_SLOTS = {
   one: 0,
   two: 1,
@@ -20,7 +20,11 @@ export const PLAYER_SLOTS = {
   aiExpert: 5,
   aiGenius: 6,
   copy: 7,
+  online: 8,
 } as const;
+
+/** The slots the original had (and its NINARO.CFG and NINARO.SAV know): all but Online. */
+export const LEGACY_SLOTS = 8;
 
 /** ColAdd: a player's second colour is their colour + 2. */
 export const COL_ADD = 2;
@@ -35,6 +39,8 @@ export class GameState {
     playerNew('AI Expert', Color.YELLOW, PlayerType.Computer),
     playerNew('AI Genius', Color.PURPLE, PlayerType.Computer),
     playerNew('Empty AI', Color.GREEN, PlayerType.Computer),
+    // Its colour is always the opponent's, as their device sends it.
+    playerNew('Online', Color.RED, PlayerType.Online),
   ]);
 
   gridCols = 7;
@@ -94,8 +100,8 @@ export class GameState {
   }
 
   /**
-   * The name a player goes by in the log and the status panel: "Human", or
-   * the AI's name. When both players are the same type, they are numbered 1
+   * The name a player goes by in the log and the status panel: "Human",
+   * "Online", or the AI's name. When both players are the same type, they are numbered 1
    * (player one) and 2.
    */
   logName(slot: number): string {

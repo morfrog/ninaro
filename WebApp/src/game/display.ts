@@ -82,7 +82,7 @@ export function displayComputer(g: Graph, primary: number, secondary: number): v
 /** DisplayPlayerType */
 export function displayPlayerType(g: Graph, player: Player): void {
   const pc = player.color;
-  if (player.type === PlayerType.Human) displayHuman(g, pc, pc + COL_ADD);
+  if (player.type === PlayerType.Human || player.type === PlayerType.Online) displayHuman(g, pc, pc + COL_ADD);
   else displayComputer(g, pc, pc + COL_ADD);
 }
 

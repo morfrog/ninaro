@@ -23,6 +23,9 @@ import { GameWindow } from './display';
 import { FLASH_FRAME_MS, LogFlash, drawLogFlash } from './logFlash';
 import { Color } from '../render/palette';
 import { GoesFirst, PLAYER_SLOTS, type GameState } from './state';
+import { OnlineLink, immanuelStore, type OnlineStoreFactory } from './online';
+import { boardText, cleanRoom } from '../online/protocol';
+import type { ConnectResult, SessionEvent, SessionTimings } from '../online/session';
 
 /** What the game needs from the menus, dialogs, help and title (phase 4). */
 export interface GameUi {
@@ -164,6 +167,12 @@ export class Game {
   private flashTimer: ReturnType<typeof setTimeout> | null = null;
   /** Whether the info windows are currently left out. */
   private infoHidden = false;
+  /** The online game, while one is on or connecting. */
+  online: OnlineLink | null = null;
+  /** Makes the online game's store (tests use one in memory). */
+  onlineStore: OnlineStoreFactory = immanuelStore;
+  /** The online session's timings (tests make them fast). */
+  onlineTimings?: Partial<SessionTimings>;
 
   constructor(
     readonly state: GameState,
@@ -304,8 +313,9 @@ export class Game {
     return this.state.playerOne > 1 && this.state.playerTwo > 1;
   }
 
-  /** SetP1 */
+  /** SetP1. Changing either player leaves an online game. */
   setP1(player: number): void {
+    if (this.online && player !== PLAYER_SLOTS.online) this.leaveOnline();
     const s = this.state;
     if (s.playerCurrent === s.playerOne) {
       s.playerOne = player;
@@ -313,8 +323,9 @@ export class Game {
     } else s.playerOne = player;
   }
 
-  /** SetP2 */
+  /** SetP2. Changing either player leaves an online game. */
   setP2(player: number): void {
+    if (this.online && player !== PLAYER_SLOTS.online) this.leaveOnline();
     const s = this.state;
     if (s.playerCurrent === s.playerTwo) {
       s.playerTwo = player;
@@ -386,8 +397,9 @@ export class Game {
 
   // ---- The board ----
 
-  /** ResetGameSize */
+  /** ResetGameSize. A new board leaves an online game. */
   resetGameSize(cols: number, rows: number, inARow: number): void {
+    this.leaveOnline();
     const s = this.state;
     s.gridCols = cols;
     s.gridRows = rows;
@@ -522,7 +534,7 @@ export class Game {
    * (Fastest 0.25 s, Slowest 4 s).
    */
   dropMs(player: Player): number {
-    if (player.type === PlayerType.Human) return HUMAN_DROP_MS;
+    if (player.type !== PlayerType.Computer) return HUMAN_DROP_MS;
     return HUMAN_DROP_MS * 2 ** (this.state.aiSpeed - 2);
   }
 
@@ -639,7 +651,7 @@ export class Game {
           }
         }
       }
-      if (this.stopped) return -1;
+      if (this.stopped || !this.ingame || this.online?.left) return -1;
       await this.input.wait();
     }
   }
@@ -705,15 +717,24 @@ export class Game {
     if (slot === PLAYER_SLOTS.one) return this.p1Move();
     if (slot === PLAYER_SLOTS.two) return this.p2Move();
     if (slot === PLAYER_SLOTS.copy) return this.getMove(this.state.copyOf);
+    if (slot === PLAYER_SLOTS.online) return this.onlineMove();
     return this.aiMove(slot - PLAYER_SLOTS.aiRandom);
   }
 
   // ---- Games ----
 
-  /** NewGame */
+  /** NewGame. Online, who goes first comes from the session; New while still connecting gives up connecting. */
   newGame(): void {
     const s = this.state;
-    switch (s.goesFirst) {
+    if (this.online && !this.online.started) this.leaveOnline();
+    const link = this.online;
+    if (link) {
+      link.nextGame();
+      const onlineFirst = !link.session.meFirstIn(link.game);
+      const sideFirst = onlineFirst ? link.side : link.side === 1 ? 2 : 1;
+      if (sideFirst === 1) this.setP1Current();
+      else this.setP2Current();
+    } else switch (s.goesFirst) {
       case GoesFirst.One:
         this.setP1Current();
         break;
@@ -763,8 +784,9 @@ export class Game {
     this.updatePlayerMenu();
   }
 
-  /** EndGame */
+  /** EndGame. Leaves an online game. */
   endGame(): void {
+    this.leaveOnline();
     this.ui.menuItemEnable(2, 0, true); // enable players one and two
     this.ui.menuItemEnable(2, 1, true);
     this.ui.menuItemEnable(0, 3, false); // disable end game
@@ -802,6 +824,10 @@ export class Game {
   /** SaveGame (F2) */
   saveGame(): void {
     const s = this.state;
+    if (this.online) {
+      s.msgbox.fixedAddLine('~Not while online');
+      return;
+    }
     const bytes = gameSave(s.playerOne, s.playerTwo, s.playerCurrent, s.win.tokens, s.playgrid, s.players);
     s.msgbox.fixedAddLine(this.saveFile.write(bytes) ? 'Game Saved' : '~Save Error!');
   }
@@ -814,6 +840,10 @@ export class Game {
   /** LoadGame (F3) */
   loadGame(): void {
     const s = this.state;
+    if (this.online) {
+      s.msgbox.fixedAddLine('~Not while online');
+      return;
+    }
     const bytes = this.saveFile.read();
     const loaded = bytes && validSave(bytes) ? gameLoad(bytes, s.players) : null;
     if (!loaded) {
@@ -850,6 +880,7 @@ export class Game {
    */
   async suggestMove(hatch = true): Promise<void> {
     const s = this.state;
+    if (s.playerCurrent === PLAYER_SLOTS.online) return; // the opponent's move is theirs to make
     const oldMask = this.g.getFillMask();
     if (hatch) this.g.setFillMask(SUGGEST_MASK);
     const col = this.aiMove(4);
@@ -937,6 +968,184 @@ export class Game {
     return true;
   }
 
+  // ---- Online ----
+
+  /**
+   * Plays the opponent in a room online: `side` (player one or two) becomes
+   * Online. Connects (which may wait a long time for an opponent), then
+   * starts game 1. Null if it was left before connecting.
+   */
+  async goOnline(room: string, side: 1 | 2 = 2): Promise<ConnectResult | null> {
+    const s = this.state;
+    this.leaveOnline();
+    if (this.ingame) this.endGame();
+    const prevSlot = side === 1 ? s.playerOne : s.playerTwo;
+    if (side === 1) s.playerOne = PLAYER_SLOTS.online;
+    else s.playerTwo = PLAYER_SLOTS.online;
+    if (s.playerCurrent === prevSlot) s.playerCurrent = PLAYER_SLOTS.online;
+    const local = this.player(side === 1 ? s.playerTwo : s.playerOne);
+    const board = { cols: s.gridCols, rows: s.gridRows, connect: s.win.tokens };
+    const link: OnlineLink = new OnlineLink(
+      cleanRoom(room),
+      side,
+      prevSlot,
+      board,
+      local.color,
+      this.onlineStore,
+      (e) => this.onlineEvent(link, e),
+      (trouble) => this.onlineTrouble(link, trouble),
+      this.onlineTimings,
+    );
+    this.online = link;
+    this.say(`Room: ${link.room}`);
+    this.updatePlayerMenu();
+    this.redraw();
+
+    let result: ConnectResult;
+    try {
+      result = await link.session.connect();
+    } catch {
+      return null; // left while connecting
+    }
+    if (this.online !== link) return null;
+    switch (result.kind) {
+      case 'started':
+        link.started = true;
+        if (result.colorChanged) {
+          local.color = result.myColor;
+          this.say('Your colour changed');
+        }
+        this.player(PLAYER_SLOTS.online).color = result.theirColor;
+        this.say(`Connected as ${result.role === 'h' ? 'host' : 'guest'}`);
+        this.newGame();
+        s.gameStatus();
+        break;
+      case 'mismatch':
+        this.say('~Board mismatch:');
+        this.say(`You ${boardText(result.mine)}, them ${boardText(result.theirs)}`);
+        this.leaveOnline(false);
+        break;
+      case 'busy':
+        this.say(`~Room in use: ${link.room}`);
+        this.leaveOnline(false);
+        break;
+    }
+    this.redraw();
+    this.input.poke(); // the main loop may be waiting for input with no game on
+    return result;
+  }
+
+  /**
+   * Leaves the online game (or stops connecting): tells the opponent unless
+   * sendQuit is false, and puts back the player the Online side had before.
+   */
+  leaveOnline(sendQuit = true): void {
+    const link = this.online;
+    if (!link) return;
+    this.online = null;
+    link.close(sendQuit && !link.left);
+    const s = this.state;
+    const wasCurrent = s.playerCurrent === PLAYER_SLOTS.online;
+    if (link.side === 1) s.playerOne = link.prevSlot;
+    else s.playerTwo = link.prevSlot;
+    if (wasCurrent) s.playerCurrent = link.prevSlot;
+    // The entry token was the Online player's: it becomes the player in its place.
+    if (this.ingame && s.entrygrid.statusOfCR(s.keypos, 0) !== null) s.entrygrid.resetTokenAtCR(s.keypos, 0, this.currentPlayer());
+    this.updatePlayerMenu();
+    this.input.poke();
+  }
+
+  /** The page is closing: one try at telling the opponent. */
+  leaveOnlineNow(): void {
+    this.online?.closeNow();
+  }
+
+  /** The opponent quit: the game ends. */
+  private opponentLeft(): void {
+    if (!this.online) return;
+    this.say('~Opponent left');
+    this.leaveOnline(false);
+    if (this.ingame) this.endGame();
+    this.redraw();
+  }
+
+  private onlineEvent(link: OnlineLink, e: SessionEvent): void {
+    if (this.online !== link) return;
+    switch (e.type) {
+      case 'hosting':
+        this.say('Waiting for opponent...');
+        break;
+      case 'joining':
+        this.say('Joining game...');
+        break;
+      case 'offline':
+        this.say(e.offline ? '~Opponent offline' : 'Opponent is back');
+        break;
+      case 'left':
+        link.left = true;
+        this.input.poke();
+        break;
+    }
+  }
+
+  private onlineTrouble(link: OnlineLink, trouble: boolean): void {
+    if (this.online !== link) return;
+    this.say(trouble ? '~Connection lost, retrying...' : 'Connected again');
+  }
+
+  /** A line in the message box, shown now unless a menu or dialog is open over the game. */
+  private say(line: string): void {
+    this.state.msgbox.fixedAddLine(line);
+    this.vs.windowChanged(GameWindow.msgBox, true);
+    if (this.screenOn && this.overlays.length === 0) this.vs.display(Display.DisplayChanged);
+  }
+
+  /** The whole game screen again, unless a menu or dialog is open over it. */
+  private redraw(): void {
+    if (this.screenOn && this.overlays.length === 0) this.vs.display(Display.DisplayAll);
+  }
+
+  /**
+   * The Online player's getmove: waits for the opponent's move, while keys
+   * (the menu, help, the function keys) still work. -1 if anything else
+   * happened first, as humanMove.
+   */
+  private async onlineMove(): Promise<number> {
+    const link = this.online;
+    if (!link?.started) return -1;
+    this.input.forgetPresses();
+    const move = link.nextMove();
+    for (;;) {
+      if (this.online !== link || link.left || !this.ingame || this.stopped) return -1;
+      if (this.input.kbhit()) {
+        if (await this.extraFunctionality(await this.input.getKey())) return -1;
+        continue;
+      }
+      if (this.mouseUsage && this.input.getMouseInput().button === RMB) {
+        this.vs.display((await this.keyUp()) as Display);
+        return -1;
+      }
+      const r = await Promise.race([move, this.input.wait().then(() => null)]);
+      if (!r) continue;
+      if ('col' in r) {
+        link.tookMove();
+        return r.col;
+      }
+      if ('left' in r) {
+        link.left = true;
+        return -1;
+      }
+      // Out of step, or the session ended under us.
+      if (this.online === link) {
+        this.say('~Out of step: game ended');
+        this.leaveOnline();
+        if (this.ingame) this.endGame();
+        this.redraw();
+      }
+      return -1;
+    }
+  }
+
   // ---- The main loop ----
 
   /**
@@ -971,8 +1180,17 @@ export class Game {
     const s = this.state;
     while (!this.stopped) {
       while (this.ingame && !this.stopped) {
+        if (this.online?.left) {
+          this.opponentLeft();
+          break;
+        }
         this.showEntryToken();
+        const mover = s.playerCurrent;
         const col = await this.getMove(s.playerCurrent);
+        if (this.online?.left) {
+          this.opponentLeft();
+          break;
+        }
         if (this.mouseUsage && this.input.getMouseInput().button === RMB) await this.keyUp();
         // The original handled a key waiting here instead of the move,
         // which was lost (known bug 16, fixed): the move goes in first.
@@ -980,6 +1198,8 @@ export class Game {
           if (col !== s.keypos) await this.animateMove(col);
           s.keypos = col;
           if ((await this.dropToken()) !== InsertResult.Failure) {
+            // Our move goes to the opponent before anything else (game over waits for Esc).
+            if (this.online?.started && mover !== PLAYER_SLOTS.online) this.online.sendMove(col);
             if (s.winOccurred || s.isDraw) await this.gameOver();
             else this.vs.display(Display.DisplayChanged);
           }

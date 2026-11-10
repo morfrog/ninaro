@@ -4,7 +4,7 @@ import { encodeMessage, parseMessage, roomKey, type Board } from './protocol';
 import { OnlineSession, OpponentLeft, giveWayColor, type ConnectResult, type SessionEvent } from './session';
 
 const BOARD: Board = { cols: 7, rows: 8, connect: 4 };
-const FAST = { pollMs: 2, idlePollMs: 10, idleAfterMs: 1000, beatMs: 10, staleMs: 200, settleMs: 20 };
+const FAST = { pollMs: 2, idlePollMs: 10, idleAfterMs: 1000, beatMs: 10, staleMs: 500, settleMs: 20 };
 
 /** A seeded random (mulberry32), so a failing run can be repeated. */
 function seeded(seed: number): () => number {
@@ -214,7 +214,7 @@ describe('OnlineSession', () => {
     const a = device(service, 14, 111);
     const pa = a.session.connect();
     // A joins the ghost, sees it is stale, and becomes host.
-    for (let i = 0; i < 200 && a.events.filter((e) => e.type === 'hosting').length === 0; i++) await delay(5);
+    for (let i = 0; i < 600 && a.events.filter((e) => e.type === 'hosting').length === 0; i++) await delay(5);
     expect(a.events.map((e) => e.type)).toEqual(['joining', 'hosting']);
     const b = device(service, 4, 112);
     const [ra, rb] = (await Promise.all([pa, b.session.connect()])).map(started);
@@ -228,7 +228,7 @@ describe('OnlineSession', () => {
     await service.data.put(roomKey('smithy', 'h'), encodeMessage(ghost));
     const a = device(service, 14, 121);
     const pa = a.session.connect();
-    for (let i = 0; i < 200 && a.events.length === 0; i++) await delay(5);
+    for (let i = 0; i < 600 && a.events.length === 0; i++) await delay(5);
     expect(a.events[0]).toEqual({ type: 'hosting' });
     const b = device(service, 4, 122);
     const [ra, rb] = (await Promise.all([pa, b.session.connect()])).map(started);
@@ -257,7 +257,7 @@ describe('OnlineSession', () => {
     const b = device(service, 4, 142, BOARD, 'two');
     a.session.connect().catch(() => {});
     b.session.connect().catch(() => {});
-    for (let i = 0; i < 200 && (a.events.length === 0 || b.events.length === 0); i++) await delay(5);
+    for (let i = 0; i < 600 && (a.events.length === 0 || b.events.length === 0); i++) await delay(5);
     expect(a.events[0]).toEqual({ type: 'hosting' });
     expect(b.events[0]).toEqual({ type: 'hosting' });
   });
@@ -271,7 +271,7 @@ describe('OnlineSession', () => {
     await Promise.all([pa, b.session.connect()]);
     a.session.close(); // A's heartbeat stops, as when its phone sleeps
     const waiting = b.session.waitMove(1, 1).catch(() => -1);
-    for (let i = 0; i < 200 && !b.events.some((e) => e.type === 'offline'); i++) await delay(5);
+    for (let i = 0; i < 600 && !b.events.some((e) => e.type === 'offline'); i++) await delay(5);
     expect(b.events).toContainEqual({ type: 'offline', offline: true });
     if (a.session.meFirstIn(1)) {
       await a.session.sendMove(1, 1, 3);

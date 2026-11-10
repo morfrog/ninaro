@@ -28,7 +28,7 @@ describe('NINARO.CFG', () => {
     expect([s.playerOne, s.playerTwo]).toEqual([PLAYER_SLOTS.aiRandom, PLAYER_SLOTS.aiGenius]);
     expect(s.hilite).toBe(4);
     expect(game.mouseUsage).toBe(2);
-    expect(s.players.players.map((p) => p.color)).toEqual([2, 1, 6, 4, 3, 2, 5, 4]);
+    expect(s.players.players.slice(0, 8).map((p) => p.color)).toEqual([2, 1, 6, 4, 3, 2, 5, 4]);
   });
 
   it('writes the same 100-byte layout as SaveCfg', () => {
