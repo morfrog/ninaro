@@ -24,7 +24,7 @@ import { FLASH_FRAME_MS, LogFlash, drawLogFlash } from './logFlash';
 import { Color } from '../render/palette';
 import { GoesFirst, PLAYER_SLOTS, type GameState } from './state';
 import { OnlineLink, immanuelStore, type OnlineStoreFactory } from './online';
-import { boardText, cleanRoom } from '../online/protocol';
+import { KIND_NAMES, boardText, cleanRoom } from '../online/protocol';
 import type { ConnectResult, SessionEvent, SessionTimings } from '../online/session';
 
 /** What the game needs from the menus, dialogs, help and title (phase 4). */
@@ -243,8 +243,15 @@ export class Game {
       cropped: this.cropped,
       fullscreen: this.viewMode === 'fullscreen' && this.screenOn,
       readout: `${s.gridCols}x${s.gridRows}@${s.win.tokens}`,
-      players: { one: s.logName(s.playerOne), two: s.logName(s.playerTwo) },
+      players: { one: this.toolbarName(s.playerOne), two: this.toolbarName(s.playerTwo) },
     });
+  }
+
+  /** A player's name in the toolbar: as in the log, and an online opponent with who they are, as "Online (Human)". */
+  private toolbarName(slot: number): string {
+    const link = this.online;
+    if (slot === PLAYER_SLOTS.online && link?.started) return `Online (${KIND_NAMES[link.theirKind]})`;
+    return this.state.logName(slot);
   }
 
   /** Runs after each redraw: the page follows the view, and any message on show is drawn over the board. */
@@ -1003,6 +1010,7 @@ export class Game {
       prevSlot,
       board,
       local.color,
+      this.playerKind(side === 1 ? s.playerTwo : s.playerOne),
       this.onlineStore,
       (e) => this.onlineEvent(link, e),
       (trouble) => this.onlineTrouble(link, trouble),
@@ -1028,7 +1036,9 @@ export class Game {
           this.say('Your colour changed');
         }
         this.player(PLAYER_SLOTS.online).color = result.theirColor;
+        link.theirKind = result.theirKind;
         this.say(`Connected as ${result.role === 'h' ? 'host' : 'guest'}`);
+        this.say(`~Opponent: ${KIND_NAMES[result.theirKind]}`);
         this.newGame();
         s.gameStatus();
         break;
@@ -1045,6 +1055,12 @@ export class Game {
     this.redraw();
     this.input.poke(); // the main loop may be waiting for input with no game on
     return result;
+  }
+
+  /** Who a player is, as the opponent's device is told: 0 a human, 1..5 AI Random to AI Genius. */
+  private playerKind(slot: number): number {
+    if (slot === PLAYER_SLOTS.copy) slot = this.state.copyOf;
+    return slot >= PLAYER_SLOTS.aiRandom && slot <= PLAYER_SLOTS.aiGenius ? slot - PLAYER_SLOTS.aiRandom + 1 : 0;
   }
 
   /**

@@ -35,7 +35,7 @@ The request asked for one 64-character buffer. Two keys are better: each device 
 Each write is a snapshot of the sender's state, not an event. So reading the latest value is always enough, a missed poll loses nothing, and writing the same thing again is harmless.
 
 ```
-1,<role>,<nonce>,<peer>,<cols>x<rows>x<connect>,<color>,<phase>,<game>,<move>,<col>,<beat>
+1,<role>,<nonce>,<peer>,<cols>x<rows>x<connect>,<color>,<kind>,<phase>,<game>,<move>,<col>,<beat>
 ```
 
 | Field | Meaning |
@@ -46,13 +46,14 @@ Each write is a snapshot of the sender's state, not an event. So reading the lat
 | `peer` | The other side's nonce once known, `-` before. A message is only taken by the session it names, so a stranger or a leftover from an earlier session in the same room is ignored. |
 | `cols x rows x connect` | This device's board, e.g. `7x8x4` |
 | `color` | The sender's token colour, one hex digit (palette index 0–15) |
+| `kind` | Who plays on the sender's device: `0` a human, `1`–`5` AI Random to AI Genius. Each side is told `Opponent: Human` (or the AI) on connecting, and the toolbar shows `Online (Human)`. |
 | `phase` | `W` waiting for an opponent (host) or joining (guest); `S` start, sent by the host; `P` playing; `X` aborted; `Q` quit |
 | `game` | Game number in this session, from 1 |
 | `move` | Number of this side's latest move in the game (0 = none yet). For `S`, who goes first: `h` or `g`. |
 | `col` | Column of that move (0-based) |
 | `beat` | Heartbeat counter, raised every 5 s for the whole session, so others can tell a live room from an abandoned one |
 
-Example: `1,g,k3f9,ab12,7x8x4,c,P,2,11,5,0` is the guest playing host `ab12`, colour 12, game 2, its move 11 in column 5. That's 32 characters; the longest possible (50x50x50, counters at their 999999 limit) is 50.
+Example: `1,g,k3f9,ab12,7x8x4,c,0,P,2,11,5,0` is the guest playing host `ab12`, colour 12, a human, game 2, its move 11 in column 5. That's 34 characters; the longest possible (50x50x50, counters at their 999999 limit) is 52.
 
 The request's `1,2,5` (player 1, second move, position 5) is this message's `role,move,col`. The other fields are what's needed to make it work with this store.
 

@@ -52,6 +52,8 @@ export type ConnectResult =
       theirColor: number;
       /** Our colour was the host's, so we (the guest) took another. */
       colorChanged: boolean;
+      /** Who plays on the opponent's device: 0 a human, 1..5 an AI (KIND_NAMES). */
+      theirKind: number;
     }
   | { kind: 'mismatch'; mine: Board; theirs: Board }
   /** Two others are already playing in this room. */
@@ -73,6 +75,8 @@ export interface SessionOptions {
   board: Board;
   /** Our token colour, palette index 0..15. */
   color: number;
+  /** Who plays on this device: 0 a human, 1..5 an AI (KIND_NAMES). */
+  kind?: number;
   /** Ends the session: every wait and loop stops. The caller should give the store the same signal. */
   signal?: AbortSignal;
   timings?: Partial<SessionTimings>;
@@ -140,6 +144,7 @@ export class OnlineSession {
       peer: null,
       board: options.board,
       color: options.color,
+      kind: options.kind ?? 0,
       phase: 'W',
       game: 0,
       move: 0,
@@ -305,7 +310,7 @@ export class OnlineSession {
         this.firstOfSession = first;
         this.update({ phase: 'S', peer: guest.nonce, game: 1, move: 0, col: 0, first });
         await this.flush();
-        return { kind: 'started', role: 'h', first, myColor: this.myColor, theirColor: guest.color, colorChanged: false };
+        return { kind: 'started', role: 'h', first, myColor: this.myColor, theirColor: guest.color, colorChanged: false, theirKind: guest.kind };
       }
       // We may have gone stale (a sleeping phone) and been replaced as host.
       const self = await this.read(this.key('h'));
@@ -345,7 +350,7 @@ export class OnlineSession {
           // A host already playing has made the first move: it went first.
           const first: Role = m.phase === 'S' ? m.first! : 'h';
           this.firstOfSession = first;
-          return { kind: 'started', role: 'g', first, myColor: this.myColor, theirColor: m.color, colorChanged };
+          return { kind: 'started', role: 'g', first, myColor: this.myColor, theirColor: m.color, colorChanged, theirKind: m.kind };
         }
       } else if (m.phase === 'S' || m.phase === 'P') {
         return { kind: 'busy' }; // another guest got there first

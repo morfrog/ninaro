@@ -117,6 +117,13 @@ describe('online play', () => {
     expect(b.state.player(PLAYER_SLOTS.online).color).toBe(Color.YELLOW);
     expect(a.said).toContain('Connected as host');
     expect(b.said).toContain('Connected as guest');
+    // Each is told who they are playing, and the toolbar says so.
+    expect(a.said).toContain('~Opponent: AI Normal');
+    expect(b.said).toContain('~Opponent: Human');
+    let toolbarA = { one: '', two: '' };
+    a.game.onView = (v) => (toolbarA = v.players);
+    a.game.setViewMode('normal');
+    expect(toolbarA).toEqual({ one: 'Human', two: 'Online (AI Normal)' });
     // The same player starts on both: one device's player one is the other's Online.
     expect(a.state.playerCurrent === PLAYER_SLOTS.one).toBe(b.state.playerCurrent === PLAYER_SLOTS.online);
 

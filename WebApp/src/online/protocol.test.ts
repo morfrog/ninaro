@@ -10,6 +10,7 @@ const base: Message = {
   peer: 'ab12',
   board: { cols: 7, rows: 8, connect: 4 },
   color: 12,
+  kind: 3,
   phase: 'P',
   game: 2,
   move: 11,
@@ -20,11 +21,11 @@ const base: Message = {
 
 describe('encodeMessage', () => {
   it('writes the plan\'s format', () => {
-    expect(encodeMessage(base)).toBe('1,g,k3f9,ab12,7x8x4,c,P,2,11,5,0');
+    expect(encodeMessage(base)).toBe('1,g,k3f9,ab12,7x8x4,c,3,P,2,11,5,0');
   });
 
   it('puts who goes first in the move field of a start message', () => {
-    expect(encodeMessage({ ...base, role: 'h', phase: 'S', game: 1, move: 0, col: 0, first: 'g' })).toBe('1,h,k3f9,ab12,7x8x4,c,S,1,g,0,0');
+    expect(encodeMessage({ ...base, role: 'h', phase: 'S', game: 1, move: 0, col: 0, first: 'g' })).toBe('1,h,k3f9,ab12,7x8x4,c,3,S,1,g,0,0');
   });
 
   it('keeps the longest message within 64 safe characters', () => {
@@ -50,16 +51,16 @@ describe('encodeMessage', () => {
 
 describe('parseMessage', () => {
   it('reads a message with no peer yet', () => {
-    expect(parseMessage('1,h,k3f9,-,7x8x4,e,W,0,0,0,3')?.peer).toBeNull();
+    expect(parseMessage('1,h,k3f9,-,7x8x4,e,0,W,0,0,0,3')?.peer).toBeNull();
   });
 
   it('reads back what encodeMessage wrote', () => {
     for (const m of [
       base,
-      { ...base, role: 'h' as const, phase: 'W' as const, peer: null, game: 0, move: 0, col: 0, beat: 37, color: 0 },
+      { ...base, role: 'h' as const, phase: 'W' as const, peer: null, kind: 0, game: 0, move: 0, col: 0, beat: 37, color: 0 },
       { ...base, phase: 'S' as const, move: 0, first: 'h' as const },
       { ...base, phase: 'X' as const },
-      { ...base, phase: 'Q' as const, board: { cols: 12, rows: 13, connect: 6 }, col: 11, color: 15 },
+      { ...base, phase: 'Q' as const, board: { cols: 12, rows: 13, connect: 6 }, col: 11, color: 15, kind: 5 },
     ]) {
       expect(parseMessage(encodeMessage(m))).toEqual(m);
     }
@@ -70,19 +71,21 @@ describe('parseMessage', () => {
       '',
       '"x"',
       '1,2,5',
-      '2,g,k3f9,ab12,7x8x4,c,P,2,11,5,0', // another version
-      '1,x,k3f9,ab12,7x8x4,c,P,2,11,5,0',
-      '1,g,K3F9,ab12,7x8x4,c,P,2,11,5,0',
-      '1,g,k3f9,AB,7x8x4,c,P,2,11,5,0',
-      '1,g,k3f9,ab12,7x8,c,P,2,11,5,0',
-      '1,g,k3f9,ab12,2x8x4,c,P,2,11,5,0',
-      '1,g,k3f9,ab12,7x8x4,g,P,2,11,5,0',
-      '1,g,k3f9,ab12,7x8x4,c,Z,2,11,5,0',
-      '1,g,k3f9,ab12,7x8x4,c,P,02,11,5,0',
-      '1,g,k3f9,ab12,7x8x4,c,P,2,11,7,0', // column off the board
-      '1,g,k3f9,ab12,7x8x4,c,P,2,h,5,0', // first player outside a start message
-      '1,g,k3f9,ab12,7x8x4,c,S,2,3,5,0', // a start message without first player
-      '1,g,k3f9,ab12,7x8x4,c,P,2,11,5,0,extra',
+      '2,g,k3f9,ab12,7x8x4,c,3,P,2,11,5,0', // another version
+      '1,x,k3f9,ab12,7x8x4,c,3,P,2,11,5,0',
+      '1,g,K3F9,ab12,7x8x4,c,3,P,2,11,5,0',
+      '1,g,k3f9,AB,7x8x4,c,3,P,2,11,5,0',
+      '1,g,k3f9,ab12,7x8,c,3,P,2,11,5,0',
+      '1,g,k3f9,ab12,2x8x4,c,3,P,2,11,5,0',
+      '1,g,k3f9,ab12,7x8x4,g,3,P,2,11,5,0',
+      '1,g,k3f9,ab12,7x8x4,c,3,Z,2,11,5,0',
+      '1,g,k3f9,ab12,7x8x4,c,3,P,02,11,5,0',
+      '1,g,k3f9,ab12,7x8x4,c,3,P,2,11,7,0', // column off the board
+      '1,g,k3f9,ab12,7x8x4,c,3,P,2,h,5,0', // first player outside a start message
+      '1,g,k3f9,ab12,7x8x4,c,3,S,2,3,5,0', // a start message without first player
+      '1,g,k3f9,ab12,7x8x4,c,3,P,2,11,5,0,extra',
+      '1,g,k3f9,ab12,7x8x4,c,6,P,2,11,5,0', // no such kind
+      '1,g,k3f9,ab12,7x8x4,c,x,P,2,11,5,0',
     ]) {
       expect(parseMessage(text), text).toBeNull();
     }
@@ -91,7 +94,7 @@ describe('parseMessage', () => {
 
 describe('messageVersion', () => {
   it('reads the version of any message, ours or not', () => {
-    expect(messageVersion('1,g,k3f9,ab12,7x8x4,c,P,2,11,5,0')).toBe(1);
+    expect(messageVersion('1,g,k3f9,ab12,7x8x4,c,3,P,2,11,5,0')).toBe(1);
     expect(messageVersion('2,anything')).toBe(2);
     expect(messageVersion('')).toBeNull();
     expect(messageVersion('x,1')).toBeNull();

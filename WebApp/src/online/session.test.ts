@@ -53,7 +53,7 @@ afterEach(() => {
   for (const c of controllers.splice(0)) c.abort(new Error('test over'));
 });
 
-function device(service: FlakyService, color: number, seed: number, board = BOARD, room = 'smithy') {
+function device(service: FlakyService, color: number, seed: number, board = BOARD, room = 'smithy', kind = 0) {
   const controller = new AbortController();
   controllers.push(controller);
   const events: SessionEvent[] = [];
@@ -70,6 +70,7 @@ function device(service: FlakyService, color: number, seed: number, board = BOAR
     room,
     board,
     color,
+    kind,
     signal: controller.signal,
     timings: FAST,
     random: seeded(seed),
@@ -101,6 +102,17 @@ describe('OnlineSession', () => {
     expect(a.events[0]).toEqual({ type: 'hosting' });
     expect(b.events[0]).toEqual({ type: 'joining' });
     expect(service.failures).toBeGreaterThan(0);
+  });
+
+  it('tells each side who plays on the other device', async () => {
+    const service = new FlakyService(seeded(16));
+    const a = device(service, 14, 161); // a human
+    const b = device(service, 4, 162, BOARD, 'smithy', 5); // AI Genius
+    const pa = a.session.connect();
+    await delay(40);
+    const [ra, rb] = (await Promise.all([pa, b.session.connect()])).map(started);
+    expect(ra.theirKind).toBe(5);
+    expect(rb.theirKind).toBe(0);
   });
 
   it('settles two devices connecting at the same moment: one host, one guest', async () => {
@@ -209,7 +221,7 @@ describe('OnlineSession', () => {
   it('takes over a room whose host has gone', async () => {
     const service = new FlakyService(seeded(11), 0.3);
     // A host that waited and then went away: its heartbeat never moves again.
-    const ghost = { role: 'h' as const, nonce: 'dead', peer: null, board: BOARD, color: 2, phase: 'W' as const, game: 0, move: 0, col: 0, beat: 5, first: null };
+    const ghost = { role: 'h' as const, nonce: 'dead', peer: null, board: BOARD, color: 2, kind: 0, phase: 'W' as const, game: 0, move: 0, col: 0, beat: 5, first: null };
     await service.data.put(roomKey('smithy', 'h'), encodeMessage(ghost));
     const a = device(service, 14, 111);
     const pa = a.session.connect();
@@ -224,7 +236,7 @@ describe('OnlineSession', () => {
 
   it('takes over a room whose game was abandoned', async () => {
     const service = new FlakyService(seeded(12), 0.3);
-    const ghost = { role: 'h' as const, nonce: 'dead', peer: 'gone', board: BOARD, color: 2, phase: 'P' as const, game: 3, move: 7, col: 2, beat: 50, first: null };
+    const ghost = { role: 'h' as const, nonce: 'dead', peer: 'gone', board: BOARD, color: 2, kind: 0, phase: 'P' as const, game: 3, move: 7, col: 2, beat: 50, first: null };
     await service.data.put(roomKey('smithy', 'h'), encodeMessage(ghost));
     const a = device(service, 14, 121);
     const pa = a.session.connect();

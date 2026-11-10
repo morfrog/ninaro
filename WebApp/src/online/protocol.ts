@@ -2,11 +2,12 @@
 // own key, and each write is that side's whole state, so the latest value is
 // always enough and writing it again is harmless:
 //
-//   1,<role>,<nonce>,<peer>,<cols>x<rows>x<connect>,<color>,<phase>,<game>,<move>,<col>,<beat>
+//   1,<role>,<nonce>,<peer>,<cols>x<rows>x<connect>,<color>,<kind>,<phase>,<game>,<move>,<col>,<beat>
 //
 // <peer> is the other side's nonce once known (- before), so a message is
 // only ever taken by the session it is meant for. For phase S (start) the
-// move field says who goes first: h or g.
+// move field says who goes first: h or g. <kind> is who is playing on the
+// sender's device: 0 a human, 1..5 an AI (Random to Genius).
 
 export const PROTOCOL_VERSION = 1;
 
@@ -32,6 +33,8 @@ export interface Message {
   board: Board;
   /** The sender's token colour, palette index 0..15. */
   color: number;
+  /** Who plays on the sender's device: 0 a human, 1..5 AI Random to AI Genius. */
+  kind: number;
   phase: Phase;
   /** Game number in the session, from 1 (0 before the first game starts). */
   game: number;
@@ -45,7 +48,10 @@ export interface Message {
   first: Role | null;
 }
 
-/** Counters wrap here, which keeps every message well under 64 characters (50 at most). */
+/** The kinds of player, by `kind`. */
+export const KIND_NAMES = ['Human', 'AI Random', 'AI Novice', 'AI Normal', 'AI Expert', 'AI Genius'] as const;
+
+/** Counters wrap here, which keeps every message well under 64 characters (52 at most). */
 export const COUNTER_LIMIT = 1_000_000;
 
 const NONCE = /^[0-9a-z]{4}$/;
@@ -81,6 +87,7 @@ export function encodeMessage(m: Message): string {
   if (m.peer !== null && !NONCE.test(m.peer)) throw new Error(`Bad peer: ${m.peer}`);
   if (!validBoard(m.board)) throw new Error(`Bad board: ${boardText(m.board)}`);
   if (!Number.isInteger(m.color) || m.color < 0 || m.color > 15) throw new Error(`Bad colour: ${m.color}`);
+  if (!Number.isInteger(m.kind) || m.kind < 0 || m.kind >= KIND_NAMES.length) throw new Error(`Bad kind: ${m.kind}`);
   if (!count(m.game) || !count(m.move) || !count(m.beat)) throw new Error('Bad counter');
   if (!Number.isInteger(m.col) || m.col < 0 || m.col >= m.board.cols) throw new Error(`Bad column: ${m.col}`);
   if ((m.phase === 'S') !== (m.first !== null)) throw new Error('Only a start message says who goes first');
@@ -93,6 +100,7 @@ export function encodeMessage(m: Message): string {
     m.peer ?? '-',
     `${cols}x${rows}x${connect}`,
     m.color.toString(16),
+    m.kind,
     m.phase,
     m.game,
     move,
@@ -110,8 +118,8 @@ export function messageVersion(text: string): number | null {
 /** A stored value as a message, or null if it isn't a valid one of this version. */
 export function parseMessage(text: string): Message | null {
   const f = text.split(',');
-  if (f.length !== 11) return null;
-  const [version, role, nonce, peer, board, color, phase, game, move, col, beat] = f;
+  if (f.length !== 12) return null;
+  const [version, role, nonce, peer, board, color, kind, phase, game, move, col, beat] = f;
   if (version !== String(PROTOCOL_VERSION)) return null;
   if (role !== 'h' && role !== 'g') return null;
   if (!NONCE.test(nonce)) return null;
@@ -121,6 +129,7 @@ export function parseMessage(text: string): Message | null {
   const parsedBoard = { cols: Number(b[1]), rows: Number(b[2]), connect: Number(b[3]) };
   if (!validBoard(parsedBoard)) return null;
   if (!/^[0-9a-f]$/.test(color)) return null;
+  if (!/^[0-9]$/.test(kind) || Number(kind) >= KIND_NAMES.length) return null;
   if (!PHASES.includes(phase)) return null;
   if (!COUNT.test(game) || !COUNT.test(col) || !COUNT.test(beat)) return null;
   let first: Role | null = null;
@@ -140,6 +149,7 @@ export function parseMessage(text: string): Message | null {
     peer: peer === '-' ? null : peer,
     board: parsedBoard,
     color: parseInt(color, 16),
+    kind: Number(kind),
     phase: phase as Phase,
     game: Number(game),
     move: moveNum,

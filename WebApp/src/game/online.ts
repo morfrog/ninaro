@@ -30,6 +30,8 @@ export class OnlineLink {
   started = false;
   /** The opponent quit; the game loop ends the game. */
   left = false;
+  /** Who plays on the opponent's device: 0 a human, 1..5 an AI (KIND_NAMES). Known once started. */
+  theirKind = 0;
   /** Game number in the session (1 for the first). */
   game = 0;
   /** Our moves, and theirs, in this game. */
@@ -45,13 +47,15 @@ export class OnlineLink {
     readonly prevSlot: number,
     board: Board,
     color: number,
+    /** Who plays on this device: 0 a human, 1..5 an AI. */
+    kind: number,
     makeStore: OnlineStoreFactory,
     onEvent: (e: SessionEvent) => void,
     onTrouble: (trouble: boolean) => void,
     timings?: Partial<SessionTimings>,
   ) {
     const { store, putNow } = makeStore(this.controller.signal, onTrouble);
-    this.session = new OnlineSession({ store, putNow, room, board, color, signal: this.controller.signal, timings, onEvent });
+    this.session = new OnlineSession({ store, putNow, room, board, color, kind, signal: this.controller.signal, timings, onEvent });
   }
 
   /** A new game: counts start again. */
