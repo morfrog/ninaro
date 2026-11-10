@@ -98,8 +98,8 @@ const SUGGEST_MASK = [0xa2, 0x15, 0xa2, 0x10, 0xa2, 0x10, 0xa2, 0x15];
 const HUMAN_DROP_MS = 1000;
 /** Pause between frames of a falling token. */
 const FRAME_MS = 16;
-/** How far (EGA pixels) a finger must go down, past any sideways move, to drop the token. */
-const DROP_PX = 40;
+/** How far a finger must go down, past any sideways move, to drop the token: this fraction of the board's height. */
+const DROP_FRACTION = 1 / 3;
 
 /**
  * The windows Fullscreen leaves out: everything at the right, where the
@@ -654,7 +654,7 @@ export class Game {
 
   /**
    * A finger that went down on the board and is dragged: sideways moves the
-   * entry token to the column under the finger, and down DROP_PX from the
+   * entry token to the column under the finger, and down DROP_FRACTION of the board from the
    * last sideways move drops it. Returns true when it drops.
    */
   private touchDragMove(drag: TouchDrag, anchor: { x: number; y: number }): boolean {
@@ -664,7 +664,9 @@ export class Game {
     const s = this.state;
     const dx = drag.x - anchor.x;
     const dy = drag.y - anchor.y;
-    if (dy > DROP_PX && dy > Math.abs(dx)) {
+    const board = this.vs.windows[GameWindow.playGrid].vp;
+    const dropPx = ((board.y2 - board.y1 + 1) * DROP_FRACTION);
+    if (dy > dropPx && dy > Math.abs(dx)) {
       this.input.spendTouch();
       this.input.takeWheel(); // the finger's vertical scroll is not for the help
       return true;

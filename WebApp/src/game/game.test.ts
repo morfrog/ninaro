@@ -286,16 +286,16 @@ describe('the pointer', () => {
     const run = game.run();
     const x = (col: number) => Math.round(((col + 0.5) * 384) / 7);
     // The board's upper two-thirds are y 31 to about 242; the bottom third is tap-only.
-    input.touchDown(x(1), 150);
-    input.touchMove(x(5), 150); // sideways: the token follows the finger
+    input.touchDown(x(1), 60);
+    input.touchMove(x(5), 60); // sideways: the token follows the finger
     await tick();
     expect(state.keypos).toBe(5);
     expect(state.playgrid.inCol(5)).toBe(0);
-    input.touchMove(x(5), 225); // down: drops in column 5
+    input.touchMove(x(5), 175); // down a third of the board: drops in column 5
     await tick();
     await tick();
     expect(state.playgrid.statusOfCR(5, 7)).toBe(state.player(1)); // player two moves first
-    input.touchMove(x(5), 230); // still down: the same press drops nothing more
+    input.touchMove(x(5), 180); // still down: the same press drops nothing more
     await tick();
     expect(input.touchDrag()?.spent).toBe(true);
     expect(input.touchUp()).toBe(true); // a drag, so no tap follows
