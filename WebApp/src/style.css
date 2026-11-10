@@ -51,6 +51,13 @@ a {
   margin-top: 16px;
 }
 
+/* A touch screen has no keys to describe: the note about keys is left out. */
+@media (hover: none) and (pointer: coarse) {
+  .note {
+    display: none;
+  }
+}
+
 /* Buttons for players without a keyboard, above the screen. */
 .toolbar {
   display: flex;
