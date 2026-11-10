@@ -66,6 +66,8 @@ export class NinaroUi implements GameUi {
   onExit: () => Promise<void> = async () => {};
   /** Leaves for the home page, from the menu's Exit. */
   onHome: () => Promise<void> = async () => {};
+  /** Asks for the room to play Online in: the room, or null if cancelled. The page sets it (it needs a real text box). */
+  askRoom: () => Promise<string | null> = async () => null;
 
   constructor(
     private readonly game: Game,
@@ -81,9 +83,10 @@ export class NinaroUi implements GameUi {
         name: 'Player',
         enabled: true,
         selectable: true,
-        store: Control.list(Show.Radio, 3, 2, 13, [
+        store: Control.list(Show.Radio, 4, 2, 13, [
           { value: 1, name: 'Human' },
           ...[2, 3, 4, 5, 6].map((slot) => ({ value: slot, name: name(slot) })),
+          { value: PLAYER_SLOTS.online, name: 'Online' },
         ]),
       },
       { name: 'Color', enabled: true, selectable: true, store: Control.range(Show.Color, 1, 10, 5, 1, '', 7, '') },
@@ -389,6 +392,8 @@ export class NinaroUi implements GameUi {
     this.setupPlayer(pnum);
     if (await this.runDialog(d, DIALOG_VP, 5, 8, '~The Player Dialog')) {
       let p = d.control(0).valueGet(d.control(0).current)!;
+      // Online's colour is always the opponent's, as their device sends it.
+      if (p === PLAYER_SLOTS.online) return p === pnum ? -1 : p;
       if (p === 0 || p === 1) {
         // a human
       } else if ((pnum === s.playerTwo && p === s.playerOne) || (pnum === s.playerOne && p === s.playerTwo)) {
@@ -401,7 +406,14 @@ export class NinaroUi implements GameUi {
         s.copyOf = p;
         p = PLAYER_SLOTS.copy;
       }
-      s.player(p).color = d.control(1).current;
+      const color = d.control(1).current;
+      // Both screens show the same colours, so a new colour mid-game online leaves the online game.
+      const recolourOnline = game.online !== null && p === pnum && s.player(p).color !== color;
+      s.player(p).color = color;
+      if (recolourOnline) {
+        game.leaveOnline();
+        s.msgbox.fixedAddLine('~Left online game');
+      }
       return p === pnum ? -1 : p;
     }
     return -1;
@@ -414,6 +426,12 @@ export class NinaroUi implements GameUi {
     this.playerDialog.control(0).elemSet(0, n - 1, 'Human');
     const player = await this.choosePlayer(n === 1 ? s.playerOne : s.playerTwo);
     if (player === -1) return;
+    if (player === PLAYER_SLOTS.online) {
+      const room = await this.askRoom();
+      // Connecting can wait a long time for an opponent: the menu closes and the game carries on meanwhile.
+      if (room !== null) void game.goOnline(room, n);
+      return;
+    }
     if (n === 1) game.setP1(player);
     else game.setP2(player);
     if (game.ingame) {

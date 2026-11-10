@@ -164,6 +164,67 @@ html[data-view='fullscreen'] .site-footer {
   touch-action: none;
 }
 
+/* ---- The Play Online room box, over the game ---- */
+
+.online-dialog:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.6);
+}
+
+.online-dialog__box {
+  width: min(100%, 420px);
+  padding: 16px;
+  background: #000000;
+  border: 2px solid #ff5555;
+}
+
+.online-dialog__title {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  color: #55ff55;
+}
+
+.online-dialog__label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.online-dialog__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 1.1rem; /* 16px or more: phones don't zoom in on focus */
+  color: var(--text);
+  background: #000000;
+  border: 2px solid #aaaaaa;
+  border-radius: 0;
+}
+
+.online-dialog__input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.online-dialog__hint {
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.online-dialog__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* ---- AI tournament page ---- */
 
 .tournament h1 {

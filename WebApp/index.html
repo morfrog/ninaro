@@ -20,6 +20,30 @@
       <div class="screen-frame" id="screen-frame">
         <canvas id="screen" class="screen" width="640" height="350" role="img" aria-label="Ninaro screen"></canvas>
       </div>
+      <div class="online-dialog" id="online-dialog" hidden>
+        <form class="online-dialog__box" id="online-form" aria-labelledby="online-title">
+          <h2 class="online-dialog__title" id="online-title">Play Online</h2>
+          <label class="online-dialog__label" for="online-room">Room</label>
+          <input
+            class="online-dialog__input"
+            id="online-room"
+            name="room"
+            maxlength="24"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            enterkeyhint="go"
+          />
+          <p class="online-dialog__hint" id="online-hint">
+            Both players use the same room name, on the same size board.
+          </p>
+          <div class="online-dialog__buttons">
+            <button type="submit" class="btn btn--go">Connect</button>
+            <button type="button" class="btn" id="online-copy">Copy link</button>
+            <button type="button" class="btn" id="online-cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
       <p class="note note--touch">
         Tap a column to move the token there, and tap again to drop it. Or press a finger on the board and drag left or right
         to move the token, then drag down a third of the board to drop it. Tap the bottom third of the board to drop the token

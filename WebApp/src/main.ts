@@ -14,6 +14,8 @@ import { titleScreen } from './game/title';
 import { NinaroUi, applyBackground, applyDisplayMode } from './game/ui';
 import { Input } from './input/input';
 import { ESC } from './input/keys';
+import { DEFAULT_ROOM, askRoom, initialRoom, roomFromUrl, saveRoom } from './ui/roomPrompt';
+import { withOnlineHelp } from './game/onlineHelp';
 import { Screen } from './render/screen';
 import './devLink';
 
@@ -25,7 +27,8 @@ const input = new Input();
 input.attach(window, canvas, (x, y) => screen.toScreen(x, y));
 
 const game = new Game(state, screen.graph, vs, input);
-const ui = new NinaroUi(game, helpText);
+const ui = new NinaroUi(game, withOnlineHelp(helpText));
+ui.askRoom = () => askRoom(initialRoom(location.search));
 game.ui = ui;
 
 // NINARO.CFG and NINARO.SAV live in the browser's storage. LoadCfg: the
@@ -37,9 +40,14 @@ if (cfg) decodeConfig(cfg, game);
 
 // The original saved its settings when it quit; a page can be closed at any
 // time, so they are also saved whenever it is hidden or closed.
-window.addEventListener('pagehide', () => game.saveConfig());
+// Not during the title screen: it plays on its own 36x9 board, which would be
+// saved as the player's board.
+window.addEventListener('pagehide', () => {
+  if (!inTitle) game.saveConfig();
+  game.leaveOnlineNow(); // one try at telling an online opponent
+});
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') game.saveConfig();
+  if (document.visibilityState === 'hidden' && !inTitle) game.saveConfig();
 });
 
 // Browsers only allow sound after the player has pressed a key or clicked.
@@ -98,12 +106,22 @@ async function program(): Promise<void> {
   if (menuButton) menuButton.textContent = 'Menu';
   applyBackground(game);
   game.start(undefined, size);
+  // ?online=<room>: player two is Online in that room, once, as the page opens.
+  if (urlRoom !== null) {
+    const room = urlRoom || DEFAULT_ROOM;
+    urlRoom = null;
+    saveRoom(room);
+    void game.goOnline(room, 2);
+  }
 }
+
+let urlRoom = roomFromUrl(location.search);
 
 // Exit: the original saved its configuration and quit to DOS; here the
 // program starts again from the title screen.
 ui.onExit = async () => {
   game.saveConfig();
+  game.leaveOnline();
   game.ingame = false;
   state.resetMessages();
   await program();
@@ -113,6 +131,7 @@ ui.onExit = async () => {
 const HOME_URL = 'https://morfrog.github.io/';
 ui.onHome = async () => {
   game.saveConfig();
+  game.leaveOnline();
   window.location.href = HOME_URL;
 };
 
