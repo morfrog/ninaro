@@ -85,19 +85,45 @@ const frame = document.querySelector<HTMLElement>('#screen-frame');
 const boardTitle = document.querySelector<HTMLElement>('#board-title');
 const boardReadout = document.querySelector<HTMLElement>('#board-readout');
 const boardPlayers = document.querySelector<HTMLElement>('#board-players');
+const turnBadge = document.querySelector<HTMLElement>('#turn');
 game.onView = (view) => {
   document.documentElement.dataset.view = view.fullscreen ? 'fullscreen' : 'normal';
   frame?.classList.toggle('screen-frame--cropped', view.cropped);
   if (boardTitle) boardTitle.hidden = !view.fullscreen;
   if (boardReadout && boardReadout.textContent !== view.readout) boardReadout.textContent = view.readout;
   if (boardPlayers) {
-    const key = `${view.players.one}|${view.players.two}`;
+    const side = view.turn?.side ?? 0;
+    const key = `${view.players.one}|${view.players.two}|${side}`;
     if (boardPlayers.dataset.players !== key) {
       boardPlayers.dataset.players = key;
       const vs = document.createElement('span');
       vs.className = 'toolbar__vs';
       vs.textContent = 'vs';
-      boardPlayers.replaceChildren(view.players.one, vs, view.players.two);
+      // The player whose turn it is stands out.
+      const name = (text: string, current: boolean) => {
+        const el = document.createElement('span');
+        el.textContent = text;
+        if (current) el.className = 'toolbar__current';
+        return el;
+      };
+      boardPlayers.replaceChildren(name(view.players.one, side === 1), vs, name(view.players.two, side === 2));
+    }
+  }
+  // Whose turn: "Your turn" / "Their turn" online, or the player's name, with their token's colour.
+  if (turnBadge) {
+    const turn = view.turn;
+    const key = turn ? `${turn.text}|${turn.color}|${turn.mine}` : '';
+    if (turnBadge.dataset.turn !== key) {
+      turnBadge.dataset.turn = key;
+      turnBadge.hidden = !turn;
+      if (turn) {
+        const dot = document.createElement('span');
+        dot.className = 'turn__dot';
+        dot.style.background = turn.color;
+        turnBadge.replaceChildren(dot, turn.text);
+        turnBadge.classList.toggle('turn--mine', turn.mine === true);
+        turnBadge.classList.toggle('turn--theirs', turn.mine === false);
+      }
     }
   }
 };

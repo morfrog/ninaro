@@ -104,6 +104,42 @@ a {
   font-weight: normal;
 }
 
+/* The player whose turn it is, in "One vs Two". */
+.toolbar__current {
+  color: #ffff55;
+  font-weight: bold;
+}
+
+/* Whose turn it is, next to Menu, in both views: a dot in their token's colour and who. */
+.turn:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid #555555;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.turn__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* Online: your turn stands out; theirs is quieter. */
+.turn--mine {
+  border-color: #55ff55;
+  color: #55ff55;
+  font-weight: bold;
+}
+
+.turn--theirs {
+  color: var(--muted);
+}
+
 /* Fullscreen: the frame shows the board only, and is as wide as the toolbar, so the board lines up with
    Home on the left and Display on the right. The canvas is 640 / 384 times the frame's width, so the
    right-hand part of the screen is cut off. */

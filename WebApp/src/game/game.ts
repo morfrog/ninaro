@@ -130,6 +130,20 @@ export interface ViewState {
   readout: string;
   /** Who is playing: "Human" and "AI Normal", for "Human vs AI Normal". */
   players: { one: string; two: string };
+  /** Whose turn it is while a game is being played, else null. */
+  turn: TurnState | null;
+}
+
+/** Whose turn it is, for the page to show. */
+export interface TurnState {
+  /** Player one or two. */
+  side: 1 | 2;
+  /** "Your turn" or "Their turn" online; "Human 1's turn" or "AI Normal's turn" otherwise. */
+  text: string;
+  /** The player's token colour, as CSS ('' if unknown). */
+  color: string;
+  /** Online: whether it is this device's turn. Null when not online. */
+  mine: boolean | null;
 }
 
 export class Game {
@@ -250,7 +264,22 @@ export class Game {
       fullscreen: this.viewMode === 'fullscreen' && this.screenOn,
       readout: `${s.gridCols}x${s.gridRows}@${s.win.tokens}`,
       players: { one: this.toolbarName(s.playerOne), two: this.toolbarName(s.playerTwo) },
+      turn: this.turnState(),
     });
+  }
+
+  /** Whose turn it is, while a game is being played (not between games, or while connecting). */
+  private turnState(): TurnState | null {
+    const s = this.state;
+    if (!this.screenOn || !this.ingame || s.winOccurred || s.isDraw) return null;
+    const side = s.playerCurrent === s.playerOne ? 1 : 2;
+    const color = this.g.palette?.css(this.currentPlayer().color) ?? '';
+    const link = this.online;
+    if (link?.started) {
+      const mine = s.playerCurrent !== PLAYER_SLOTS.online;
+      return { side, text: mine ? 'Your turn' : 'Their turn', color, mine };
+    }
+    return { side, text: `${s.logName(s.playerCurrent)}'s turn`, color, mine: null };
   }
 
   /** A player's name in the toolbar: as in the log, and an online opponent with who they are, as "Online (Human)". */
@@ -1336,8 +1365,11 @@ export class Game {
     if (waitEsc) s.msgbox.fixedAddLine('~Press ESC To Continue');
     this.vs.display(Display.DisplayAll);
     if (waitEsc) s.msgbox.delLine(7);
-    this.newGame();
+    // The original started the next game before waiting, so "Goes First" came
+    // up under the result; now the next game begins once the player continues.
     if (waitEsc) await this.waitForEsc();
+    if (this.stopped) return;
+    this.newGame();
     this.vs.display(Display.DisplayAll);
   }
 

@@ -7,7 +7,7 @@ import type { Graph } from '../render/graph';
 import { Color } from '../render/palette';
 import { viewportFromViewport } from '../render/screen';
 import type { ViewSys } from '../render/viewsys';
-import { Game } from './game';
+import { Game, type ViewState } from './game';
 import type { OnlineStoreFactory } from './online';
 import { GameState, PLAYER_SLOTS } from './state';
 
@@ -121,10 +121,18 @@ describe('online play', () => {
     // Each is told who they are playing, and the toolbar says so.
     expect(a.said).toContain('~Opponent: AI Normal');
     expect(b.said).toContain('~Opponent: Human');
-    let toolbarA = { one: '', two: '' };
-    a.game.onView = (v) => (toolbarA = v.players);
+    let viewA: ViewState | null = null;
+    let viewB: ViewState | null = null;
+    a.game.onView = (v) => (viewA = v);
+    b.game.onView = (v) => (viewB = v);
     a.game.setViewMode('normal');
-    expect(toolbarA).toEqual({ one: 'Human', two: 'Online (AI Normal)' });
+    b.game.setViewMode('normal');
+    expect(viewA!.players).toEqual({ one: 'Human', two: 'Online (AI Normal)' });
+    // Each device says whose turn it is from its own side: one says "Your turn", the other "Their turn".
+    const aFirst = a.state.playerCurrent === PLAYER_SLOTS.one;
+    expect(viewA!.turn?.text).toBe(aFirst ? 'Your turn' : 'Their turn');
+    expect(viewB!.turn?.text).toBe(aFirst ? 'Their turn' : 'Your turn');
+    expect(viewA!.turn?.mine).toBe(aFirst);
     // The same player starts on both: one device's player one is the other's Online.
     expect(a.state.playerCurrent === PLAYER_SLOTS.one).toBe(b.state.playerCurrent === PLAYER_SLOTS.online);
 

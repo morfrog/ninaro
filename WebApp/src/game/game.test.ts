@@ -7,7 +7,7 @@ import { ESC, KP4 } from '../input/keys';
 import type { Graph } from '../render/graph';
 import { viewportFromViewport } from '../render/screen';
 import type { ViewSys } from '../render/viewsys';
-import { Game, startColumn } from './game';
+import { Game, startColumn, type TurnState } from './game';
 import { GameState, GoesFirst } from './state';
 
 const SCREEN = { x1: 0, y1: 0, x2: 639, y2: 349 };
@@ -108,6 +108,25 @@ describe('the main loop', () => {
     await run;
   });
 
+  it("tells the page whose turn it is, by name, and nobody's between games", () => {
+    const { game, state } = makeGame();
+    let turn: TurnState | null = null;
+    game.onView = (v) => (turn = v.turn);
+    game.start(1);
+    game.setViewMode('normal');
+    // "Successive" on a new start: player two first.
+    expect(turn).toMatchObject({ side: 2, text: "Human 2's turn", mine: null });
+    game.nextPlayer();
+    game.setViewMode('normal');
+    expect(turn).toMatchObject({ side: 1, text: "Human 1's turn" });
+    state.playerTwo = 4; // AI Normal
+    game.setViewMode('normal');
+    expect(turn).toMatchObject({ side: 1, text: "Human's turn" });
+    game.endGame();
+    game.setViewMode('normal');
+    expect(turn).toBeNull();
+  });
+
   it('waits for Esc after a win, then starts the next game', async () => {
     const { game, state, input } = makeGame();
     game.start(1);
@@ -122,13 +141,17 @@ describe('the main loop', () => {
     for (let i = 0; i < 5; i++) await tick();
     await new Promise((r) => setTimeout(r, 250)); // the win tune's length, muted: none
     expect(state.playerTwoScore).toBe(1);
-    expect(state.msgbox.line(state.msgbox.size)).toBe('Human 1 Goes First'); // NewGame ran
+    // The next game waits for Esc: no "Goes First" yet, and the winning board stays.
+    expect(state.msgbox.visibleLines().some((l) => l.endsWith('Goes First') && l.startsWith('Human 1'))).toBe(false);
+    expect(state.playgrid.tokens()).toBe(7);
     input.pushKey(97); // not Esc
     await tick();
+    expect(state.playgrid.tokens()).toBe(7);
     input.pushKey(ESC);
     await tick();
     await tick();
     expect(state.playgrid.tokens()).toBe(0);
+    expect(state.msgbox.line(state.msgbox.size)).toBe('Human 1 Goes First'); // NewGame ran
     game.stopped = true;
     input.pushKey(0);
     await run;
@@ -450,7 +473,7 @@ describe('the View option', () => {
     game.setScreenOn(false);
     game.setViewMode('fullscreen');
     expect(active.every(Boolean)).toBe(true);
-    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4', players: { one: 'Human 1', two: 'Human 2' } });
+    expect(views.at(-1)).toMatchObject({ cropped: false, fullscreen: false, readout: '7x8@4', players: { one: 'Human 1', two: 'Human 2' }, turn: null });
     game.setScreenOn(true);
     expect(active[INFO[0]]).toBe(false);
   });
@@ -460,11 +483,11 @@ describe('the View option', () => {
     game.setViewMode('fullscreen');
     expect(active.slice(0, 2)).toEqual([true, true]);
     for (const i of INFO) expect(active[i]).toBe(false);
-    expect(views.at(-1)).toEqual({ cropped: true, fullscreen: true, readout: '7x8@4', players: { one: 'Human 1', two: 'Human 2' } });
+    expect(views.at(-1)).toMatchObject({ cropped: true, fullscreen: true, readout: '7x8@4', players: { one: 'Human 1', two: 'Human 2' } });
 
     game.setViewMode('normal');
     expect(active.every(Boolean)).toBe(true);
-    expect(views.at(-1)).toEqual({ cropped: false, fullscreen: false, readout: '7x8@4', players: { one: 'Human 1', two: 'Human 2' } });
+    expect(views.at(-1)).toMatchObject({ cropped: false, fullscreen: false, readout: '7x8@4', players: { one: 'Human 1', two: 'Human 2' } });
   });
 
   it('gives the whole screen back while a menu or dialog is open', async () => {
