@@ -25,6 +25,9 @@ chose the same colour, the second to arrive gets another.
 The other player on your device can be a human or any of
 the AIs, to let an AI play someone online.
 
+The players are remembered: when the game next opens, an
+Online player connects to the last room again.
+
 Changing a player, the board or your colour, ending the game
 or closing the page leaves the online game, and the other
 player is told. Leaving part way through a game loses it:

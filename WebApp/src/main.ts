@@ -5,11 +5,11 @@ import helpText from '../../Legacy/NINARO.HLP?raw';
 import { decodeConfig } from './data/config';
 import { loadDisplayMode } from './render/displayMode';
 import { loadViewMode } from './render/viewMode';
-import { CONFIG_KEY, SAVE_KEY, StoredFile } from './data/storage';
+import { CONFIG_KEY, ONLINE_KEY, SAVE_KEY, StoredFile } from './data/storage';
 import ttlUrl from '../../Legacy/NINARO.TTL?url';
 import { gameViewSys } from './game/display';
 import { Game } from './game/game';
-import { GameState } from './game/state';
+import { GameState, PLAYER_SLOTS } from './game/state';
 import { titleScreen } from './game/title';
 import { NinaroUi, applyBackground, applyDisplayMode } from './game/ui';
 import { Input } from './input/input';
@@ -35,8 +35,11 @@ game.ui = ui;
 // settings from last time, if there are any (ProgInit's defaults if not).
 game.configFile = new StoredFile(CONFIG_KEY);
 game.saveFile = new StoredFile(SAVE_KEY);
+game.onlineFile = new StoredFile(ONLINE_KEY);
+// With no settings yet (a first visit), player two is AI Normal, so a new
+// player can start playing at once; the original started with two humans.
 const cfg = game.configFile.read();
-if (cfg) decodeConfig(cfg, game);
+if (!cfg || !decodeConfig(cfg, game)) game.setP2(PLAYER_SLOTS.aiNormal);
 
 // The original saved its settings when it quit; a page can be closed at any
 // time, so they are also saved whenever it is hidden or closed.
@@ -106,16 +109,23 @@ async function program(): Promise<void> {
   if (menuButton) menuButton.textContent = 'Menu';
   applyBackground(game);
   game.start(undefined, size);
-  // ?online=<room>: player two is Online in that room, once, as the page opens.
-  if (urlRoom !== null) {
-    const room = urlRoom || DEFAULT_ROOM;
-    urlRoom = null;
-    saveRoom(room);
-    void game.goOnline(room, 2);
+  // As the page opens (once): ?online=<room> makes player two Online in that
+  // room; otherwise a player who was Online last time is again, in the last room.
+  if (!opened) {
+    opened = true;
+    const urlRoom = roomFromUrl(location.search);
+    const side = game.savedOnlineSide();
+    if (urlRoom !== null) {
+      const room = urlRoom || DEFAULT_ROOM;
+      saveRoom(room);
+      void game.goOnline(room, 2);
+    } else if (side !== null) {
+      void game.goOnline(initialRoom(''), side);
+    }
   }
 }
 
-let urlRoom = roomFromUrl(location.search);
+let opened = false;
 
 // Exit: the original saved its configuration and quit to DOS; here the
 // program starts again from the title screen.

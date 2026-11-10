@@ -5,6 +5,8 @@
 
 export const CONFIG_KEY = 'ninaro:v1:cfg';
 export const SAVE_KEY = 'ninaro:v1:save';
+/** Which side was Online, to reconnect when the game opens. */
+export const ONLINE_KEY = 'ninaro:v1:online';
 
 /** The part of Storage this needs (so tests can pass a Map-backed one). */
 export type KeyValueStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;

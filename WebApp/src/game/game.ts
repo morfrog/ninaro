@@ -150,6 +150,12 @@ export class Game {
   saveFile: SavedFile = memoryFile();
   /** NINARO.CFG: the settings, written by saveConfig(). */
   configFile: SavedFile = memoryFile();
+  /**
+   * Which side is Online (one byte, 1 or 2), so the page can reconnect when
+   * the game next opens; removed when neither is. NINARO.CFG keeps the
+   * original's layout, which has no Online player.
+   */
+  onlineFile: SavedFile = memoryFile();
   /** savecfg: false after Ctrl-F9 removes the configuration, so it isn't written again. */
   saveCfg = true;
   ui: GameUi = NO_UI;
@@ -437,6 +443,7 @@ export class Game {
   /** KeyUp and KeyCancel: the menu. */
   async keyUp(): Promise<number> {
     await this.ui.menuCall(this);
+    this.saveConfig(); // the players or settings may have changed: remember them now
     return Display.DisplayAll;
   }
 
@@ -843,7 +850,16 @@ export class Game {
 
   /** SaveCfg, unless Ctrl-F9 removed the configuration (ExitGame's `if (savecfg)`). */
   saveConfig(): void {
-    if (this.saveCfg) this.configFile.write(encodeConfig(this));
+    if (!this.saveCfg) return;
+    this.configFile.write(encodeConfig(this));
+    if (this.online) this.onlineFile.write(Uint8Array.of(this.online.side));
+    else this.onlineFile.remove();
+  }
+
+  /** The side to make Online when the game opens (as it was last time), or null. */
+  savedOnlineSide(): 1 | 2 | null {
+    const side = this.onlineFile.read()?.[0];
+    return side === 1 || side === 2 ? side : null;
   }
 
   /** LoadGame (F3) */
@@ -970,6 +986,7 @@ export class Game {
         break;
       case CF9:
         this.configFile.remove();
+        this.onlineFile.remove();
         this.saveCfg = false;
         this.state.msgbox.fixedAddLine('Config Removed...');
         this.vs.windowChanged(GameWindow.msgBox, true);
@@ -984,6 +1001,7 @@ export class Game {
       default:
         return false;
     }
+    this.saveConfig(); // a function key or the menu may have changed the players: remember them now
     return true;
   }
 
@@ -1052,6 +1070,7 @@ export class Game {
         this.leaveOnline(false);
         break;
     }
+    this.saveConfig(); // Online (or, if it didn't start, the player put back) is remembered for next time
     this.redraw();
     this.input.poke(); // the main loop may be waiting for input with no game on
     return result;
@@ -1120,6 +1139,7 @@ export class Game {
     else this.say('~Opponent left');
     this.leaveOnline(false);
     if (this.ingame) this.endGame();
+    this.saveConfig();
     this.redraw();
   }
 

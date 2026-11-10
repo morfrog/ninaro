@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { decodeConfig, encodeConfig } from '../data/config';
 import { Input } from '../input/input';
+import { F6 } from '../input/keys';
 import { MemoryStore } from '../online/kvStore';
 import type { Graph } from '../render/graph';
 import { Color } from '../render/palette';
@@ -248,6 +249,38 @@ describe('online play', () => {
     const b = makeGame(store, 11);
     expect(decodeConfig(bytes, b.game)).toBe(true);
     expect(b.state.playerTwo).toBe(PLAYER_SLOTS.two);
+  });
+
+  it('remembers new players at once, not only when the page closes', async () => {
+    const store = new MemoryStore();
+    const a = makeGame(store, 15);
+    await a.game.extraFunctionality(F6); // demo: two AIs
+    const bytes = a.game.configFile.read();
+    expect(bytes).not.toBeNull();
+    const b = makeGame(store, 16);
+    expect(decodeConfig(bytes!, b.game)).toBe(true);
+    expect([b.state.playerOne, b.state.playerTwo]).toEqual([a.state.playerOne, a.state.playerTwo]);
+  });
+
+  it('remembers which side is Online, until the online game ends', async () => {
+    const store = new MemoryStore();
+    const a = makeGame(store, 17);
+    const b = makeGame(store, 18);
+    expect(a.game.savedOnlineSide()).toBeNull();
+    const connectA = a.game.goOnline('room', 1);
+    await delay(40);
+    await Promise.all([connectA, b.game.goOnline('room', 2)]);
+    expect(a.game.savedOnlineSide()).toBe(1);
+    expect(b.game.savedOnlineSide()).toBe(2);
+    a.game.endGame(); // A leaves; B is told
+    a.game.saveConfig();
+    expect(a.game.savedOnlineSide()).toBeNull();
+    const runB = b.game.run();
+    await until(() => b.game.online === null);
+    expect(b.game.savedOnlineSide()).toBeNull();
+    b.game.stopped = true;
+    b.input.poke();
+    await runB;
   });
 
   it('will not save or load a game while online', async () => {
