@@ -252,7 +252,7 @@ export class Game {
     this.syncView();
     if (!this.screenOn || !this.cropped) return;
     const flash = this.flash.current(performance.now());
-    if (!flash) return;
+    if (flash.length === 0) return;
     const s = this.state;
     drawLogFlash(this.g, this.vs.windows[GameWindow.playGrid].vp, flash, {
       back: Color.BLACK,
@@ -278,7 +278,7 @@ export class Game {
         this.flash.clear();
         return;
       }
-      const live = this.flash.current(performance.now()) !== null;
+      const live = this.flash.current(performance.now()).length > 0;
       // Restores the saved screen, then draws the message if it is still showing.
       this.vs.display(Display.DisplayCurrent);
       if (live) this.flashTimer = setTimeout(frame, FLASH_FRAME_MS);

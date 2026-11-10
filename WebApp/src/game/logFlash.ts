@@ -1,18 +1,21 @@
-// Fullscreen's log: each new message appears once, as a single line in a box
-// with the message box's border, centred over the board, and fades away.
-// The message box itself is not shown in fullscreen, so this is how the
-// player sees what happened.
+// Fullscreen's log: each new message appears over the board, in a box with
+// the message box's border, and fades away on its own timer. Messages that
+// come close together stack up, newest at the bottom, so none is cut short:
+// "a", then "a b", then "b" once a has faded. The message box itself is not
+// shown in fullscreen, so this is how the player sees what happened.
 
 import { BORDER, FILL, HAlign, VAlign, type Graph } from '../render/graph';
 import { setViewport, type Viewport } from '../render/screen';
 
 /** How long a message stays fully visible. */
-export const FLASH_HOLD_MS = 1300;
+export const FLASH_HOLD_MS = 2200;
 /** How long it takes to fade out after that. */
 export const FLASH_FADE_MS = 700;
 export const FLASH_MS = FLASH_HOLD_MS + FLASH_FADE_MS;
 /** Time between redraws while fading. */
 export const FLASH_FRAME_MS = 33;
+/** The most lines on show at once; a newer line pushes out the oldest. */
+export const FLASH_MAX_LINES = 4;
 
 /** Characters per line the box is sized for: the message box's width. */
 const BOX_CHARS = 30;
@@ -31,29 +34,25 @@ export interface FlashText {
   alpha: number;
 }
 
-/** The message on show, if any. Only the latest one is kept. */
+/** The messages on show, oldest first, each with its own timer. */
 export class LogFlash {
-  private line: { text: string; bold: boolean; shownAt: number } | null = null;
+  private lines: { text: string; bold: boolean; shownAt: number }[] = [];
 
-  /** Shows `line` from time `now` (milliseconds), replacing any message on show. */
+  /** Shows `line` from time `now` (milliseconds), below any still on show. */
   show(line: string, now: number): void {
     const bold = line.startsWith('~');
-    this.line = { text: bold ? line.slice(1) : line, bold, shownAt: now };
+    this.lines.push({ text: bold ? line.slice(1) : line, bold, shownAt: now });
+    if (this.lines.length > FLASH_MAX_LINES) this.lines.splice(0, this.lines.length - FLASH_MAX_LINES);
   }
 
   clear(): void {
-    this.line = null;
+    this.lines = [];
   }
 
-  /** What to draw at time `now`, or null once it has faded out. */
-  current(now: number): FlashText | null {
-    if (!this.line) return null;
-    const alpha = flashAlpha(now - this.line.shownAt);
-    if (alpha <= 0) {
-      this.line = null;
-      return null;
-    }
-    return { text: this.line.text, bold: this.line.bold, alpha };
+  /** What to draw at time `now`, oldest first: empty once all have faded. */
+  current(now: number): FlashText[] {
+    this.lines = this.lines.filter((l) => flashAlpha(now - l.shownAt) > 0);
+    return this.lines.map((l) => ({ text: l.text, bold: l.bold, alpha: flashAlpha(now - l.shownAt) }));
   }
 }
 
@@ -70,34 +69,38 @@ export interface FlashColors {
 }
 
 /**
- * Draws the message over the board, centred in it, at the current alpha.
- * The box is 92% of the board's width and a line and a bit high, with the
- * text in the message box's cell size.
+ * Draws the messages over the board, centred in it. The box is 92% of the
+ * board's width, with a row for each line in the message box's cell size; it
+ * fades with its last line, and each line fades on its own.
  */
-export function drawLogFlash(g: Graph, board: Viewport, flash: FlashText, colors: FlashColors): void {
+export function drawLogFlash(g: Graph, board: Viewport, lines: FlashText[], colors: FlashColors): void {
+  if (lines.length === 0) return;
   const width = board.x2 - board.x1 + 1;
   const height = board.y2 - board.y1 + 1;
   const boxW = Math.trunc(width * 0.92);
-  const boxH = Math.trunc(height / 11);
+  const oneLineH = Math.trunc(height / 11);
+  const cellH = oneLineH - 12;
+  const step = cellH + 4;
+  const boxH = oneLineH + (lines.length - 1) * step;
   const x1 = board.x1 + Math.trunc((width - boxW) / 2);
   const y1 = board.y1 + Math.trunc((height - boxH) / 2);
   const x2 = x1 + boxW - 1;
   const y2 = y1 + boxH - 1;
-  const cellH = boxH - 12;
-  const charW = Math.trunc((boxW - 16) / Math.max(BOX_CHARS, flash.text.length));
-  // The text is centred on the box's middle, as the Graph centres it on a point (the
+  const longest = Math.max(...lines.map((l) => l.text.length));
+  const charW = Math.trunc((boxW - 16) / Math.max(BOX_CHARS, longest));
+  // Each line is centred on the box's middle, as the Graph centres it on a point (the
   // modern font is narrower than its cells, so aligning by cells would sit it off-centre).
   // The capitals sit a tenth of a cell down and are seven tenths tall, so their middle is at 0.45 of the cell.
   const textX = x1 + boxW / 2;
-  const textY = y1 + boxH / 2 - 0.45 * cellH;
+  const firstY = y1 + oneLineH / 2 - 0.45 * cellH;
 
   const mask = g.getFillMask();
   const ctx = g.ctx;
-  ctx.globalAlpha = flash.alpha;
   try {
     setViewport(g, board);
     g.setVieworg(0, 0);
     g.setFillMask(null);
+    ctx.globalAlpha = Math.max(...lines.map((l) => l.alpha));
     g.setColor(colors.back);
     g.rectangle(FILL, x1, y1, x2, y2);
     g.setColor(colors.border);
@@ -105,8 +108,11 @@ export function drawLogFlash(g: Graph, board: Viewport, flash: FlashText, colors
     g.setCharSpacing(0);
     g.setCharSize(cellH, charW);
     g.setTextAlign(HAlign.CENTER, VAlign.TOP);
-    g.setColor(flash.bold ? colors.hilite : colors.text);
-    g.grText(textX, textY, flash.text);
+    lines.forEach((line, i) => {
+      ctx.globalAlpha = line.alpha;
+      g.setColor(line.bold ? colors.hilite : colors.text);
+      g.grText(textX, firstY + i * step, line.text);
+    });
   } finally {
     ctx.globalAlpha = 1;
     g.setFillMask(mask);
