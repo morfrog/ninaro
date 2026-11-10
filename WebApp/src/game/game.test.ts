@@ -305,7 +305,7 @@ describe('the pointer', () => {
     await run;
   });
 
-  it('a tap in the bottom third drops at once, in the column tapped', async () => {
+  it('a tap in the bottom third drops the token where it is, without moving it', async () => {
     const { game, state, input } = makeGame();
     game.start(1);
     const run = game.run();
@@ -313,7 +313,8 @@ describe('the pointer', () => {
     input.pushButton(1, x(5), 300, 'touch');
     await tick();
     await tick();
-    expect(state.playgrid.statusOfCR(5, 7)).toBe(state.player(1));
+    expect(state.playgrid.statusOfCR(3, 7)).toBe(state.player(1)); // the token was in column 3
+    expect(state.playgrid.inCol(5)).toBe(0);
     game.stopped = true;
     input.pushKey(0);
     await run;

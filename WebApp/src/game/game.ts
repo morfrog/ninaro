@@ -616,11 +616,12 @@ export class Game {
           // The original dropped on a click anywhere; with the pointer visible,
           // only a click on the board does.
           if (col < 0) continue;
+          // A tap in the bottom third drops the token where it is, without moving it.
+          if (m.pointerType === 'touch' && this.inDropZone(m.y)) return s.keypos;
           if (col !== s.keypos) {
             this.moveEntryTo(col);
             this.vs.display(Display.DisplayChanged);
-            // A tap higher up moves only; tap again to drop. In the bottom third it drops at once.
-            if (m.pointerType === 'touch' && !this.inDropZone(m.y)) continue;
+            if (m.pointerType === 'touch') continue; // tap again to drop
           }
           return s.keypos;
         }
