@@ -35,36 +35,37 @@ The request asked for one 64-character buffer. Two keys are better: each device 
 Each write is a snapshot of the sender's state, not an event. So reading the latest value is always enough, a missed poll loses nothing, and writing the same thing again is harmless.
 
 ```
-1,<role>,<nonce>,<cols>x<rows>x<connect>,<color>,<phase>,<game>,<move>,<col>,<beat>
+1,<role>,<nonce>,<peer>,<cols>x<rows>x<connect>,<color>,<phase>,<game>,<move>,<col>,<beat>
 ```
 
 | Field | Meaning |
 |---|---|
-| `1` | Protocol version. A different version aborts like a board mismatch. |
+| `1` | Protocol version. It is in the keys too (`ninaro1-...`), so devices on different versions never meet. |
 | `role` | `h` or `g` |
 | `nonce` | 4 random base-36 characters, new each session. Tells two sessions in the same room apart, and settles a race to be host. |
+| `peer` | The other side's nonce once known, `-` before. A message is only taken by the session it names, so a stranger or a leftover from an earlier session in the same room is ignored. |
 | `cols x rows x connect` | This device's board, e.g. `7x8x4` |
 | `color` | The sender's token colour, one hex digit (palette index 0–15) |
 | `phase` | `W` waiting for an opponent (host) or joining (guest); `S` start, sent by the host; `P` playing; `X` aborted; `Q` quit |
 | `game` | Game number in this session, from 1 |
 | `move` | Number of this side's latest move in the game (0 = none yet). For `S`, who goes first: `h` or `g`. |
 | `col` | Column of that move (0-based) |
-| `beat` | Heartbeat counter, raised every 5 s while waiting so the other side knows this device is still there |
+| `beat` | Heartbeat counter, raised every 5 s for the whole session, so others can tell a live room from an abandoned one |
 
-Example: `1,g,k3f9,7x8x4,c,P,2,11,5,0` is guest, colour 12, game 2, its move 11 in column 5. That's 27 characters; the longest possible (50x50x50, big counters) is about 42.
+Example: `1,g,k3f9,ab12,7x8x4,c,P,2,11,5,0` is the guest playing host `ab12`, colour 12, game 2, its move 11 in column 5. That's 32 characters; the longest possible (50x50x50, counters at their 999999 limit) is 50.
 
 The request's `1,2,5` (player 1, second move, position 5) is this message's `role,move,col`. The other fields are what's needed to make it work with this store.
 
 ## Handshake
 
 1. **Who is host.** On Connect, read the `-h` key.
-   - Empty, or its `beat` hasn't changed in 15 s (a room left over from earlier): **become host**. Write `W` with a new nonce. After 2 s, read it back. If the nonce there isn't ours, another device wrote at the same moment and won (last write wins, and both devices read the same final value), so become guest instead.
-   - A live `W` from a host: **become guest**.
-   - A host already in `S` or `P` with a different guest nonce: the room is busy. Say "Room smithy is in use" and stop.
-2. **Guest says hello.** The guest writes `W` (its role, nonce, board and colour) to `-g`, then polls `-h`. If its colour is the host's, it changes its own first (see Colours).
-3. **Host checks.** The host polls `-g`. On a guest `W`:
-   - Board or version different: write `X` and show `Board mismatch: you 7x8@4, them 12x13@6`. The guest reads `X`, shows the same, and both end the online game.
-   - Same: clear the board, pick who goes first, and write `S,1,<h|g>`. The guest reads `S`, clears its board and starts too. Both show `Online: <name> goes first`.
+   - A `W` from a host: **become guest** (step 2). If its heartbeat then doesn't move for 20 s, it was left over from earlier: start again, treating that host as gone.
+   - A host in `S` or `P`: watch it for up to 20 s. If it changes, two others are playing: the room is busy. Say "Room smithy is in use" and stop. If not, the game was abandoned: become host.
+   - Empty, `X`, `Q`, or a host found to be gone: **become host**. Write `W` with a new nonce. After 2 s, read it back. If the nonce there isn't ours, another device wrote at the same moment and won (last write wins, and both devices read the same final value), so go round again and join it.
+2. **Guest says hello.** The guest writes `W` (its role, nonce, board and colour, and the host's nonce as `peer`) to `-g`, then polls `-h`. If the host starts with another guest (`S` or `P` naming another peer), the room is busy. If its colour is the host's, it changes its own first (see Colours).
+3. **Host checks.** The host polls `-g`. On a guest `W` naming it as peer:
+   - Board different: write `X` and show `Board mismatch: you 7x8@4, them 12x13@6`. The guest reads `X`, shows the same, and both end the online game.
+   - Same: clear the board, pick who goes first, and write `S,1,<h|g>`. The guest reads `S`, clears its board and starts too. (If the host went first and has already moved, the guest sees `P` instead, which also means the host went first.) Both show `Online: <name> goes first`.
 4. **Who goes first.** Game 1 is random, picked by the host. After that, it alternates (Successive). Both devices work it out from the game number, so later games need no handshake.
 
 ## Colours
@@ -89,8 +90,11 @@ Both boards look the same: each player keeps their own colour on both screens.
 
 ## Network handling
 
-- `kvGet`/`kvPut` retry 503s, network errors and timeouts: 300 ms, then doubling up to 4 s, with a little random jitter. A write isn't done until it returns `true`.
+- Gets and puts retry 503s, network errors and timeouts: 300 ms, then doubling up to 4 s, with a little random jitter. A write isn't done until it returns `true`.
 - Poll every 1 s while waiting for a move or reply, and slow to every 5 s after 2 minutes with no opponent, to go easy on a free service.
+- On its own turn a device checks every 5 s that the opponent hasn't quit, so `Opponent left` shows without waiting for a move.
+- Writes go one at a time, always of the latest state, so a heartbeat can never land after a move and undo it.
+- An opponent whose heartbeat stops for 20 s shows as `Opponent offline` (a sleeping phone, say) until it comes back. The game keeps waiting.
 - After 20 s of failed requests the status reads `Connection lost, retrying...`. Nothing ends on its own; Esc or F4 leaves.
 - Polling stops while the page is hidden and starts again when it's shown (phones suspend background tabs anyway). Snapshots make catching up free.
 

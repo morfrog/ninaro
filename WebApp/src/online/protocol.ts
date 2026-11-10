@@ -2,9 +2,11 @@
 // own key, and each write is that side's whole state, so the latest value is
 // always enough and writing it again is harmless:
 //
-//   1,<role>,<nonce>,<cols>x<rows>x<connect>,<color>,<phase>,<game>,<move>,<col>,<beat>
+//   1,<role>,<nonce>,<peer>,<cols>x<rows>x<connect>,<color>,<phase>,<game>,<move>,<col>,<beat>
 //
-// For phase S (start) the move field says who goes first: h or g.
+// <peer> is the other side's nonce once known (- before), so a message is
+// only ever taken by the session it is meant for. For phase S (start) the
+// move field says who goes first: h or g.
 
 export const PROTOCOL_VERSION = 1;
 
@@ -25,6 +27,8 @@ export interface Message {
   role: Role;
   /** 4 base-36 characters, new each session. */
   nonce: string;
+  /** The other side's nonce, once known: who this message is for. */
+  peer: string | null;
   board: Board;
   /** The sender's token colour, palette index 0..15. */
   color: number;
@@ -41,7 +45,7 @@ export interface Message {
   first: Role | null;
 }
 
-/** Counters wrap here, which keeps every message well under 64 characters. */
+/** Counters wrap here, which keeps every message well under 64 characters (50 at most). */
 export const COUNTER_LIMIT = 1_000_000;
 
 const NONCE = /^[0-9a-z]{4}$/;
@@ -74,6 +78,7 @@ export function boardText(b: Board): string {
 export function encodeMessage(m: Message): string {
   const count = (v: number) => Number.isInteger(v) && v >= 0 && v < COUNTER_LIMIT;
   if (!NONCE.test(m.nonce)) throw new Error(`Bad nonce: ${m.nonce}`);
+  if (m.peer !== null && !NONCE.test(m.peer)) throw new Error(`Bad peer: ${m.peer}`);
   if (!validBoard(m.board)) throw new Error(`Bad board: ${boardText(m.board)}`);
   if (!Number.isInteger(m.color) || m.color < 0 || m.color > 15) throw new Error(`Bad colour: ${m.color}`);
   if (!count(m.game) || !count(m.move) || !count(m.beat)) throw new Error('Bad counter');
@@ -85,6 +90,7 @@ export function encodeMessage(m: Message): string {
     PROTOCOL_VERSION,
     m.role,
     m.nonce,
+    m.peer ?? '-',
     `${cols}x${rows}x${connect}`,
     m.color.toString(16),
     m.phase,
@@ -104,11 +110,12 @@ export function messageVersion(text: string): number | null {
 /** A stored value as a message, or null if it isn't a valid one of this version. */
 export function parseMessage(text: string): Message | null {
   const f = text.split(',');
-  if (f.length !== 10) return null;
-  const [version, role, nonce, board, color, phase, game, move, col, beat] = f;
+  if (f.length !== 11) return null;
+  const [version, role, nonce, peer, board, color, phase, game, move, col, beat] = f;
   if (version !== String(PROTOCOL_VERSION)) return null;
   if (role !== 'h' && role !== 'g') return null;
   if (!NONCE.test(nonce)) return null;
+  if (peer !== '-' && !NONCE.test(peer)) return null;
   const b = BOARD.exec(board);
   if (!b) return null;
   const parsedBoard = { cols: Number(b[1]), rows: Number(b[2]), connect: Number(b[3]) };
@@ -130,6 +137,7 @@ export function parseMessage(text: string): Message | null {
   return {
     role,
     nonce,
+    peer: peer === '-' ? null : peer,
     board: parsedBoard,
     color: parseInt(color, 16),
     phase: phase as Phase,
